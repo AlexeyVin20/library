@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -19,15 +20,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import FileUpload from "@/components/FileUpload";
 import ColorPicker from "@/components/admin/ColorPicker";
-import { createBook } from "@/lib/admin/actions/book";
+import { BookInput, handleAddBook } from "@/lib/admin/actions/book";
 import { toast } from "@/hooks/use-toast";
 
-interface Props extends Partial<Book> {
+interface Props extends Partial<BookInput> {
   type?: "create" | "update";
 }
 
 const BookForm = ({ type, ...book }: Props) => {
   const router = useRouter();
+  const [isbn, setIsbn] = useState("");
 
   const form = useForm<z.infer<typeof bookSchema>>({
     resolver: zodResolver(bookSchema),
@@ -40,21 +42,65 @@ const BookForm = ({ type, ...book }: Props) => {
       totalCopies: 1,
       coverUrl: "",
       coverColor: "",
-      videoUrl: "",
       summary: "",
+      isbn: "",
+      googleBooksId: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof bookSchema>) => {
-    const result = await createBook(values);
+  const handleFetchByISBN = async () => {
+    if (!isbn) {
+      toast({
+        title: "Ошибка",
+        description: "Введите ISBN для поиска",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}`
+      );
+      const data = await res.json();
+      if (data.totalItems > 0) {
+        const bookData = data.items[0].volumeInfo;
+        form.setValue("title", bookData.title || "");
+        form.setValue("author", bookData.authors ? bookData.authors.join(", ") : "");
+        form.setValue("description", bookData.description || "");
+        form.setValue("coverUrl", bookData.imageLinks?.thumbnail || "");
+        form.setValue("isbn", isbn);
+        toast({
+          title: "Данные получены",
+          description: "Информация о книге успешно заполнена",
+        });
+      } else {
+        toast({
+          title: "Книга не найдена",
+          description: "Проверьте правильность ISBN",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Ошибка при поиске по ISBN",
+        variant: "destructive",
+      });
+    }
+  };
 
+  const onSubmit = async (values: z.infer<typeof bookSchema>) => {
+    console.log("onSubmit triggered", values);
+    const result = await handleAddBook(values);
+  
     if (result.success) {
       toast({
         title: "Успех",
         description: "Книга успешно добавлена",
       });
-
-      router.push(`/admin/books/${result.data.id}`);
+      if (result.data) {
+        router.push(`/admin/books/${result.data.id}`);
+      }
     } else {
       toast({
         title: "Ошибка",
@@ -67,6 +113,31 @@ const BookForm = ({ type, ...book }: Props) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="flex gap-2 items-end">
+          <div className="w-full">
+            <FormItem className="flex flex-col gap-1">
+              <FormLabel className="text-base font-normal text-dark-500">
+                ISBN
+              </FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Введите ISBN книги"
+                  value={isbn}
+                  onChange={(e) => setIsbn(e.target.value)}
+                  className="book-form_input"
+                />
+              </FormControl>
+            </FormItem>
+          </div>
+          <Button
+            type="button"
+            onClick={handleFetchByISBN}
+            className="whitespace-nowrap cursor-pointer pointer-events-auto z-10"
+          >
+            Добавить по ISBN
+          </Button>
+        </div>
+
         <FormField
           control={form.control}
           name={"title"}
@@ -87,6 +158,7 @@ const BookForm = ({ type, ...book }: Props) => {
             </FormItem>
           )}
         />
+        {/* Остальные поля формы */}
         <FormField
           control={form.control}
           name={"author"}
@@ -237,8 +309,6 @@ const BookForm = ({ type, ...book }: Props) => {
           )}
         />
 
-        
-
         <FormField
           control={form.control}
           name={"summary"}
@@ -260,7 +330,10 @@ const BookForm = ({ type, ...book }: Props) => {
           )}
         />
 
-        <Button type="submit" className="book-form_btn text-white">
+        <Button
+          type="submit"
+          className="book-form_btn text-white cursor-pointer pointer-events-auto z-10"
+        >
           Добавить книгу в библиотеку
         </Button>
       </form>

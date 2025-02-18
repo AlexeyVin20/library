@@ -140,6 +140,8 @@ export default function DashboardPage() {
                 и соответствующим образом доработать Calendar. 
                 Для простоты здесь отрисовываем 3 одинаковых календаря подряд. */}
             <Calendar events={calendarEvents} />
+            <Calendar events={calendarEvents} />
+            <Calendar events={calendarEvents} />
           </div>
         </div>
 

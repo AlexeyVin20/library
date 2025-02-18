@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres
+    container_name: library-container
+    environment:
+      POSTGRES_USER: User
+      POSTGRES_PASSWORD: Password
+      POSTGRES_DB: librarydb
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

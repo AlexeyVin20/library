@@ -1,16 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { sampleBooks } from "@/constants";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function BooksPage() {
+  const [books, setBooks] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
   const [viewMode, setViewMode] = useState("grid");
 
+  // Получаем книги из API при монтировании компонента
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        const res = await fetch("/api/books");
+        if (res.ok) {
+          const data = await res.json();
+          setBooks(data);
+        } else {
+          console.error("Ошибка получения книг");
+        }
+      } catch (error) {
+        console.error("Ошибка получения книг", error);
+      }
+    };
+
+    fetchBooks();
+  }, []);
+
   // Фильтрация книг по поисковому запросу (по названию)
-  const filteredBooks = sampleBooks.filter((book) =>
+  const filteredBooks = books.filter((book) =>
     book.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -91,7 +110,7 @@ export default function BooksPage() {
           {sortedBooks.map((book) => (
             <li key={book.id} className="border rounded shadow p-4 relative">
               <img
-                src={book.cover}
+                src={book.cover_url}
                 alt={book.title}
                 className="w-full h-48 object-cover mb-3 rounded"
               />
@@ -140,7 +159,7 @@ export default function BooksPage() {
             <li key={book.id} className="border rounded shadow p-4">
               <div className="flex gap-4">
                 <img
-                  src={book.cover}
+                  src={book.cover_url}
                   alt={book.title}
                   className="w-24 h-32 object-cover rounded"
                 />
@@ -170,7 +189,7 @@ export default function BooksPage() {
           {sortedBooks.map((book) => (
             <div key={book.id} className="border rounded shadow p-4 flex gap-4">
               <img
-                src={book.cover}
+                src={book.cover_url}
                 alt={book.title}
                 className="w-32 h-40 object-cover rounded"
               />

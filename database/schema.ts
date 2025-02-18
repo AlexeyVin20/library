@@ -45,8 +45,10 @@ export const books = pgTable("books", {
   description: text("description").notNull(),
   totalCopies: integer("total_copies").notNull().default(1),
   availableCopies: integer("available_copies").notNull().default(0),
-  videoUrl: text("video_url").notNull(),
   summary: varchar("summary").notNull(),
+  // Новые поля, получаемые из Google Books API
+  isbn: varchar("isbn", { length: 20 }).notNull(),
+  googleBooksId: varchar("google_books_id", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
