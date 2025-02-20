@@ -8,7 +8,7 @@ interface BookDetailsProps {
     id: string;
     title: string;
     author: string;
-    cover_url: string;
+    coverUrl: string;
     description: string;
   }
 }
@@ -18,10 +18,10 @@ export default function BookDetails({ book }: BookDetailsProps) {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">{book.title}</h1>
       <p className="mb-2 text-gray-600">Автор: {book.author}</p>
-      {book.cover_url ? (
+      {book.coverUrl ? (
         <div className="relative w-64 h-96 mb-4">
           <Image
-            src={book.cover_url}
+            src={book.coverUrl}
             alt={book.title}
             fill
             className="rounded object-cover"

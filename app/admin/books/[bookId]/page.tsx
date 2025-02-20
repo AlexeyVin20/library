@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
+import { useEffect, useState, use } from "react";
 import { notFound } from "next/navigation";
 import BookDetails from "@/components/admin/BookDetails";
 
@@ -9,33 +8,47 @@ interface Book {
   id: string;
   title: string;
   author: string;
-  cover_url: string;
+  coverUrl: string;
   description: string;
 }
 
-export default async function BookDetailPage({
-  params: { bookId },
+export default function BookDetailPage({
+  params,
 }: {
-  params: { bookId: string };
+  params: Promise<{ bookId: string }>;
 }) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+  const [book, setBook] = useState<Book | null>(null);
+  const [error, setError] = useState<boolean>(false);
+  const resolvedParams = use(params);
+  
+  useEffect(() => {
+    const fetchBook = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+        if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+        
+        const res = await fetch(`${baseUrl}/api/books/${resolvedParams.bookId}`, {
+          headers: { "Content-Type": "application/json" },
+        });
 
-  try {
-    const res = await fetch(`${baseUrl}/api/books/${bookId}`, {
-      headers: { "Content-Type": "application/json" },
-      cache: 'no-store'
-    });
+        if (!res.ok) {
+          setError(true);
+          return;
+        }
 
-    if (!res.ok) {
-      return notFound();
-    }
+        const bookData = await res.json();
+        setBook(bookData);
+      } catch (error) {
+        console.error("Error fetching book:", error);
+        setError(true);
+      }
+    };
 
-    const book: Book = await res.json();
-    return <BookDetails book={book} />;
-    
-  } catch (error) {
-    console.error("Error fetching book:", error);
-    return notFound();
-  }
+    fetchBook();
+  }, [resolvedParams.bookId]);
+
+  if (error) return notFound();
+  if (!book) return <div>Загрузка...</div>;
+
+  return <BookDetails book={book} />;
 }

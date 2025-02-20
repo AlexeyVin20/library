@@ -70,3 +70,27 @@ export async function handleUpdateBook(values: BookInput & { id: string }) {
     return { success: false, message: error.message };
   }
 }
+
+const handleDeleteBook = async (id: string) => {
+  try {
+    const res = await fetch(`/api/books/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (res.ok) {
+      setBooks(books.filter(book => book.id !== id));
+      toast({
+        title: "Успех",
+        description: "Книга успешно удалена",
+      });
+    } else {
+      throw new Error('Ошибка удаления книги');
+    }
+  } catch (error) {
+    toast({
+      title: "Ошибка",
+      description: "Не удалось удалить книгу",
+      variant: "destructive",
+    });
+  }
+};
