@@ -1,4 +1,3 @@
-// app/books/[bookId]/page.tsx (или, если это страница списка книг – app/books/page.tsx)
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,10 +11,13 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { List, Grid2X2, CreditCard, LayoutList } from "lucide-react";
+import { CreditCard, Box } from "lucide-react";
+import BookCover from "@/components/BookCover";
 
-// Компонент для обработки загрузки изображения с ошибкой
-const BookImage = ({ src, alt }: { src: string; alt: string }) => {
+/**
+ * Компонент для отображения изображения обложки с 3D-ховер-эффектом.
+ */
+const BookImage = ({ src, alt, bookId }) => {
   const [error, setError] = useState(false);
 
   if (error || !src) {
@@ -26,26 +28,181 @@ const BookImage = ({ src, alt }: { src: string; alt: string }) => {
     );
   }
 
-  return (
+  // Класс с 3D-эффектом
+  const imageClass =
+    "transform-gpu transition-transform duration-300 hover:scale-110 hover:-rotate-6 hover:shadow-xl rounded";
+
+  const imageElement = (
     <Image
       src={src}
       alt={alt}
       width={192}
       height={192}
-      className="w-full h-48 object-cover rounded"
+      className={`w-full h-48 object-cover ${imageClass}`}
       onError={() => setError(true)}
       unoptimized
     />
   );
+
+  return bookId ? (
+    <Link href={`/admin/books/${bookId}`}>{imageElement}</Link>
+  ) : (
+    imageElement
+  );
 };
 
+/**
+ * Карточки (cards) — более классический вид с фоном cover_color и обложкой слева.
+ */
+const CardsView = ({ books, onDelete }) => {
+  return (
+    <ul className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {books.map((book) => (
+        <li
+          key={book.id}
+          className="border rounded shadow flex overflow-hidden relative"
+          style={{ height: "190px", backgroundColor: book.coverColor || "#2f2f2f" }}
+        >
+          <div className="w-1/3">
+            <BookImage src={book.coverUrl} alt={book.title} bookId={book.id} />
+          </div>
+          <div className="flex-1 p-4 text-white flex flex-col justify-between">
+            <div>
+              <h3 className="text-lg font-bold mb-1">{book.title}</h3>
+              <p className="text-sm text-white/90 mb-1">{book.author}</p>
+              <p className="text-xs text-white/80">{book.genre}</p>
+            </div>
+            <div className="flex justify-end gap-2 mt-2">
+              <Link href={`/admin/books/${book.id}/update`}>
+                <button className="px-3 py-1 bg-white text-black rounded hover:bg-gray-100 text-bg">
+                  Редактировать
+                </button>
+              </Link>
+              <button
+                onClick={() => onDelete(book.id)}
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-bg"
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+/**
+ * 3D-вид с использованием BookCover компонента
+ */
+const ThreeDBookView = ({ books, onDelete }) => {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+      {books.map((book) => (
+        <div key={book.id} className="group text-black">
+          {/* Контейнер с перспективой для 3D-эффекта */}
+          <div
+            className="relative w-full h-80 overflow-hidden"
+            style={{ perspective: "800px" }}
+          >
+            {/* Блок, который будет вращаться при ховере */}
+            <div
+              className="
+                absolute inset-0
+                transform-gpu
+                transition-transform
+                duration-300
+                group-hover:rotate-y-0
+                rotate-y-[15deg]
+                preserve-3d
+              "
+            >
+              {/* Лицевая сторона (обложка) с использованием BookCover */}
+              <Link href={`/admin/books/${book.id}`}>
+                <div className="absolute inset-0 backface-hidden">
+                  <BookCover 
+                    coverColor={book.coverColor || "#2f2f2f"}
+                    coverImage={book.coverUrl}
+                    variant="medium"
+                    className="w-full h-full"
+                  />
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Название, автор и жанр под обложкой */}
+          <div className="mt-2 text-center">
+            <p className="font-semibold">
+              {book.title} — <span className="font-normal">By {book.author}</span>
+            </p>
+            {book.genre && (
+              <p className="text-sm text-gray-400">{book.genre}</p>
+            )}
+          </div>
+
+          {/* Кнопки "Редактировать" и "Удалить" */}
+          <div className="mt-2 flex justify-center gap-2">
+            <Link href={`/admin/books/${book.id}/update`}>
+              <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                Редактировать
+              </button>
+            </Link>
+            <button
+              onClick={() => onDelete(book.id)}
+              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+            >
+              Удалить
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ViewModeMenu остается без изменений
+const ViewModeMenu = ({ viewMode, setViewMode }) => {
+  return (
+    <NavigationMenu>
+      <NavigationMenuList>
+        <NavigationMenuItem>
+          <NavigationMenuTrigger>
+            {viewMode === "cards" && <CreditCard className="mr-2 h-4 w-4" />}
+            {viewMode === "3d" && <Box className="mr-2 h-4 w-4" />}
+            Вид
+          </NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <div className="grid gap-2 p-4">
+              <button
+                onClick={() => setViewMode("cards")}
+                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded"
+              >
+                <CreditCard className="h-4 w-4" />
+                Карточки
+              </button>
+              <button
+                onClick={() => setViewMode("3d")}
+                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded"
+              >
+                <Box className="h-4 w-4" />
+                3D вид
+              </button>
+            </div>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+      </NavigationMenuList>
+    </NavigationMenu>
+  );
+};
+
+// Основной компонент страницы остается без изменений
 export default function BooksPage() {
-  const [books, setBooks] = useState<any[]>([]);
+  const [books, setBooks] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("cards");
 
-  // Получаем книги из API при монтировании компонента
   useEffect(() => {
     const fetchBooks = async () => {
       try {
@@ -74,25 +231,37 @@ export default function BooksPage() {
       : b.title.localeCompare(a.title)
   );
 
-  // Обработчик удаления книги
-  const handleDelete = async (id: string) => {
+  // Удаление
+  const handleDelete = async (id) => {
     if (!confirm("Вы уверены, что хотите удалить эту книгу?")) return;
     try {
       const res = await fetch(`/api/books/${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast({ title: "Книга удалена", description: "Книга успешно удалена" });
+        toast({
+          title: "Книга удалена",
+          description: "Книга успешно удалена",
+        });
         setBooks((prev) => prev.filter((book) => book.id !== id));
       } else {
-        toast({ title: "Ошибка", description: "Не удалось удалить книгу", variant: "destructive" });
+        toast({
+          title: "Ошибка",
+          description: "Не удалось удалить книгу",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Ошибка при удалении книги:", error);
-      toast({ title: "Ошибка", description: "Ошибка при удалении книги", variant: "destructive" });
+      toast({
+        title: "Ошибка",
+        description: "Ошибка при удалении книги",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 opacity-90">
+      {/* Шапка */}
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold">Все книги</h1>
@@ -121,171 +290,13 @@ export default function BooksPage() {
         </div>
       </header>
 
-      {viewMode === "grid" && (
-        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedBooks.map((book) => (
-            <li key={book.id} className="border rounded shadow p-4 relative">
-              <BookImage src={book.coverUrl} alt={book.title} />
-              <h3 className="text-xl font-bold">{book.title}</h3>
-              <p className="text-gray-600">{book.author}</p>
-              <p className="mt-2 text-sm text-gray-500">
-                {book.description.slice(0, 100)}...
-              </p>
-              <div className="mt-4 flex justify-end gap-2">
-                <Link href={`/admin/books/${book.id}/update`}>
-                  <button className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
-                    Редактировать
-                  </button>
-                </Link>
-                <button
-                  onClick={() => handleDelete(book.id)}
-                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Удалить
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {viewMode === "list" && (
-        <ul className="divide-y">
-          {sortedBooks.map((book) => (
-            <li key={book.id} className="py-4 flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-bold">{book.title}</h3>
-                <p className="text-gray-600">{book.author}</p>
-              </div>
-              <div className="flex gap-2">
-                <Link href={`/admin/books/${book.id}/update`}>
-                  <button className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
-                    Редактировать
-                  </button>
-                </Link>
-                <button
-                  onClick={() => handleDelete(book.id)}
-                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Удалить
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
+      {/* Отображение книг */}
       {viewMode === "cards" && (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {sortedBooks.map((book) => (
-            <li key={book.id} className="border rounded shadow p-4">
-              <div className="flex gap-4">
-                <BookImage src={book.coverUrl} alt={book.title} />
-                <div>
-                  <h3 className="text-xl font-bold">{book.title}</h3>
-                  <p className="text-gray-600">{book.author}</p>
-                  <p className="mt-2 text-sm text-gray-500">
-                    {book.description.slice(0, 80)}...
-                  </p>
-                  <div className="mt-4 flex gap-2">
-                    <Link href={`/admin/books/${book.id}/update`}>
-                      <button className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
-                        Редактировать
-                      </button>
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(book.id)}
-                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                    >
-                      Удалить
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <CardsView books={sortedBooks} onDelete={handleDelete} />
       )}
-
-      {viewMode === "detailed" && (
-        <div className="space-y-4">
-          {sortedBooks.map((book) => (
-            <div key={book.id} className="border rounded shadow p-4 flex gap-4">
-              <BookImage src={book.coverUrl} alt={book.title} />
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold">{book.title}</h3>
-                <p className="text-lg text-gray-600">{book.author}</p>
-                <p className="mt-2 text-gray-500">{book.description}</p>
-                <div className="mt-4 flex gap-2">
-                  <Link href={`/admin/books/${book.id}/update`}>
-                    <button className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
-                      Редактировать
-                    </button>
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(book.id)}
-                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Удалить
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      {viewMode === "3d" && (
+        <ThreeDBookView books={sortedBooks} onDelete={handleDelete} />
       )}
     </div>
   );
 }
-
-const ViewModeMenu = ({
-  viewMode,
-  setViewMode,
-}: {
-  viewMode: string;
-  setViewMode: (mode: string) => void;
-}) => {
-  return (
-    <NavigationMenu>
-      <NavigationMenuList>
-        <NavigationMenuItem>
-          <NavigationMenuTrigger>
-            {viewMode === "list" && <List className="mr-2 h-4 w-4" />}
-            {viewMode === "grid" && <Grid2X2 className="mr-2 h-4 w-4" />}
-            {viewMode === "cards" && <CreditCard className="mr-2 h-4 w-4" />}
-            {viewMode === "detailed" && <LayoutList className="mr-2 h-4 w-4" />}
-            Вид
-          </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <div className="grid gap-2 p-4">
-              <button
-                onClick={() => setViewMode("list")}
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded"
-              >
-                <List className="h-4 w-4" /> Список
-              </button>
-              <button
-                onClick={() => setViewMode("grid")}
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded"
-              >
-                <Grid2X2 className="h-4 w-4" /> Сетка
-              </button>
-              <button
-                onClick={() => setViewMode("cards")}
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded"
-              >
-                <CreditCard className="h-4 w-4" /> Карточки
-              </button>
-              <button
-                onClick={() => setViewMode("detailed")}
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded"
-              >
-                <LayoutList className="h-4 w-4" /> Подробно
-              </button>
-            </div>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-      </NavigationMenuList>
-    </NavigationMenu>
-  );
-};
