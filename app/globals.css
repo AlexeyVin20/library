@@ -4,8 +4,37 @@
 
 @layer base {
   :root {
-    --radius: 0.5rem;
-  }
+    /* Нейтральные цвета */
+    --scheme-neutral-100: #150047;
+    --scheme-neutral-200: #19004e;
+    --scheme-neutral-300: #1314cf;
+    --scheme-neutral-400: #1f41ef;
+    --scheme-neutral-500: #3666ff;
+    --scheme-neutral-600: #5c96ff;
+    --scheme-neutral-600-10: rgba(92,150,255,0.1);
+    --scheme-neutral-600-30: rgba(92,150,255,0.3);
+    --scheme-neutral-600-50: rgba(92,150,255,0.5);
+    --scheme-neutral-700: #79b8ff;
+    --scheme-neutral-800: #9adeff;
+    --scheme-neutral-900: #a7ecff;
+    --scheme-neutral-1000: #adf3ff;
+
+    /* Динамические цвета */
+    --color-brand: #2563eb; /* brand */
+    --color-accent: #6366f1; /* accent */
+    --color-neutral: #6b7280; /* neutral */
+    
+    /* Настройки интерфейса */
+    --border-radius: 0.75rem; /* playful */
+    --transition-speed: 300ms;
+}
+
+.dark {
+    --color-brand: #1e40af;
+    --color-accent: #4f46e5;
+    --color-neutral: #374151;
+}
+
 
   .hide-scrollbar::-webkit-scrollbar {
     width: 0px;

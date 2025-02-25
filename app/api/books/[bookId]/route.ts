@@ -72,3 +72,45 @@ export async function DELETE(
     );
   }
 }
+
+// Новый метод PATCH для обновления книги
+export async function PATCH(
+  request: Request,
+  { params }: { params: { bookId: string } }
+) {
+  try {
+    if (!params.bookId) {
+      return NextResponse.json({ error: "Не указан ID книги" }, { status: 400 });
+    }
+
+    const data = await request.json();
+    // Например, вы ожидаете поля: title, author, isbn, cover_color, cover_url, ...
+    const {title, author, isbn, genre, coverColor, coverUrl, description } = data;
+
+    const updated = await db
+      .update(books)
+      .set({
+        title,
+        author,
+        isbn,
+        genre,
+        coverColor,
+        coverUrl,
+        description,
+      })
+      .where(eq(books.id, params.bookId))
+      .returning();
+
+    if (!updated || updated.length === 0) {
+      return NextResponse.json({ error: "Книга не найдена" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Книга обновлена", book: updated[0] });
+  } catch (error) {
+    console.error("Ошибка при обновлении книги:", error);
+    return NextResponse.json(
+      { error: "Ошибка при обновлении книги" },
+      { status: 500 }
+    );
+  }
+}

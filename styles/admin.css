@@ -2,203 +2,368 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    /* Нейтральные цвета */
+    --scheme-neutral-100: #150047;
+    --scheme-neutral-200: #19004e;
+    --scheme-neutral-300: #1314cf;
+    --scheme-neutral-400: #1f41ef;
+    --scheme-neutral-500: #3666ff;
+    --scheme-neutral-600: #5c96ff;
+    --scheme-neutral-600-10: rgba(92,150,255,0.1);
+    --scheme-neutral-600-30: rgba(92,150,255,0.3);
+    --scheme-neutral-600-50: rgba(92,150,255,0.5);
+    --scheme-neutral-700: #79b8ff;
+    --scheme-neutral-800: #9adeff;
+    --scheme-neutral-900: #a7ecff;
+    --scheme-neutral-1000: #adf3ff;
+
+    /* Динамические цвета */
+    --color-brand: #2563eb; /* brand */
+    --color-accent: #6366f1; /* accent */
+    --color-neutral: #6b7280; /* neutral */
+    
+    /* Настройки интерфейса */
+    --border-radius: 0.75rem; /* playful */
+    --transition-speed: 300ms;
+}
+
+.dark {
+    --color-brand: #1e40af;
+    --color-accent: #4f46e5;
+    --color-neutral: #374151;
+}
+
+
+  .hide-scrollbar::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+    border-radius: 0px;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 0px;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: transparent;
+  }
+}
+
 @layer components {
-    .admin-container {
-        @apply flex w-[calc(100%-264px)] flex-1 flex-col bg-light-300 p-5 xs:p-10;
-    }
+  .form-btn {
+    @apply bg-primary text-dark-100 hover:bg-primary inline-flex min-h-14 w-full items-center justify-center rounded-md px-6 py-2 font-bold text-base !important;
+  }
 
-    .back-btn {
-        @apply mb-10 w-fit border border-light-300 bg-white text-xs font-medium text-dark-200 hover:bg-light-300 !important;
-    }
+  .form-input {
+    @apply w-full min-h-14 border-none text-base font-bold placeholder:font-normal text-white placeholder:text-light-100 focus-visible:ring-0 focus-visible:shadow-none bg-dark-300 !important;
+  }
 
-    /* Confirmation Dialog */
-    .confirm-trigger {
-        @apply font-semibold text-sm shadow-none hover:bg-opacity-70 w-full !important;
-    }
+  /* Book Card */
+  .book-title {
+    @apply mt-2 line-clamp-1 text-base font-semibold text-white xs:text-xl;
+  }
 
-    .confirm-approve {
-        @apply bg-green-100 text-green-800 hover:bg-green-100/70 !important;
-    }
+  .book-genre {
+    @apply mt-1 line-clamp-1 text-sm italic text-light-100 xs:text-base;
+  }
 
-    .confirm-reject {
-        @apply bg-red-100 text-red-800 hover:bg-red-100/70 !important;
-    }
+  .book-loaned {
+    @apply flex flex-row items-center gap-1 max-xs:justify-center;
+  }
 
-    .confirm-content {
-        @apply sm:max-w-md flex flex-col items-center justify-center p-6 !important;
-    }
+  .book-btn {
+    @apply bg-dark-600 mt-3 min-h-14 w-full font-bebas-neue text-base text-primary;
+  }
 
-    .confirm-illustration {
-        @apply size-28 rounded-full flex justify-center items-center mx-auto;
-    }
+  /* Borrowed Book */
+  .borrowed-book {
+    @apply gradient-vertical p-5 rounded-2xl xs:w-min w-full relative;
+  }
 
-    .confirm-illustration div:first-child {
-        @apply size-[70%] rounded-full flex justify-center items-center;
-    }
+  .borrowed-book_cover {
+    @apply py-4 lg:px-16 px-10 flex justify-center items-center w-full rounded-lg;
+  }
 
-    .confirm-btn {
-        @apply w-full min-h-14 rounded-xl font-bold text-base text-light-800 !important;
-    }
+  /* Book Cover */
+  .book-cover_extra_small {
+    @apply w-[28.95px] h-10;
+  }
 
-    /* Book Form */
-    .book-form_input {
-        @apply min-h-14 border border-gray-100 bg-light-600 p-4 text-base font-semibold placeholder:font-normal placeholder:text-slate-500 !important;
-    }
+  .book-cover_small {
+    @apply w-[55px] h-[76px];
+  }
 
-    .book-form_btn {
-        @apply min-h-14 w-full bg-primary-admin hover:bg-primary-admin/95 !important;
-    }
+  .book-cover_medium {
+    @apply w-[144px] h-[199px];
+  }
 
-    /* Home Page */
-    .view-btn {
-        @apply bg-light-300 rounded-md text-primary-admin font-semibold hover:bg-light-300/80 shadow-none !important;
-    }
+  .book-cover_regular {
+    @apply xs:w-[174px] w-[114px] xs:h-[239px] h-[169px];
+  }
 
-    .add-new-book_btn {
-        @apply mt-7 mb-3 bg-light-300 py-4 px-3 flex flex-row items-center rounded-xl gap-4;
-    }
+  .book-cover_wide {
+    @apply xs:w-[296px] w-[256px] xs:h-[404px] h-[354px];
+  }
 
-    .add-new-book_btn div:first-child {
-        @apply size-12 bg-white rounded-full flex justify-center items-center;
-    }
+  /* Book List */
+  .book-list {
+    @apply mt-10 flex flex-wrap gap-5 max-xs:justify-between xs:gap-10;
+  }
 
-    .add-new-book_btn p:first-child {
-        @apply font-semibold text-lg text-dark-400;
-    }
+  /* Book Overview */
+  .book-overview {
+    @apply flex flex-col-reverse items-center gap-12 sm:gap-32 xl:flex-row xl:gap-8;
+  }
 
-    /* Statistics */
-    .stat {
-        @apply bg-white rounded-xl p-5 space-y-5 flex-1;
-    }
+  .book-overview h1 {
+    @apply text-5xl font-semibold text-white md:text-7xl;
+  }
 
-    .stat-info {
-        @apply flex justify-between items-center gap-5;
-    }
+  .book-info {
+    @apply mt-7 flex flex-row flex-wrap gap-4 text-xl text-light-100;
+  }
 
-    .stat-label {
-        @apply font-medium text-base text-light-500 whitespace-nowrap;
-    }
+  .book-copies {
+    @apply flex flex-row flex-wrap gap-4 mt-1;
+  }
 
-    .stat-count {
-        @apply font-semibold text-3xl text-dark-400;
-    }
+  .book-copies p {
+    @apply text-xl text-light-100;
+  }
 
-    /* Book Stripe */
-    .book-stripe {
-        @apply flex flex-row gap-4 bg-light-300 p-4 rounded-lg;
-    }
+  .book-copies p span {
+    @apply ml-2 font-semibold text-primary;
+  }
 
-    .book-stripe .title {
-        @apply font-semibold text-base text-dark-400 line-clamp-1;
-    }
+  .book-description {
+    @apply mt-2 text-justify text-xl text-light-100;
+  }
 
-    .book-stripe .author {
-        @apply flex flex-wrap flex-row items-center gap-2;
-    }
+  .book-overview_btn {
+    @apply mt-4 min-h-14 w-fit bg-primary text-dark-100 hover:bg-primary/90 max-md:w-full !important;
+  }
 
-    .book-stripe .author p:first-child {
-        @apply text-light-500 text-sm line-clamp-1;
-    }
+  /* File Upload */
+  .upload-btn {
+    @apply flex min-h-14 w-full items-center justify-center gap-1.5 rounded-md;
+  }
 
-    .book-stripe .author div {
-        @apply size-1 rounded-full bg-light-500;
-    }
+  .upload-filename {
+    @apply mt-1 text-center text-xs;
+  }
 
-    .book-stripe .author p:last-child {
-        @apply text-light-500 text-sm;
-    }
+  .progress {
+    @apply rounded-full bg-green-800 p-0.5 text-center font-bebas-neue text-[8px] font-bold leading-none text-light-100;
+  }
 
-    .book-stripe .user {
-        @apply mt-2.5 flex flex-row flex-wrap gap-5;
-    }
+  /* Search */
+  .search {
+    @apply relative mt-10 flex min-h-14 w-full items-center rounded-xl bg-dark-300 px-4;
+  }
 
-    .book-stripe .user .avatar {
-        @apply flex flex-row items-center gap-1.5;
-    }
+  .search-input {
+    @apply w-full border-none font-bold placeholder:font-normal text-white placeholder:text-light-100 focus-visible:ring-0 focus-visible:shadow-none !important;
+  }
 
-    .book-stripe .user .avatar p {
-        @apply text-xs text-dark-200;
-    }
+  /* Book Receipt */
+  .book-receipt_admin-btn {
+    @apply bg-light-300 rounded-md text-primary-admin font-semibold hover:bg-light-300/80 !important;
+  }
 
-    .book-stripe .borrow-date {
-        @apply flex flex-row items-center gap-1.5;
-    }
+  /* Book Ticket */
+  #book-ticket {
+    @apply relative mt-10 hidden w-[544px] overflow-hidden bg-dark-300 py-8;
+  }
 
-    .book-stripe .borrow-date p {
-        @apply text-xs text-dark-200;
-    }
+  #book-ticket #book-details div {
+    @apply space-y-1 rounded-md border border-light-100/10 p-3;
+  }
 
-    /* Color Picker */
-    .color-picker {
-        @apply flex min-h-14 flex-row items-center gap-3 rounded-md border border-gray-100 bg-light-600 p-4 text-base font-semibold text-dark-400;
-    }
+  #book-ticket #book-details div p:first-child {
+    @apply text-xs text-light-700;
+  }
 
-    .hex-input {
-        @apply h-full flex-1 bg-transparent font-ibm-plex-sans outline-none;
-    }
+  #book-ticket #book-details div p:last-child {
+    @apply text-sm font-bold text-white;
+  }
 
-    .hex-color-picker {
-        @apply absolute left-0 top-full z-50 mt-3;
-    }
+  #book-ticket #book-divider div:first-child {
+    @apply absolute -left-3.5 top-1/2 size-7 -translate-y-1/2 rounded-full bg-black;
+  }
 
-    /* Error Fallback */
-    .error-fallback {
-        @apply p-4 bg-red-100 text-red-700 rounded-md;
-    }
+  #book-ticket #book-divider div:last-child {
+    @apply absolute -right-3.5 top-1/2 size-7 -translate-y-1/2 rounded-full bg-black;
+  }
 
-    .error-fallback h2 {
-        @apply text-lg font-semibold mb-2;
-    }
+  .book-ticket-circles {
+    @apply absolute inset-x-0 -bottom-6 flex flex-row gap-1.5;
+  }
 
-    /* Header */
-    .admin-header {
-        @apply flex lg:items-end items-start justify-between lg:flex-row flex-col gap-5 sm:mb-10 mb-5;
-    }
+  /* Not Found */
+  #not-found {
+    @apply flex justify-center items-center flex-col text-center w-full;
+  }
 
-    /* Search */
-    .admin-search {
-        @apply flex border border-gray-100 min-h-14 items-center gap-1 rounded-md bg-light-600 px-4 lg:max-w-md w-full;
-    }
+  #not-found h4 {
+    @apply text-white mt-6 font-semibold text-2xl;
+  }
 
-    .admin-search_input {
-        @apply w-full border-0 shadow-none bg-transparent outline-none focus:outline-none focus:ring-0 focus:border-0 !important;
-    }
+  #not-found p {
+    @apply text-light-100 w-[360px] mt-1;
+  }
 
-    /* Sidebar */
-    .admin-sidebar {
-        @apply sticky left-0 top-0 flex h-dvh flex-col justify-between bg-white px-5 pb-5 pt-10;
-    }
+  .not-found-btn {
+    @apply bg-primary font-bebas-neue min-w-[360px] mt-6 text-dark-100 text-xl hover:bg-primary/90 min-h-12 !important;
+  }
 
-    .admin-sidebar .logo {
-        @apply flex flex-row items-center gap-2 border-b border-dashed border-primary-admin/20 pb-10 max-md:justify-center;
-    }
+  /* Pagination */
+  #pagination {
+    @apply flex flex-row justify-end gap-3;
+  }
 
-    .admin-sidebar .logo h1 {
-        @apply text-2xl font-semibold text-primary-admin max-md:hidden;
-    }
+  .pagination-btn_light {
+    @apply bg-light-300 text-dark-300 hover:bg-light-300/70 !important;
+  }
 
-    .admin-sidebar .link {
-        @apply flex flex-row items-center w-full gap-2 rounded-lg px-5 py-3.5 max-md:justify-center;
-    }
+  .pagination-btn_dark {
+    @apply bg-dark-300 hover:bg-dark-100 !important;
+  }
 
-    .admin-sidebar .link p {
-        @apply text-base font-medium max-md:hidden;
-    }
+  #pagination p {
+    @apply text-sm inline-flex items-center font-semibold px-4 py-1.5 rounded-md text-center;
+  }
 
-    .admin-sidebar .user {
-        @apply my-8 flex w-full flex-row gap-2 rounded-full border border-light-400 px-6 py-2 shadow-sm max-md:px-2;
-    }
+  /* Sort */
+  .select-trigger {
+    @apply w-40 h-10 px-4 bg-dark-300 text-light-100 border-dark-100 !important;
+  }
 
-    /* User Card */
-    .user-card {
-        @apply w-40 bg-light-300 py-4 px-3 flex justify-center items-center flex-col rounded-xl text-center;
-    }
+  .select-content {
+    @apply bg-dark-300 text-light-100 border-dark-100 !important;
+  }
 
-    .user-card .name {
-        @apply font-medium mt-3 text-dark-400 line-clamp-1 w-full break-words;
-    }
+  .select-item {
+    @apply focus:bg-dark-600 focus:text-light-100 !important;
+  }
+}
 
-    .user-card .email {
-        @apply text-light-500 text-sm line-clamp-1 break-words w-full;
-    }
+@layer utilities {
+  .gradient-vertical {
+    background: linear-gradient(180deg, #12141d 0%, #12151f 100%);
+  }
+
+  .gradient-gray {
+    background: linear-gradient(270deg, #37363a 0%, #353637 100%);
+  }
+
+  .gradient-blue {
+    background: linear-gradient(180deg, #232839 0%, #12141d 100%);
+  }
+
+  /* Auth */
+  .auth-container {
+    @apply relative flex flex-col-reverse text-light-100 sm:flex-row;
+  }
+
+  .auth-form {
+    @apply my-auto flex h-full min-h-screen flex-1 items-center bg-pattern bg-cover bg-top bg-dark-100 px-5 py-10;
+  }
+
+  .auth-box {
+    @apply gradient-vertical mx-auto flex max-w-xl flex-col gap-6 rounded-lg p-10;
+  }
+
+  .auth-illustration {
+    @apply sticky h-40 w-full sm:top-0 sm:h-screen sm:flex-1;
+  }
+
+  /* Root */
+  .root-container {
+    @apply flex min-h-screen flex-1 flex-col bg-pattern bg-cover bg-top bg-dark-100 px-5 xs:px-10 md:px-16;
+  }
+
+  /* Book Details */
+  .book-details {
+    @apply lg:mt-36 mt-16 mb-20 flex flex-col gap-16 lg:flex-row;
+  }
+
+  .book-details h3 {
+    @apply text-xl font-semibold text-primary;
+  }
+
+  /* Library */
+  .library {
+    @apply mx-auto flex max-w-xl w-full flex-col text-center;
+  }
+
+  .library-subtitle {
+    @apply text-lg font-semibold uppercase text-light-100;
+  }
+
+  .library-title {
+    @apply mt-2 text-3xl font-semibold text-white xs:text-5xl;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
 }

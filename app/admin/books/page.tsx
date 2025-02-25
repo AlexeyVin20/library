@@ -28,7 +28,6 @@ const BookImage = ({ src, alt, bookId }) => {
     );
   }
 
-  // Класс с 3D-эффектом
   const imageClass =
     "transform-gpu transition-transform duration-300 hover:scale-110 hover:-rotate-6 hover:shadow-xl rounded";
 
@@ -51,9 +50,6 @@ const BookImage = ({ src, alt, bookId }) => {
   );
 };
 
-/**
- * Карточки (cards) — более классический вид с фоном cover_color и обложкой слева.
- */
 const CardsView = ({ books, onDelete }) => {
   return (
     <ul className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -74,13 +70,13 @@ const CardsView = ({ books, onDelete }) => {
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Link href={`/admin/books/${book.id}/update`}>
-                <button className="px-3 py-1 bg-white text-black rounded hover:bg-gray-100 text-bg">
+                <button className="px-3 py-1 bg-white text-black rounded hover:bg-gray-100">
                   Редактировать
                 </button>
               </Link>
               <button
                 onClick={() => onDelete(book.id)}
-                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-bg"
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
               >
                 Удалить
               </button>
@@ -92,20 +88,15 @@ const CardsView = ({ books, onDelete }) => {
   );
 };
 
-/**
- * 3D-вид с использованием BookCover компонента
- */
 const ThreeDBookView = ({ books, onDelete }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
       {books.map((book) => (
         <div key={book.id} className="group text-black">
-          {/* Контейнер с перспективой для 3D-эффекта */}
           <div
             className="relative w-full h-80 overflow-hidden"
             style={{ perspective: "800px" }}
           >
-            {/* Блок, который будет вращаться при ховере */}
             <div
               className="
                 absolute inset-0
@@ -117,7 +108,6 @@ const ThreeDBookView = ({ books, onDelete }) => {
                 preserve-3d
               "
             >
-              {/* Лицевая сторона (обложка) с использованием BookCover */}
               <Link href={`/admin/books/${book.id}`}>
                 <div className="absolute inset-0 backface-hidden">
                   <BookCover 
@@ -130,8 +120,6 @@ const ThreeDBookView = ({ books, onDelete }) => {
               </Link>
             </div>
           </div>
-
-          {/* Название, автор и жанр под обложкой */}
           <div className="mt-2 text-center">
             <p className="font-semibold">
               {book.title} — <span className="font-normal">By {book.author}</span>
@@ -140,8 +128,6 @@ const ThreeDBookView = ({ books, onDelete }) => {
               <p className="text-sm text-gray-400">{book.genre}</p>
             )}
           </div>
-
-          {/* Кнопки "Редактировать" и "Удалить" */}
           <div className="mt-2 flex justify-center gap-2">
             <Link href={`/admin/books/${book.id}/update`}>
               <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
@@ -161,7 +147,6 @@ const ThreeDBookView = ({ books, onDelete }) => {
   );
 };
 
-// ViewModeMenu остается без изменений
 const ViewModeMenu = ({ viewMode, setViewMode }) => {
   return (
     <NavigationMenu>
@@ -196,7 +181,6 @@ const ViewModeMenu = ({ viewMode, setViewMode }) => {
   );
 };
 
-// Основной компонент страницы остается без изменений
 export default function BooksPage() {
   const [books, setBooks] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -206,7 +190,9 @@ export default function BooksPage() {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const res = await fetch("/api/books");
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+        if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not определён");
+        const res = await fetch(`${baseUrl}/api/Books`);
         if (res.ok) {
           const data = await res.json();
           setBooks(data);
@@ -221,7 +207,6 @@ export default function BooksPage() {
     fetchBooks();
   }, []);
 
-  // Фильтрация и сортировка
   const filteredBooks = books.filter((book) =>
     book.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -231,11 +216,11 @@ export default function BooksPage() {
       : b.title.localeCompare(a.title)
   );
 
-  // Удаление
   const handleDelete = async (id) => {
     if (!confirm("Вы уверены, что хотите удалить эту книгу?")) return;
     try {
-      const res = await fetch(`/api/books/${id}`, { method: "DELETE" });
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      const res = await fetch(`${baseUrl}/api/Books/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast({
           title: "Книга удалена",
@@ -261,7 +246,6 @@ export default function BooksPage() {
 
   return (
     <div className="p-6 opacity-90">
-      {/* Шапка */}
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold">Все книги</h1>
@@ -290,7 +274,6 @@ export default function BooksPage() {
         </div>
       </header>
 
-      {/* Отображение книг */}
       {viewMode === "cards" && (
         <CardsView books={sortedBooks} onDelete={handleDelete} />
       )}
