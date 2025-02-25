@@ -60,7 +60,7 @@ const CardsView = ({ books, onDelete }) => {
           style={{ height: "190px", backgroundColor: book.coverColor || "#2f2f2f" }}
         >
           <div className="w-1/3">
-            <BookImage src={book.coverUrl} alt={book.title} bookId={book.id} />
+            <BookImage src={book.cover} alt={book.title} bookId={book.id} />
           </div>
           <div className="flex-1 p-4 text-white flex flex-col justify-between">
             <div>
@@ -111,8 +111,8 @@ const ThreeDBookView = ({ books, onDelete }) => {
               <Link href={`/admin/books/${book.id}`}>
                 <div className="absolute inset-0 backface-hidden">
                   <BookCover 
-                    coverColor={book.coverColor || "#2f2f2f"}
-                    coverImage={book.coverUrl}
+                    coverColor={"#2f2f2f"}
+                    coverImage={book.cover}
                     variant="medium"
                     className="w-full h-full"
                   />
