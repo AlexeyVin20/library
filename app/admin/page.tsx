@@ -7,6 +7,7 @@ import MyChartStats from "@/components/admin/ChartStats";
 import BorrowedBooksChart from "@/components/admin/BorrowedBooksChart";
 import ActiveUsersChart from "@/components/admin/ActiveUsersChart";
 import Calendar, { CalendarEvent } from "@/components/admin/Calendar";
+import "@/styles/admin.css";
 
 // Пример данных
 const totalBooks = 120;

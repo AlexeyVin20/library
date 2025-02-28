@@ -1,10 +1,9 @@
 "use server";
 
-// Типизацию BookInput можно определить исходя из структуры формы и схемы
 export interface BookInput {
   id?: string;
   title: string;
-  authors: { id: string; fullName: string }[];
+  authors: string;
   genre?: string | null;
   categorization?: string | null;
   isbn: string;

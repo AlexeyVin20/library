@@ -7,15 +7,20 @@ import BookDetails from "@/components/admin/BookDetails";
 interface Book {
   id: string;
   title: string;
-  author: string;
-  coverUrl: string;
-  description: string;
-  // Если у вас появятся реальные поля:
-  // genre: string;
-  // rating: number;
-  // totalCopies: number;
-  // availableCopies: number;
-  // resume: string;
+  authors: string;
+  genre?: string | null;
+  categorization?: string | null;
+  isbn: string;
+  cover?: string | null;
+  description?: string | null;
+  summary?: string | null;
+  publicationYear?: number | null;
+  publisher?: string | null;
+  pageCount?: number | null;
+  language?: string | null;
+  availableCopies: number;
+  dateAdded?: string;
+  dateModified?: string;
 }
 
 export default function BookDetailPage({
@@ -25,6 +30,7 @@ export default function BookDetailPage({
 }) {
   const [book, setBook] = useState<Book | null>(null);
   const [error, setError] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Распарсим params (Next.js 13 для серверных роутов)
   const resolvedParams = use(params);
@@ -45,10 +51,16 @@ export default function BookDetailPage({
         }
 
         const bookData = await res.json();
+        // Если поле authors отсутствует или не строка – устанавливаем пустую строку
+        if (!bookData.authors || typeof bookData.authors !== "string") {
+          bookData.authors = "";
+        }
         setBook(bookData);
       } catch (error) {
         console.error("Error fetching book:", error);
         setError(true);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -56,7 +68,8 @@ export default function BookDetailPage({
   }, [resolvedParams.bookId]);
 
   if (error) return notFound();
-  if (!book) return <div>Загрузка...</div>;
+  if (loading) return <div>Загрузка...</div>;
+  if (!book) return <div>Книга не найдена</div>;
 
   return <BookDetails book={book} />;
 }

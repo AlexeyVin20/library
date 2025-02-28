@@ -65,8 +65,8 @@ const CardsView = ({ books, onDelete }) => {
           <div className="flex-1 p-4 text-white flex flex-col justify-between">
             <div>
               <h3 className="text-lg font-bold mb-1">{book.title}</h3>
-              <p className="text-sm text-white/90 mb-1">{book.author}</p>
-              <p className="text-xs text-white/80">{book.genre}</p>
+              <p className="text-sm text-white/90 mb-1">{book.authors}</p>
+              <p className="text-xs text-white/80">{book.genre || ""}</p>
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Link href={`/admin/books/${book.id}/update`}>
@@ -122,7 +122,7 @@ const ThreeDBookView = ({ books, onDelete }) => {
           </div>
           <div className="mt-2 text-center">
             <p className="font-semibold">
-              {book.title} — <span className="font-normal">By {book.author}</span>
+              {book.title} — <span className="font-normal">By {book.authors}</span>
             </p>
             {book.genre && (
               <p className="text-sm text-gray-400">{book.genre}</p>

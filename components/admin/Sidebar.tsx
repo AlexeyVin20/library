@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { Session } from "next-auth";
+import "@/styles/admin.css"
 
 // Пример условного компонента переключателя темы (ToggleButton) из shadcn
 import { Toggle } from "@/components/ui/toggle"; // замените на реальную реализацию
@@ -25,10 +26,10 @@ const Sidebar = ({ session }: { session: Session }) => {
   }, [theme]);
 
   return (
-    <aside className="w-64 h-screen bg-white dark:bg-gray-800 shadow-lg flex flex-col justify-between p-6">
+    <aside className="w-64 h-screen bg-blue border border-white dark:bg-gray-800 shadow-lg flex flex-col justify-between p-6">
       <div>
         <div className="flex items-center gap-3 mb-8">
-          <Image src="/icons/admin/logo.svg" alt="logo" height={37} width={37} />
+          <Image src="/icons/admin/logo.png" alt="logo" height={37} width={37} />
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Библиотека</h1>
         </div>
 
@@ -55,7 +56,7 @@ const Sidebar = ({ session }: { session: Session }) => {
                       className={cn("object-contain transition-all", isSelected && "brightness-0 invert")}
                     />
                   </div>
-                  <span className={cn("font-medium", isSelected ? "text-white" : "text-gray-800 dark:text-gray-200")}>
+                  <span className={cn("font-medium", isSelected ? "text-black" : "text-gray-800 dark:text-gray-200")}>
                     {link.text}
                   </span>
                 </div>
@@ -65,12 +66,12 @@ const Sidebar = ({ session }: { session: Session }) => {
         </nav>
 
         {/* Переключатель темы над профилем */}
-        <div className="mt-6">
+        <div className="mt-6 flex justify-center items-center text-5xl">
           <Toggle
             pressed={theme === "dark"}
             onPressedChange={(pressed) => setTheme(pressed ? "dark" : "light")}
           >
-            {theme === "light" ? "Тёмная тема" : "Светлая тема"}
+            {theme === "light" ? "🌙" : "☀️"}
           </Toggle>
         </div>
       </div>

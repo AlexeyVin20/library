@@ -14,7 +14,7 @@ export const signInSchema = z.object({
 
 export const bookSchema = z.object({
   title: z.string().min(1, "Название книги обязательно").max(255, "Название книги не должно превышать 255 символов"),
-  authors: z.array(z.string()),
+  authors: z.string(),
   genre: z.string().nullable().optional(),
   categorization: z.string().nullable().optional(),
   isbn: z.string().min(1, "ISBN обязателен").max(20, "ISBN не должен превышать 20 символов"),

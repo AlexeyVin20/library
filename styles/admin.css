@@ -25,7 +25,7 @@
     --color-neutral: #6b7280; /* neutral */
     
     /* Настройки интерфейса */
-    --border-radius: 0.75rem; /* playful */
+    --border-radius: 0.2rem; /* playful */
     --transition-speed: 300ms;
 }
 
@@ -340,6 +340,7 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+  
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
