@@ -29,16 +29,6 @@ export const adminSideBarLinks = [
     text: "Все книги",
   },
   {
-    img: "/icons/admin/bookmark.svg",
-    route: "/admin/book-requests",
-    text: "Запросы на выдачу",
-  },
-  {
-    img: "/icons/admin/user.svg",
-    route: "/admin/account-requests",
-    text: "Запросы пользователей",
-  },
-  {
     img: "/icons/admin/shelf.png",
     route: "/admin/shelfs",
     text: "Полки",

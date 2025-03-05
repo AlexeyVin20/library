@@ -272,7 +272,7 @@ const EditorPage: React.FC = () => {
         Math.pow(shelf.posY - boundedY, 2)
       );
       
-      return distance < 150; // Минимальное расстояние между полками
+      return distance < 75; // Минимальное расстояние между полками
     });
     
     if (isOverlapping) {
