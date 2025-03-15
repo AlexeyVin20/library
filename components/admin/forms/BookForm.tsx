@@ -234,37 +234,45 @@ const BookForm = ({
     if (!geminiImage) return;
     setGeminiLoading(true);
     try {
-      const endpoint =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-      const apiKey = "AIzaSyBzu9lZmJCvo5wD0_vcwUPPcdVap5m5Iv0";
-      const requestBody = {
-        contents: [
-          {
-            parts: [
-              {
-                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число). Если информации нет, оставь null, цену ставь = 0",
-              },
-              {
-                inlineData: {
-                  mimeType: "image/jpeg",
-                  data: geminiImage,
-                },
-              },
-            ],
-          },
-        ],
-      };
+      const endpoint = "https://openrouter.ai/api/v1/chat/completions";
+const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+const requestBody = {
+  model: "google/gemini-2.0-flash-001",
+  messages: [
+    {
+      role: "user", 
+      content: [
+        {
+          type: "text",
+          text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число). Если информации нет, оставь null, цену ставь = 0"
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:image/jpeg;base64,${geminiImage}`
+          }
+        }
+      ]
+    }
+  ],
+  max_tokens: 8096
+};
 
-      const res = await fetch(`${endpoint}?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
+
+const res = await fetch(endpoint, {
+  method: "POST",
+  headers: { 
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`,
+    "HTTP-Referer": window.location.origin
+  },
+  body: JSON.stringify(requestBody),
+});
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       const data = await res.json();
-      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const responseText = data?.choices?.[0]?.message?.content;
       if (responseText) {
         let jsonString = responseText.trim();
         if (jsonString.startsWith("```json")) {
