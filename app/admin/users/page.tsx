@@ -1,94 +1,116 @@
 "use client";
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
 interface User {
-  id: number;
-  name: string;
+  id: string; // Guid из API
+  fullName: string;
   email: string;
-  booksOnHand: number;
-  nextReturnDate: string;
-  nextReturnBook: string;
+  borrowedBooksCount: number;
+  isActive: boolean;
 }
 
-// Пример данных (замените на реальные данные)
-const users: User[] = [
-  {
-    id: 1,
-    name: "Иван Иванов",
-    email: "ivan@example.com",
-    booksOnHand: 3,
-    nextReturnDate: "2025-03-10",
-    nextReturnBook: "Война и мир",
-  },
-  {
-    id: 2,
-    name: "Петр Петров",
-    email: "petr@example.com",
-    booksOnHand: 2,
-    nextReturnDate: "2025-03-15",
-    nextReturnBook: "Преступление и наказание",
-  },
-  {
-    id: 3,
-    name: "Мария Смирнова",
-    email: "maria@example.com",
-    booksOnHand: 1,
-    nextReturnDate: "2025-03-20",
-    nextReturnBook: "Мастер и Маргарита",
-  },
-  {
-    id: 4,
-    name: "Алексей Соколов",
-    email: "aleksey@example.com",
-    booksOnHand: 4,
-    nextReturnDate: "2025-03-18",
-    nextReturnBook: "Анна Каренина",
-  },
-  // можно добавить ещё пользователей
-];
+interface Reservation {
+  id: string;
+  userId: string;
+  bookId: string;
+  reservationDate: string;
+  expirationDate: string;
+  status: string;
+  book?: { title: string; }
+}
 
 export default function AllUsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+        
+        // Параллельно загружаем пользователей и резервации
+        const [usersResponse, reservationsResponse] = await Promise.all([
+          fetch(`${baseUrl}/api/User`),
+          fetch(`${baseUrl}/api/Reservation`)
+        ]);
+
+        if (!usersResponse.ok) throw new Error(`Ошибка загрузки пользователей: ${usersResponse.status}`);
+        if (!reservationsResponse.ok) throw new Error(`Ошибка загрузки резерваций: ${reservationsResponse.status}`);
+
+        const usersData = await usersResponse.json();
+        const reservationsData = await reservationsResponse.json();
+        
+        setUsers(usersData);
+        setReservations(reservationsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Произошла ошибка при загрузке данных');
+        console.error('Ошибка загрузки данных:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+  
+  // Для каждого пользователя находим ближайшую дату возврата книги
+  const usersWithNextReturn = users.map(user => {
+    // Находим резервации данного пользователя со статусом Approved
+    const userReservations = reservations.filter(
+      r => r.userId === user.id && r.status === "Approved"
+    );
+    
+    // Сортируем по дате и берем ближайшую
+    const nextReservation = userReservations.length > 0 
+      ? userReservations.sort((a, b) => 
+          new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime()
+        )[0]
+      : null;
+      
+    return {
+      ...user,
+      nextReturnDate: nextReservation?.expirationDate 
+        ? new Date(nextReservation.expirationDate).toLocaleDateString() 
+        : 'Нет',
+      nextReturnBook: nextReservation?.book?.title || 'Нет'
+    };
+  });
+
+  if (loading) return <div className="text-center p-8">Загрузка...</div>;
+  if (error) return <div className="text-center p-8 text-red-500">Ошибка: {error}</div>;
+
   return (
-    <div className="p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">Пользователи</h1>
-        <p className="text-sm text-gray-500">
-          Список пользователей с информацией о взятых книгах
-        </p>
-      </header>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {users.map((user) => (
-          <Link
-            key={user.id}
-            href={`/admin/users/${user.id}`}
-            className="block bg-white shadow rounded p-4 hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-center mb-4">
-              <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center text-lg font-bold text-gray-700">
-                {user.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </div>
-              <div className="ml-4">
-                <h2 className="text-xl font-semibold">{user.name}</h2>
-                <p className="text-sm text-gray-500">{user.email}</p>
-              </div>
-            </div>
-            <div className="text-sm">
-              <p>
-                <span className="font-medium">Книг на руках:</span> {user.booksOnHand}
-              </p>
-              <p>
-                <span className="font-medium">Ближайший возврат:</span> {user.nextReturnDate}
-              </p>
-              <p>
-                <span className="font-medium">Книга:</span> {user.nextReturnBook}
-              </p>
-            </div>
-          </Link>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Все пользователи</h1>
+        <Link href="/admin/users/create">
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
+            Добавить пользователя
+          </button>
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {usersWithNextReturn.map(user => (
+          <div key={user.id} className="bg-white shadow-md rounded-lg p-6">
+            <h2 className="text-xl font-bold mb-2">
+              <Link href={`/admin/users/${user.id}`}>
+                {user.fullName}
+              </Link>
+            </h2>
+            <p className="text-gray-600 mb-2">{user.email}</p>
+            <p className="mb-1">Книг на руках: {user.borrowedBooksCount}</p>
+            <p className="mb-1">Ближайший возврат: {user.nextReturnDate}</p>
+            <p className="mb-1">Книга: {user.nextReturnBook}</p>
+            <p className="mt-2">
+              <span className={`px-2 py-1 rounded text-xs ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {user.isActive ? 'Активен' : 'Заблокирован'}
+              </span>
+            </p>
+          </div>
         ))}
       </div>
     </div>

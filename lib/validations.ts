@@ -14,17 +14,29 @@ export const signInSchema = z.object({
 
 export const bookSchema = z.object({
   title: z.string().min(1, "Название книги обязательно").max(255, "Название книги не должно превышать 255 символов"),
-  authors: z.string(),
+  authors: z.string().min(1, "Укажите хотя бы одного автора"),
   genre: z.string().nullable().optional(),
   categorization: z.string().nullable().optional(),
+  udk: z.string().nullable().optional(),
+  bbk: z.string().nullable().optional(),
   isbn: z.string().min(1, "ISBN обязателен").max(20, "ISBN не должен превышать 20 символов"),
   cover: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   summary: z.string().nullable().optional(),
-  publicationYear: z.number().int().nullable().optional(),
+  publicationYear: z.number().int().min(1000).max(new Date().getFullYear()).nullable().optional(),
   publisher: z.string().nullable().optional(),
-  pageCount: z.number().int().nullable().optional(),
+  pageCount: z.number().int().min(0).nullable().optional(),
   language: z.string().nullable().optional(),
-  availableCopies: z.number().int().min(0, "Количество экземпляров не может быть отрицательным").default(0),
+  availableCopies: z.number().int().min(0, "Количество экземпляров не может быть отрицательным").default(1),
+  shelfId: z.number().int().nullable().optional(),
+  edition: z.string().nullable().optional(),
+  price: z.number().min(0).nullable().optional(),
+  format: z.string().nullable().optional(),
+  originalTitle: z.string().nullable().optional(),
+  originalLanguage: z.string().nullable().optional(),
+  isEbook: z.boolean().default(false),
+  condition: z.string().nullable().optional()
 });
+
+export type BookFormData = z.infer<typeof bookSchema>;
 

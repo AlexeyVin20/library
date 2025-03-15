@@ -4,21 +4,35 @@ import { useEffect, useState, use } from "react";
 import { notFound } from "next/navigation";
 import BookDetails from "@/components/admin/BookDetails";
 
+// Theme classes aligned with DashboardPage's "cosmic" theme
 interface Book {
   id: string;
   title: string;
   authors: string;
+  isbn: string;
   genre?: string | null;
   categorization?: string | null;
-  isbn: string;
   cover?: string | null;
   description?: string | null;
-  summary?: string | null;
   publicationYear?: number | null;
   publisher?: string | null;
   pageCount?: number | null;
   language?: string | null;
   availableCopies: number;
+  shelfId?: number;
+  edition?: string | null;
+  price?: number | null;
+  format?: string | null;
+  originalTitle?: string | null;
+  originalLanguage?: string | null;
+  isEbook?: boolean;
+  condition?: string | null;
+  rating?: number;
+  readCount?: number;
+  series?: string | null;
+  seriesOrder?: number;
+  dateRead?: string | null;
+  purchaseLink?: string | null;
   dateAdded?: string;
   dateModified?: string;
 }
@@ -32,7 +46,6 @@ export default function BookDetailPage({
   const [error, setError] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Распарсим params (Next.js 13 для серверных роутов)
   const resolvedParams = use(params);
 
   useEffect(() => {
@@ -51,7 +64,6 @@ export default function BookDetailPage({
         }
 
         const bookData = await res.json();
-        // Если поле authors отсутствует или не строка – устанавливаем пустую строку
         if (!bookData.authors || typeof bookData.authors !== "string") {
           bookData.authors = "";
         }
@@ -68,8 +80,8 @@ export default function BookDetailPage({
   }, [resolvedParams.bookId]);
 
   if (error) return notFound();
-  if (loading) return <div>Загрузка...</div>;
-  if (!book) return <div>Книга не найдена</div>;
+  if (loading) return <div className="text-center text-neutral-500 dark:text-neutral-400">Загрузка...</div>;
+  if (!book) return <div className="text-center text-neutral-500 dark:text-neutral-400">Книга не найдена</div>;
 
   return <BookDetails book={book} />;
 }

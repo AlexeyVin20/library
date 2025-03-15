@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import CatalogMenu from "./CatalogMenu";
 
 const TopNavigation = ({ session }: { session: Session }) => {
   const pathname = usePathname();
@@ -77,6 +78,21 @@ const TopNavigation = ({ session }: { session: Session }) => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             {adminSideBarLinks.map((link, index) => {
+              // Пропускаем ссылку на книги, так как будем использовать CatalogMenu вместо неё
+              if (link.route === "/admin/books") {
+                return (
+                  <motion.div
+                    key={link.route}
+                    custom={index}
+                    initial="hidden"
+                    animate="visible"
+                    variants={navItemVariants}
+                  >
+                    <CatalogMenu />
+                  </motion.div>
+                );
+              }
+
               const isSelected =
                 (link.route !== "/admin" &&
                   pathname.includes(link.route) &&

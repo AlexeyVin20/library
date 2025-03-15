@@ -12,8 +12,32 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { CreditCard, Box, BookOpen } from "lucide-react";
-import BookCover from "@/components/BookCover";
 import "@/styles/admin.css";
+
+// Интерфейс для модели журнала
+interface Journal {
+  id: number;
+  title: string;
+  issn: string;
+  registrationNumber?: string | null;
+  format: "Print" | "Electronic" | "Mixed";
+  periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
+  pagesPerIssue: number;
+  description?: string | null;
+  publisher?: string | null;
+  foundationDate: string;
+  circulation: number;
+  isOpenAccess: boolean;
+  category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
+  targetAudience?: string | null;
+  isPeerReviewed: boolean;
+  isIndexedInRINTS: boolean;
+  isIndexedInScopus: boolean;
+  isIndexedInWebOfScience: boolean;
+  publicationDate: string;
+  pageCount: number;
+  coverImageUrl?: string | null;
+}
 
 /**
  * Theme classes aligned with DashboardPage's "cosmic" theme
@@ -31,9 +55,9 @@ const getThemeClasses = () => {
 };
 
 /**
- * BookImage component with DashboardPage-style hover effects
+ * JournalImage component with DashboardPage-style hover effects
  */
-const BookImage = ({ src, alt, bookId }) => {
+const JournalImage = ({ src, alt, journalId }) => {
   const [error, setError] = useState(false);
   const themeClasses = getThemeClasses();
 
@@ -59,8 +83,8 @@ const BookImage = ({ src, alt, bookId }) => {
     </div>
   );
 
-  return bookId ? (
-    <Link href={`/admin/books/${bookId}`}>{imageElement}</Link>
+  return journalId ? (
+    <Link href={`/admin/journals/${journalId}`}>{imageElement}</Link>
   ) : (
     imageElement
   );
@@ -69,26 +93,29 @@ const BookImage = ({ src, alt, bookId }) => {
 /**
  * CardsView with DashboardPage-style cards
  */
-const CardsView = ({ books, onDelete, themeClasses }) => {
+const CardsView = ({ journals, onDelete, themeClasses }) => {
   return (
     <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-      {books.map((book) => (
-        <li key={book.id} className={`${themeClasses.card} flex overflow-hidden`}>
+      {journals.map((journal) => (
+        <li key={journal.id} className={`${themeClasses.card} flex overflow-hidden`}>
           <div className="w-1/3 p-4">
-            <BookImage src={book.cover} alt={book.title} bookId={book.id} />
+            <JournalImage src={journal.coverImageUrl} alt={journal.title} journalId={journal.id} />
           </div>
           <div className="flex-1 p-4 flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-bold text-neutral-500 dark:text-neutral-100">{book.title}</h3>
-              <p className="text-sm text-neutral-400 dark:text-neutral-300">{book.authors}</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">{book.genre || ""}</p>
+              <h3 className="text-lg font-bold text-neutral-500 dark:text-neutral-100">{journal.title}</h3>
+              <p className="text-sm text-neutral-400 dark:text-neutral-300">ISSN: {journal.issn}</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">{journal.publisher || ""}</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                {journal.category && `${journal.category}`}
+              </p>
             </div>
             <div className="flex justify-end gap-2 mt-2">
-              <Link href={`/admin/books/${book.id}/update`}>
+              <Link href={`/admin/journals/${journal.id}/update`}>
                 <button className={themeClasses.button}>Редактировать</button>
               </Link>
               <button
-                onClick={() => onDelete(book.id)}
+                onClick={() => onDelete(journal.id)}
                 className="bg-red-500/90 hover:bg-red-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2"
               >
                 Удалить
@@ -102,40 +129,49 @@ const CardsView = ({ books, onDelete, themeClasses }) => {
 };
 
 /**
- * ThreeDBookView with DashboardPage-style 3D effects
+ * ThreeDJournalView with DashboardPage-style 3D effects
  */
-const ThreeDBookView = ({ books, onDelete, themeClasses }) => {
+const ThreeDJournalView = ({ journals, onDelete, themeClasses }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-6">
-      {books.map((book) => (
-        <div key={book.id} className="group text-neutral-900 dark:text-neutral-100">
+      {journals.map((journal) => (
+        <div key={journal.id} className="group text-neutral-900 dark:text-neutral-100">
           <div className="relative w-full h-96 overflow-visible" style={{ perspective: "1000px" }}>
             <div className="absolute inset-0 transform-gpu transition-all duration-500 group-hover:rotate-y-0 rotate-y-[15deg] preserve-3d group-hover:scale-105">
-              <Link href={`/admin/books/${book.id}`}>
-                <BookCover
-                  coverColor="rgba(47, 47, 47, 0.5)"
-                  coverImage={book.cover}
-                  variant="medium"
-                  className={`${themeClasses.card} w-full h-full`}
-                />
+              <Link href={`/admin/journals/${journal.id}`}>
+                <div className={`${themeClasses.card} w-full h-full overflow-hidden`}>
+                  {journal.coverImageUrl ? (
+                    <Image
+                      src={journal.coverImageUrl}
+                      alt={journal.title}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                      <BookOpen className="w-12 h-12 text-gray-400" />
+                    </div>
+                  )}
+                </div>
               </Link>
             </div>
           </div>
           <div className={`${themeClasses.card} mt-2 text-center p-3`}>
             <p className="font-semibold line-clamp-1">
-            <span className="font-normal text-neutral-500 dark:text-neutral-300"> {book.title}{" "} </span>
-              <span className="font-normal text-neutral-400 dark:text-neutral-300">— {book.authors}</span>
+              <span className="font-normal text-neutral-500 dark:text-neutral-300">{journal.title}</span>
             </p>
-            {book.genre && (
-              <p className="text-sm text-neutral-400 dark:text-neutral-400">{book.genre}</p>
+            <p className="text-sm text-neutral-400 dark:text-neutral-300">ISSN: {journal.issn}</p>
+            {journal.publisher && (
+              <p className="text-sm text-neutral-400 dark:text-neutral-400">{journal.publisher}</p>
             )}
           </div>
           <div className="mt-2 flex justify-center gap-2">
-            <Link href={`/admin/books/${book.id}/update`}>
+            <Link href={`/admin/journals/${journal.id}/update`}>
               <button className={themeClasses.button}>Редактировать</button>
             </Link>
             <button
-              onClick={() => onDelete(book.id)}
+              onClick={() => onDelete(journal.id)}
               className="bg-red-500/90 hover:bg-red-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2"
             >
               Удалить
@@ -179,67 +215,67 @@ const ViewModeMenu = ({ viewMode, setViewMode, themeClasses }) => {
 };
 
 /**
- * Main BooksPage component
+ * Main JournalsPage component
  */
-export default function BooksPage() {
-  const [books, setBooks] = useState([]);
+export default function JournalsPage() {
+  const [journals, setJournals] = useState<Journal[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
   const [viewMode, setViewMode] = useState("cards");
   const themeClasses = getThemeClasses();
 
   useEffect(() => {
-    const fetchBooks = async () => {
+    const fetchJournals = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
         if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-        const res = await fetch(`${baseUrl}/api/Books`);
+        const res = await fetch(`${baseUrl}/api/journals`);
         if (res.ok) {
           const data = await res.json();
-          setBooks(data);
+          setJournals(data);
         } else {
-          console.error("Ошибка получения книг");
+          console.error("Ошибка получения журналов");
         }
       } catch (error) {
-        console.error("Ошибка получения книг", error);
+        console.error("Ошибка получения журналов", error);
       }
     };
 
-    fetchBooks();
+    fetchJournals();
   }, []);
 
-  const filteredBooks = books.filter((book) =>
-    book.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredJournals = journals.filter((journal) =>
+    journal.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const sortedBooks = filteredBooks.sort((a, b) =>
+  const sortedJournals = filteredJournals.sort((a, b) =>
     sortOrder === "asc"
       ? a.title.localeCompare(b.title)
       : b.title.localeCompare(a.title)
   );
 
-  const handleDelete = async (id) => {
-    if (!confirm("Вы уверены, что хотите удалить эту книгу?")) return;
+  const handleDelete = async (id: number) => {
+    if (!confirm("Вы уверены, что хотите удалить этот журнал?")) return;
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      const res = await fetch(`${baseUrl}/api/Books/${id}`, { method: "DELETE" });
+      const res = await fetch(`${baseUrl}/api/journals/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast({
-          title: "Книга удалена",
-          description: "Книга успешно удалена",
+          title: "Журнал удален",
+          description: "Журнал успешно удален",
         });
-        setBooks((prev) => prev.filter((book) => book.id !== id));
+        setJournals((prev) => prev.filter((journal) => journal.id !== id));
       } else {
         toast({
           title: "Ошибка",
-          description: "Не удалось удалить книгу",
+          description: "Не удалось удалить журнал",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Ошибка при удалении книги:", error);
+      console.error("Ошибка при удалении журнала:", error);
       toast({
         title: "Ошибка",
-        description: "Ошибка при удалении книги",
+        description: "Ошибка при удалении журнала",
         variant: "destructive",
       });
     }
@@ -249,8 +285,8 @@ export default function BooksPage() {
     <div className={`min-h-screen flex flex-col ${themeClasses.mainContainer} p-6`}>
       <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/30 dark:bg-neutral-100/30 border-b border-white/20 dark:border-neutral-700/20 p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between shadow-sm mb-6">
         <div className="flex flex-wrap gap-4 items-center">
-          <Link href="/admin/books/create">
-            <button className={themeClasses.button}>Добавить книгу</button>
+          <Link href="/admin/journals/create">
+            <button className={themeClasses.button}>Добавить журнал</button>
           </Link>
           <button
             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
@@ -270,20 +306,20 @@ export default function BooksPage() {
       </header>
 
       <main className="flex-1 space-y-8">
-        {sortedBooks.length === 0 ? (
+        {sortedJournals.length === 0 ? (
           <div className={`${themeClasses.card} py-20 text-center`}>
-            <p className="text-xl text-neutral-900 dark:text-neutral-100">Книги не найдены</p>
+            <p className="text-xl text-neutral-900 dark:text-neutral-100">Журналы не найдены</p>
             <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-              Попробуйте изменить параметры поиска или добавьте новую книгу
+              Попробуйте изменить параметры поиска или добавьте новый журнал
             </p>
           </div>
         ) : (
           <div className={themeClasses.card}>
             {viewMode === "cards" && (
-              <CardsView books={sortedBooks} onDelete={handleDelete} themeClasses={themeClasses} />
+              <CardsView journals={sortedJournals} onDelete={handleDelete} themeClasses={themeClasses} />
             )}
             {viewMode === "3d" && (
-              <ThreeDBookView books={sortedBooks} onDelete={handleDelete} themeClasses={themeClasses} />
+              <ThreeDJournalView journals={sortedJournals} onDelete={handleDelete} themeClasses={themeClasses} />
             )}
           </div>
         )}
