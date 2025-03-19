@@ -5,6 +5,8 @@ import { Plus, Lock, Unlock, X, Search } from 'lucide-react';
 import { Book, Shelf, Journal } from '@/lib/types';
 import Link from 'next/link';
 import Modal from '@/components/Modal';
+import ShelfItemContextMenu from '@/components/admin/ShelfItemContextMenu';
+import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface Position {
   x: number;
@@ -34,6 +36,8 @@ export default function ShelfsPage() {
   const [filteredJournals, setFilteredJournals] = useState<Journal[]>([]);
   const [isJournalTab, setIsJournalTab] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuData, setContextMenuData] = useState<{ item: Book | Journal | null; isJournal: boolean; position: { x: number; y: number }; shelfId: number; itemPosition: number } | null>(null);
 
   const [newShelf, setNewShelf] = useState({
     category: '',
@@ -51,20 +55,21 @@ export default function ShelfsPage() {
 
   const getThemeClasses = () => {
     return {
-      card: "bg-white/85 dark:bg-primary-500/20 backdrop-blur-sm border border-primary-400/40 dark:border-primary-500/40 rounded-xl shadow-lg shadow-primary-200/30 dark:shadow-primary-800/20 transform hover:-translate-y-1 transition-all duration-300",
-      shelfCard: "bg-white/85 dark:bg-blue-500/20 backdrop-blur-sm border border-blue-400/40 dark:border-blue-500/40 rounded-xl shadow-lg shadow-blue-200/30 dark:shadow-blue-800/20 transform hover:-translate-y-1 transition-all duration-300",
-      statsCard: "bg-white/85 dark:bg-primary-500/20 backdrop-blur-sm border border-primary-400/40 dark:border-primary-500/40 rounded-xl p-5 shadow-lg shadow-primary-200/30 dark:shadow-primary-800/20",
-      mainContainer: "bg-gradient-to-r from-brand-200/30 via-blue-200/30 to-primary-200/30 dark:from-brand-900/30 dark:via-blue-900/30 dark:to-primary-900/30",
-      button: "bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2",
-      iconButton: "flex items-center justify-center p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-all",
-      input: "max-w-xs bg-white/40 dark:bg-neutral-700/40 backdrop-blur-sm border border-primary-300/40 dark:border-primary-600/40 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 rounded-lg px-4 py-2",
+      card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
+      shelfCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300",
+      statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between",
+      mainContainer: "bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6",
+      button: "bg-gradient-to-r from-primary-admin/90 to-primary-admin/70 dark:from-primary-admin/80 dark:to-primary-admin/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
+      iconButton: "flex items-center justify-center p-2 rounded-lg bg-gradient-to-r from-gray-200/90 to-gray-300/70 dark:from-gray-700/80 dark:to-gray-800/60 backdrop-blur-xl text-gray-700 dark:text-gray-200 shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300",
+      input: "max-w-xs bg-white/40 dark:bg-neutral-700/40 backdrop-blur-sm border border-white/30 dark:border-neutral-700/30 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 rounded-lg px-4 py-2",
       menu: "backdrop-blur-xl bg-white/80 dark:bg-neutral-800/80 p-3 rounded-lg border border-white/20 dark:border-neutral-700/20 shadow-lg",
       menuItem: "block p-2 rounded-md hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors",
-      editorArea: "bg-white/70 dark:bg-neutral-900/70 backdrop-blur-sm border border-primary-300/40 dark:border-primary-600/40 rounded-xl shadow-lg overflow-hidden min-h-[500px] relative",
+      editorArea: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden min-h-[500px] relative",
       bookOnShelf: "w-6 h-8 rounded transition-all cursor-pointer",
-      searchDropdown: "absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 rounded-md shadow-lg max-h-60 overflow-auto",
-      searchItem: "px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer",
+      searchDropdown: "absolute z-50 mt-1 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-md shadow-lg max-h-60 overflow-auto",
+      searchItem: "px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 cursor-pointer",
       highlightedBook: "animate-pulse border-2 border-yellow-400 shadow-lg shadow-yellow-300/50",
+      sectionTitle: "text-2xl font-bold mb-4 text-neutral-500 dark:text-white border-b pb-2 border-white/30 dark:border-neutral-700/30",
     };
   };
   
@@ -200,7 +205,7 @@ export default function ShelfsPage() {
     }
   };
 
-  const animateHighlightedBook = (bookId) => {
+  const animateHighlightedBook = (bookId: string) => {
     handleBookFound(bookId);
     setShowSearchDropdown(false);
     
@@ -516,358 +521,424 @@ export default function ShelfsPage() {
 
   const themeClasses = getThemeClasses();
 
-  const ShelfContent = ({ shelf }) => {
+  const ShelfContent = ({ shelf }: { shelf: Shelf }) => {
     return (
-      <div className="flex flex-wrap gap-1">
-        {Array.from({ length: shelf.capacity }).map((_, i) => {
-          const book = books.find(b => b.shelfId === shelf.id && b.position === i);
-          const journal = journals.find(j => j.shelfId === shelf.id && j.position === i);
-          const item = book || journal;
-          const isHighlighted = book && book.id === highlightedBookId;
-          
-          const getBackground = () => {
-            if (item) {
-              if (isHighlighted) return 'bg-yellow-300 transform scale-110';
-              
-              if (book) {
-                return book.availableCopies > 0 
-                  ? 'bg-green-500 hover:scale-105' 
-                  : 'bg-red-500 hover:scale-105';
-              } else {
-                return 'bg-blue-500 hover:scale-105'; // Журналы
-              }
-            } 
-            return 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600';
-          };
-          
-          return (
-            <div
-              key={i}
-              data-book-id={book?.id || ''}
-              className={`${themeClasses.bookOnShelf} ${getBackground()}`}
-              onMouseEnter={() => item && handleBookHover(book)}
-              onMouseLeave={() => handleBookHover(null)}
-              onClick={() => !item && handleEmptySlotClick(shelf.id, i)}
-            ></div>
-          );
-        })}
-      </div>
+        <div className="flex flex-wrap gap-1">
+            {Array.from({ length: shelf.capacity }).map((_, i) => {
+                const book = books.find(b => b.shelfId === shelf.id && b.position === i);
+                const journal = journals.find(j => j.shelfId === shelf.id && j.position === i);
+                const item = book || journal;
+
+                const getBackground = () => {
+                    if (item) {
+                        if (book) {
+                            return book.availableCopies && book.availableCopies > 0 
+                                ? 'bg-green-500 hover:scale-105' 
+                                : 'bg-red-500 hover:scale-105';
+                        } else {
+                            return 'bg-blue-500 hover:scale-105'; // Журналы
+                        }
+                    } 
+                    return 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600';
+                };
+
+                const handleContextMenu = (e: React.MouseEvent) => {
+                    e.preventDefault();
+                    if (item) {
+                        // Открываем контекстное меню с передачей данных
+                        setContextMenuData({ 
+                            item, 
+                            isJournal: !!journal, 
+                            position: { x: e.pageX, y: e.pageY },
+                            shelfId: shelf.id,
+                            itemPosition: i
+                        });
+                        setShowContextMenu(true);
+                    }
+                };
+
+                return (
+                    <div
+                        key={i}
+                        data-book-id={book?.id || ''}
+                        className={`${themeClasses.bookOnShelf} ${getBackground()}`}
+                        onClick={() => {
+                            if (item) {
+                                // Если место занято, открываем контекстное меню
+                                handleContextMenu({ preventDefault: () => {}, pageX: window.innerWidth / 2, pageY: window.innerHeight / 2 } as React.MouseEvent);
+                            } else {
+                                // Если место пустое, открываем селектор для добавления
+                                handleEmptySlotClick(shelf.id, i);
+                            }
+                        }}
+                        onContextMenu={handleContextMenu}
+                    ></div>
+                );
+            })}
+        </div>
     );
   };
-  
+
+  // Обработчик для закрытия меню
+  const handleCloseMenu = () => {
+    setShowContextMenu(false);
+    setContextMenuData(null);
+  };
+
+  // Обработчик для удаления элемента
+  const handleRemoveItem = () => {
+    if (contextMenuData) {
+      const { shelfId, itemPosition, isJournal } = contextMenuData;
+      removeItemFromShelf(shelfId, itemPosition, isJournal);
+    }
+  };
+
+  const removeItemFromShelf = async (shelfId: number, position: number, isJournal: boolean) => {
+    if (!contextMenuData) return;
+    
+    try {
+      setLoading(true);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+      
+      const itemId = contextMenuData.item?.id;
+      const endpoint = isJournal ? 'journals' : 'books';
+      
+      const response = await fetch(`${baseUrl}/api/${endpoint}/${itemId}/position`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shelfId,
+          position
+        }),
+      });
+      
+      if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
+      
+      // Обновляем данные
+      if (isJournal) {
+        await fetchJournals();
+      } else {
+        await fetchBooks();
+      }
+      
+      setShowContextMenu(false);
+      setContextMenuData(null);
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка при удалении с полки');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Добавляем обработчик клика для закрытия меню
+  useEffect(() => {
+    const handleClick = () => {
+      if (showContextMenu) {
+        handleCloseMenu();
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+
+    return () => {
+      document.removeEventListener('click', handleClick);
+    };
+  }, [showContextMenu]);
 
   return (
-    <div className={`min-h-screen flex flex-col ${themeClasses.mainContainer} p-6`}>
-      {/* Header */}
-      <header className="mb-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-primary-900 dark:text-primary-100">Управление полками библиотеки</h1>
-          <div className="flex space-x-2">
-            <button
-              onClick={toggleEditMode}
-              className={`${themeClasses.iconButton} ${isEditMode ? 'bg-yellow-200 dark:bg-yellow-700' : ''}`}
-              title={isEditMode ? "Заблокировать перемещение" : "Разблокировать перемещение"}
-            >
-              {isEditMode ? <Lock size={18} /> : <Unlock size={18} />}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 space-y-8">
-        {error && (
-          <div className={`${themeClasses.card} p-4 flex justify-between items-center text-red-700`}>
-            {error}
-            <button onClick={() => setError(null)} className="text-red-700 font-bold">×</button>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 max-w-xl">
-            {!showAddForm ? (
+    <GlassMorphismContainer
+      backgroundPattern={true}
+      isDarkMode={false}
+    >
+      <div className="flex flex-col">
+        {/* Header */}
+        <header className="mb-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-neutral-500 dark:text-white">Управление полками библиотеки</h1>
+            <div className="flex space-x-2">
               <button
-                onClick={() => setShowAddForm(true)}
-                className={`${themeClasses.button} flex items-center`}
+                onClick={toggleEditMode}
+                className={`${themeClasses.iconButton} ${isEditMode ? 'bg-yellow-200/80 dark:bg-yellow-700/80' : ''}`}
+                title={isEditMode ? "Заблокировать перемещение" : "Разблокировать перемещение"}
               >
-                <Plus size={20} className="mr-2" />
-                Добавить полку
+                {isEditMode ? <Lock size={18} /> : <Unlock size={18} />}
               </button>
-            ) : (
-              <form onSubmit={addShelf} className={themeClasses.card}>
-                <div className="flex justify-between items-center p-4 border-b border-primary-300/30 dark:border-primary-700/30">
-                  <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Добавить новую полку</h2>
-                  <button type="button" onClick={() => setShowAddForm(false)} className="text-neutral-500 hover:text-neutral-700">
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="p-4 grid grid-cols-1 gap-4">
-<div>
-  <label className="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-100">Рубрика</label>
-  <input
-    type="text"
-    name="category"
-    placeholder="Рубрика (например, Фантастика)"
-    value={newShelf.category}
-    onChange={handleNewShelfChange}
-    className={`${themeClasses.input} text-gray-900 dark:text-gray-100`}
-    required
-  />
-</div>
+            </div>
+          </div>
+        </header>
 
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Количество мест</label>
-                    <input
-                      type="number"
-                      name="capacity"
-                      placeholder="Количество мест для книг/журналов"
-                      value={newShelf.capacity}
-                      onChange={handleNewShelfChange}
-                      className={themeClasses.input}
-                      min="1"
-                      required
-                    />
+        {/* Main Content */}
+        <main className="flex-1 space-y-8">
+          {error && (
+            <div className={`${themeClasses.card} p-4 flex justify-between items-center text-red-700`}>
+              {error}
+              <button onClick={() => setError(null)} className="text-red-700 font-bold">×</button>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 max-w-xl">
+              {!showAddForm ? (
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className={`${themeClasses.button} flex items-center`}
+                >
+                  <Plus size={20} className="mr-2" />
+                  Добавить полку
+                </button>
+              ) : (
+                <form onSubmit={addShelf} className={themeClasses.card}>
+                  <div className="flex justify-between items-center p-4 border-b border-primary-300/30 dark:border-primary-700/30">
+                    <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Добавить новую полку</h2>
+                    <button type="button" onClick={() => setShowAddForm(false)} className="text-neutral-500 hover:text-neutral-700">
+                      <X size={20} />
+                    </button>
                   </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Номер полки</label>
-                    <input
-                      type="number"
-                      name="shelfNumber"
-                      placeholder="Номер полки"
-                      value={newShelf.shelfNumber}
-                      onChange={handleNewShelfChange}
-                      className={themeClasses.input}
-                      min="1"
-                      required
-                    />
+                  <div className="p-4 grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-100">Рубрика</label>
+                      <input
+                        type="text"
+                        name="category"
+                        placeholder="Рубрика (например, Фантастика)"
+                        value={newShelf.category}
+                        onChange={handleNewShelfChange}
+                        className={`${themeClasses.input} text-gray-900 dark:text-gray-100`}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Количество мест</label>
+                      <input
+                        type="number"
+                        name="capacity"
+                        placeholder="Количество мест для книг/журналов"
+                        value={newShelf.capacity}
+                        onChange={handleNewShelfChange}
+                        className={themeClasses.input}
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Номер полки</label>
+                      <input
+                        type="number"
+                        name="shelfNumber"
+                        placeholder="Номер полки"
+                        value={newShelf.shelfNumber}
+                        onChange={handleNewShelfChange}
+                        className={themeClasses.input}
+                        min="1"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="p-4 border-t border-primary-300/30 dark:border-primary-700/30">
+                    <button type="submit" className={themeClasses.button}>
+                      Добавить полку
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            <div className="flex-1 relative">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Поиск книг по названию или автору..."
+                  className={`${themeClasses.input} w-full pl-10 text-gray-900 dark:text-gray-100`}
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  onFocus={() => searchTerm.length > 1 && setShowSearchDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
+                />
+                <Search className="absolute left-3 top-2.5 text-gray-500" size={18} />
+              </div>
+              
+              {showSearchDropdown && filteredBooks.length > 0 && (
+                <div className={themeClasses.searchDropdown}>
+                  {filteredBooks.map(book => (
+                    <div 
+                      key={book.id}
+                      className={themeClasses.searchItem}
+                      onMouseDown={() => animateHighlightedBook(book.id)}
+                    >
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{book.title}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{book.authors || 'Автор не указан'}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {editingShelf && (
+            <form onSubmit={updateShelf} className={themeClasses.card}>
+              <div className="p-4 border-b border-primary-300/30 dark:border-primary-700/30">
+                <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Редактировать полку #{editingShelf.id}</h2>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Рубрика</label>
+                  <input
+                    type="text"
+                    name="category"
+                    placeholder="Рубрика"
+                    value={editShelfData.category}
+                    onChange={handleEditShelfChange}
+                    className={themeClasses.input}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Количество мест</label>
+                  <input
+                    type="number"
+                    name="capacity"
+                    placeholder="Кол-во мест"
+                    value={editShelfData.capacity}
+                    onChange={handleEditShelfChange}
+                    className={themeClasses.input}
+                    min="1"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Номер полки</label>
+                  <input
+                    type="number"
+                    name="shelfNumber"
+                    placeholder="Номер полки"
+                    value={editShelfData.shelfNumber}
+                    onChange={handleEditShelfChange}
+                    className={themeClasses.input}
+                    min="1"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="p-4 border-t border-primary-300/30 dark:border-primary-700/30 flex space-x-4">
+                <button type="submit" className={themeClasses.button}>
+                  Сохранить изменения
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingShelf(null); }}
+                  className="bg-neutral-500/90 hover:bg-neutral-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2"
+                >
+                  Отмена
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div
+            id="shelf-editor"
+            ref={editorRef}
+            className={`${themeClasses.editorArea} relative p-4 h-[600px]`}
+            onMouseMove={draggedShelf ? handleDragMove : undefined}
+            onMouseUp={draggedShelf ? handleDragEnd : undefined}
+            onMouseLeave={draggedShelf ? handleDragEnd : undefined}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+              </div>
+            ) : shelves.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-neutral-500 dark:text-neutral-400">
+                Нет полок для отображения. Добавьте первую полку.
+              </div>
+            ) : (
+              shelves.map((shelf) => (
+                <div
+                  key={shelf.id}
+                  id={`shelf-${shelf.id}`}
+                  className={`${themeClasses.shelfCard} absolute p-3 ${isEditMode ? 'cursor-move' : ''}`}
+                  style={{
+                    left: shelf.posX,
+                    top: shelf.posY,
+                    transition: draggedShelf?.id === shelf.id ? 'none' : 'all 0.2s ease',
+                    zIndex: draggedShelf?.id === shelf.id ? 100 : 10,
+                  }}
+                  onMouseDown={isEditMode ? (e) => handleDragStart(e, shelf) : undefined}
+                  onMouseEnter={() => setHoveredShelf(shelf)}
+                  onMouseLeave={() => setTimeout(() => { if (!hoveredBook) setHoveredShelf(null); }, 100)}
+                >
+                  <div className="shelf-container">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-semibold text-blue-900 dark:text-blue-300">{shelf.category}</span>
+                      <span className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs text-blue-800 dark:text-blue-200">
+                        #{shelf.shelfNumber}
+                      </span>
+                    </div>
+                    
+                    <ShelfContent shelf={shelf} />
+                    
+                    <div className="mt-2 flex space-x-2">
+                      <button
+                        onClick={() => startEditShelf(shelf)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs"
+                      >
+                        Изменить
+                      </button>
+                      <button
+                        onClick={() => { if (confirm('Вы уверены, что хотите удалить эту полку?')) deleteShelf(shelf.id); }}
+                        className="bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs"
+                      >
+                        Удалить
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="p-4 border-t border-primary-300/30 dark:border-primary-700/30">
-                  <button type="submit" className={themeClasses.button}>
-                    Добавить полку
-                  </button>
-                </div>
-              </form>
+              ))
             )}
           </div>
 
-          <div className="flex-1 relative">
-  <div className="relative">
-    <input
-      type="text"
-      placeholder="Поиск книг по названию или автору..."
-      className={`${themeClasses.input} w-full pl-10 text-gray-900 dark:text-gray-100`}
-      value={searchTerm}
-      onChange={handleSearch}
-      onFocus={() => searchTerm.length > 1 && setShowSearchDropdown(true)}
-      onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
-    />
-    <Search className="absolute left-3 top-2.5 text-gray-500" size={18} />
-  </div>
-  
-  {showSearchDropdown && filteredBooks.length > 0 && (
-    <div className={themeClasses.searchDropdown}>
-      {filteredBooks.map(book => (
-        <div 
-          key={book.id}
-          className={themeClasses.searchItem}
-          onMouseDown={() => animateHighlightedBook(book.id)}
-        >
-          <div className="font-medium text-gray-900 dark:text-gray-100">{book.title}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">{book.authors || 'Автор не указан'}</div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-        </div>
-
-        {editingShelf && (
-          <form onSubmit={updateShelf} className={themeClasses.card}>
-            <div className="p-4 border-b border-primary-300/30 dark:border-primary-700/30">
-              <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Редактировать полку #{editingShelf.id}</h2>
-            </div>
-            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Рубрика</label>
-                <input
-                  type="text"
-                  name="category"
-                  placeholder="Рубрика"
-                  value={editShelfData.category}
-                  onChange={handleEditShelfChange}
-                  className={themeClasses.input}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Количество мест</label>
-                <input
-                  type="number"
-                  name="capacity"
-                  placeholder="Кол-во мест"
-                  value={editShelfData.capacity}
-                  onChange={handleEditShelfChange}
-                  className={themeClasses.input}
-                  min="1"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Номер полки</label>
-                <input
-                  type="number"
-                  name="shelfNumber"
-                  placeholder="Номер полки"
-                  value={editShelfData.shelfNumber}
-                  onChange={handleEditShelfChange}
-                  className={themeClasses.input}
-                  min="1"
-                  required
-                />
-              </div>
-            </div>
-            <div className="p-4 border-t border-primary-300/30 dark:border-primary-700/30 flex space-x-4">
-              <button type="submit" className={themeClasses.button}>
-                Сохранить изменения
-              </button>
-              <button
-                type="button"
-                onClick={() => { setEditingShelf(null); }}
-                className="bg-neutral-500/90 hover:bg-neutral-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2"
-              >
-                Отмена
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div
-          id="shelf-editor"
-          ref={editorRef}
-          className={`${themeClasses.editorArea} relative p-4 h-[600px]`}
-          onMouseMove={draggedShelf ? handleDragMove : undefined}
-          onMouseUp={draggedShelf ? handleDragEnd : undefined}
-          onMouseLeave={draggedShelf ? handleDragEnd : undefined}
-        >
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-            </div>
-          ) : shelves.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-neutral-500 dark:text-neutral-400">
-              Нет полок для отображения. Добавьте первую полку.
-            </div>
-          ) : (
-            shelves.map((shelf) => (
-              <div
-                key={shelf.id}
-                id={`shelf-${shelf.id}`}
-                className={`${themeClasses.shelfCard} absolute p-3 ${isEditMode ? 'cursor-move' : ''}`}
-                style={{
-                  left: shelf.posX,
-                  top: shelf.posY,
-                  transition: draggedShelf?.id === shelf.id ? 'none' : 'all 0.2s ease',
-                  zIndex: draggedShelf?.id === shelf.id ? 100 : 10,
-                }}
-                onMouseDown={isEditMode ? (e) => handleDragStart(e, shelf) : undefined}
-                onMouseEnter={() => setHoveredShelf(shelf)}
-                onMouseLeave={() => setTimeout(() => { if (!hoveredBook) setHoveredShelf(null); }, 100)}
-              >
-                <div className="shelf-container">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-blue-900 dark:text-blue-300">{shelf.category}</span>
-                    <span className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs text-blue-800 dark:text-blue-200">
-                      #{shelf.shelfNumber}
-                    </span>
-                  </div>
-                  
-                  <ShelfContent shelf={shelf} />
-                  
-                  <div className="mt-2 flex space-x-2">
-                    <button
-                      onClick={() => startEditShelf(shelf)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs"
-                    >
-                      Изменить
-                    </button>
-                    <button
-                      onClick={() => { if (confirm('Вы уверены, что хотите удалить эту полку?')) deleteShelf(shelf.id); }}
-                      className="bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs"
-                    >
-                      Удалить
-                    </button>
-                  </div>
+          <div className={themeClasses.card}>
+            <div className="p-4">
+              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Обозначения:</h3>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-green-500 mr-2 rounded"></div>
+                  <span className="text-neutral-700 dark:text-neutral-300">Книга доступна</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-red-500 mr-2 rounded"></div>
+                  <span className="text-neutral-700 dark:text-neutral-300">Книга недоступна</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-blue-500 mr-2 rounded"></div>
+                  <span className="text-neutral-700 dark:text-neutral-300">Журнал</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 mr-2 rounded"></div>
+                  <span className="text-neutral-700 dark:text-neutral-300">Пустое место (кликните, чтобы добавить)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-yellow-300 mr-2 rounded"></div>
+                  <span className="text-neutral-700 dark:text-neutral-300">Найденная книга</span>
                 </div>
               </div>
-            ))
-          )}
-          
-          {hoveredBook && (
-            <div
-              className={`${themeClasses.card} absolute p-3 z-30`}
-              style={{ left: hoveredShelf ? hoveredShelf.posX + 220 : 0, top: hoveredShelf ? hoveredShelf.posY : 0, minWidth: '250px' }}
-            >
-              <h3 className="font-bold text-neutral-900 dark:text-neutral-100 mb-1">{hoveredBook.title}</h3>
-              <p className="text-neutral-700 dark:text-neutral-300 mb-2">Автор: {hoveredBook.authors || 'Не указан'}</p>
-              <p className={`mb-2 ${hoveredBook.availableCopies === 0 ? 'text-red-600 font-bold' : 'text-green-600'}`}>
-                Доступно: {hoveredBook.availableCopies !== undefined ? hoveredBook.availableCopies : 'Нет данных'}
-              </p>
-              <Link href={`/admin/books/${hoveredBook.id}`} className="text-primary-600 dark:text-primary-400 hover:underline block mt-2">
-                Перейти на страницу книги
-              </Link>
-            </div>
-          )}
-        </div>
-
-        <div className={themeClasses.card}>
-          <div className="p-4">
-            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Обозначения:</h3>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-green-500 mr-2 rounded"></div>
-                <span className="text-neutral-700 dark:text-neutral-300">Книга доступна</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-red-500 mr-2 rounded"></div>
-                <span className="text-neutral-700 dark:text-neutral-300">Книга недоступна</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-blue-500 mr-2 rounded"></div>
-                <span className="text-neutral-700 dark:text-neutral-300">Журнал</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 mr-2 rounded"></div>
-                <span className="text-neutral-700 dark:text-neutral-300">Пустое место (кликните, чтобы добавить)</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-yellow-300 mr-2 rounded"></div>
-                <span className="text-neutral-700 dark:text-neutral-300">Найденная книга</span>
-              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+        <BookSelector />
 
-      {/* Footer */}
-      <footer className="mt-auto p-6 text-center text-sm text-neutral-500 dark:text-neutral-700 border-t border-white/10 dark:border-neutral-700/30">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© 2025 LibraryAdmin. Все права защищены.</p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-primary transition-colors">Помощь</a>
-            <a href="#" className="hover:text-primary transition-colors">Документация</a>
-            <a href="#" className="hover:text-primary transition-colors">Обратная связь</a>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>Версия 2.5.0</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 dark:bg-primary/20 text-primary">
-              Стабильная
-            </span>
-          </div>
-        </div>
-      </footer>
-      
-      <BookSelector />
-    </div>
+        {showContextMenu && contextMenuData && (
+          <ShelfItemContextMenu
+            item={contextMenuData.item}
+            isJournal={contextMenuData.isJournal}
+            position={contextMenuData.position}
+            onClose={handleCloseMenu}
+            onRemove={handleRemoveItem}
+          />
+        )}
+      </div>
+    </GlassMorphismContainer>
   );
 }

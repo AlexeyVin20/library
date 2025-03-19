@@ -1,30 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from "recharts"
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
+import * as React from "react";
+import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 
 interface MyChartStatsProps {
-  totalBooks?: number
-  recentBorrowed?: number
-  totalUsers?: number
-  totalBorrowed?: number
+  totalBooks: number;
+  recentBorrowed: number;
+  totalBorrowed: number;
 }
-
-const chartConfig = {
-    value: {
-      label: "Value",
-      color: "hsl(var(--chart-1))",
-    },
-  }
 
 export default function MyChartStats({
   totalBooks = 0,
@@ -32,51 +17,73 @@ export default function MyChartStats({
   totalBorrowed = 0,
 }: MyChartStatsProps) {
   const chartData = [
-    { label: "Всего книг", value: totalBooks },
-    { label: "Недавно взяли", value: recentBorrowed },
-    { label: "Взято книг", value: totalBorrowed },
-  ]
+    { name: "Доступно", value: totalBooks - totalBorrowed },
+    { name: "Недавно взято", value: recentBorrowed },
+    { name: "Всего взято", value: totalBorrowed - recentBorrowed },
+  ].filter(item => item.value > 0); // Убираем нулевые значения для чистоты графика
 
-  const COLORS = [
-    "var(--color-primary)",
-    "hsl(var(--chart-1))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-3))",
-  ]
+  const COLORS = ["#4F46E5", "#10B981", "#F59E0B"];
 
   return (
-    <Card className="max-w-md">
-      <CardHeader>
-        <CardTitle className="text-sm">Круговая диаграмма</CardTitle>
-        <CardDescription className="text-xs">
-          Статистика по библиотеке
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-2 pt-2 sm:px-4 sm:pt-4">
-        <ChartContainer config={chartConfig} className="h-[200px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                outerRadius={60}
-                innerRadius={30}
-                label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
-                }
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<ChartTooltipContent />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
-  )
+    <Link href="/admin/statistics" className="block cursor-pointer transition-transform hover:scale-[1.01]">
+      <Card className="col-span-1 md:col-span-2 p-6 rounded-xl shadow-lg border-l-4 border-blue-600 hover:shadow-xl transition-shadow">
+        <CardHeader className="pb-2 pt-0">
+          <CardTitle className="text-lg font-medium">Статистика библиотеки</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={100}
+                  outerRadius={130}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  labelLine={{ stroke: "#999", strokeWidth: 1 }}
+                  animationDuration={1000}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                      stroke={COLORS[index % COLORS.length]}
+                      strokeWidth={2}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => [`${value} книг`, ""]}
+                  labelFormatter={() => ""}
+                  contentStyle={{
+                    backgroundColor: "rgb(255, 255, 255)",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                    border: "1px solid #e5e7eb",
+                    padding: "8px 12px",
+                  }}
+                  itemStyle={{ color: "#374151", fontWeight: "500" }}
+                />
+                <Legend
+                  layout="horizontal"
+                  align="center"
+                  verticalAlign="bottom"
+                  iconType="circle"
+                  wrapperStyle={{
+                    paddingTop: "10px",
+                    fontSize: "14px",
+                    color: "#374151",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
 }

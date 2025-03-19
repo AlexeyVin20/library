@@ -21,7 +21,7 @@ export default function Header() {
   });
 
   return (
-    <header className="w-full bg-white dark:bg-gray-800 shadow p-4 flex items-center justify-between">
+    <header className="w-full dark:bg-gray-800 shadow p-4 flex items-center justify-between">
       {/* Левая часть: логотип и хлебные крошки */}
       <div className="flex items-center gap-4">
         <Link href="/">

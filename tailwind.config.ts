@@ -145,6 +145,7 @@ export default {
         surface: "linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.05))", // Полупрозрачные поверхности (translucent)
         'gradient-app': 'linear-gradient(135deg,rgba(171, 241, 255, 0) 0%,rgba(0, 47, 255, 0.39) 100%)',
         'gradient-accent': 'linear-gradient(135deg,rgb(87, 62, 255) 0%,rgb(63, 80, 176) 100%)',
+        'custom-bg': "url('/images/background.jpg')",
       },
       transitionProperty: {
         all: "all 0.3s ease-in-out", // Полностью анимированные переходы

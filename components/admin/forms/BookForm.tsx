@@ -17,21 +17,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { bookSchema } from "@/lib/validations";
 import { BookInput } from "@/lib/admin/actions/book";
-import { AuthorClient } from "@/utils/api";
-// Удалён Script, так как встроенный поиск больше не рендерится
 
-// Theme classes
+// Определение стилей glassmorphism, аналогичных главной странице
 const getThemeClasses = () => {
   return {
-    card: "bg-white/70 dark:bg-neutral-200/70 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform hover:translate-y-[-5px] transition-all duration-300",
-    statsCard: "bg-white/70 dark:bg-neutral-200/70 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 rounded-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform hover:translate-y-[-5px] transition-all duration-300",
-    mainContainer: "bg-gradient-to-r from-brand-800/30 via-neutral-800/30 to-brand-900/30 dark:from-neutral-200 dark:via-brand-200 dark:to-neutral-300",
-    button: "bg-primary-admin/90 hover:bg-primary-admin text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2",
+    card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
+    statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between",
+    mainContainer: "bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6",
+    button: "bg-gradient-to-r from-primary-admin/90 to-primary-admin/70 dark:from-primary-admin/80 dark:to-primary-admin/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
     input: "bg-white/40 dark:bg-neutral-300/40 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-2",
     textarea: "bg-white/40 dark:bg-neutral-300/40 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-2 resize-none",
     tab: "bg-white/20 dark:bg-neutral-200/20 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 rounded-lg",
     tabActive: "bg-primary-admin/90 text-white rounded-lg",
     select: "bg-white/40 dark:bg-neutral-300/40 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg",
+    sectionTitle: "text-2xl font-bold mb-4 text-neutral-500 dark:text-white border-b pb-2 border-white/30 dark:border-neutral-700/30",
+    statusBadge: {
+      completed: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-green-600/90 backdrop-blur-sm",
+      processing: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-yellow-600/90 backdrop-blur-sm",
+      canceled: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-red-600/90 backdrop-blur-sm",
+    },
   };
 };
 
@@ -53,16 +57,12 @@ const BookForm = ({
   const router = useRouter();
   const themeClasses = getThemeClasses();
 
-  // Флаг для отображения поля ручного ввода ссылки (метод 4)
   const [showManualCoverInput, setShowManualCoverInput] = useState(false);
   const [manualCoverUrl, setManualCoverUrl] = useState("");
-
   const [isbn, setIsbn] = useState("");
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic-info");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  // Состояния для Gemini AI
   const [geminiImage, setGeminiImage] = useState<string | null>(null);
   const [geminiLoading, setGeminiLoading] = useState(false);
 
@@ -109,9 +109,7 @@ const BookForm = ({
   }, [initialData]);
 
   useEffect(() => {
-    if (geminiImage) {
-      handleGeminiUpload();
-    }
+    if (geminiImage) handleGeminiUpload();
   }, [geminiImage]);
 
   const handleFetchByISBN = async () => {
@@ -145,7 +143,7 @@ const BookForm = ({
         setValue("isbn", isbn);
         toast({
           title: "Книга не найдена",
-          description: "Проверьте правильность ISBN. Значение поля ISBN установлено из введенного значения.",
+          description: "Проверьте правильность ISBN.",
           variant: "destructive",
         });
       }
@@ -153,7 +151,7 @@ const BookForm = ({
       setValue("isbn", isbn);
       toast({
         title: "Ошибка",
-        description: "Ошибка при поиске по ISBN. Значение поля ISBN установлено из введенного значения.",
+        description: "Ошибка при поиске по ISBN.",
         variant: "destructive",
       });
     } finally {
@@ -235,70 +233,61 @@ const BookForm = ({
     setGeminiLoading(true);
     try {
       const endpoint = "https://openrouter.ai/api/v1/chat/completions";
-const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
-const requestBody = {
-  model: "google/gemini-2.0-flash-001",
-  messages: [
-    {
-      role: "user", 
-      content: [
-        {
-          type: "text",
-          text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число). Если информации нет, оставь null, цену ставь = 0"
+      const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+      const requestBody = {
+        model: "google/gemini-2.0-flash-exp:free",
+        webSearch: true,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число). Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото.",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${geminiImage}`,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 4096,
+      };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": window.location.origin,
         },
-        {
-          type: "image_url",
-          image_url: {
-            url: `data:image/jpeg;base64,${geminiImage}`
-          }
-        }
-      ]
-    }
-  ],
-  max_tokens: 8096
-};
-
-
-const res = await fetch(endpoint, {
-  method: "POST",
-  headers: { 
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${apiKey}`,
-    "HTTP-Referer": window.location.origin
-  },
-  body: JSON.stringify(requestBody),
-});
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
+        body: JSON.stringify(requestBody),
+      });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       const responseText = data?.choices?.[0]?.message?.content;
       if (responseText) {
         let jsonString = responseText.trim();
-        if (jsonString.startsWith("```json")) {
-          jsonString = jsonString.slice(7).trim();
-        }
-        if (jsonString.endsWith("```")) {
-          jsonString = jsonString.slice(0, -3).trim();
-        }
+        if (jsonString.startsWith("```json")) jsonString = jsonString.slice(7).trim();
+        if (jsonString.endsWith("```")) jsonString = jsonString.slice(0, -3).trim();
         const parsedData = JSON.parse(jsonString);
         let coverUrl = null;
-        // Метод 1: Поиск по ISBN
+
         if (parsedData.isbn) {
           try {
             const coverRes = await fetch(`https://bookcover.longitood.com/bookcover/${parsedData.isbn}`);
             if (coverRes.ok) {
               const coverData = await coverRes.json();
-              if (coverData.url) {
-                coverUrl = coverData.url;
-                console.log("Обложка найдена по ISBN через bookcover API");
-              }
+              if (coverData.url) coverUrl = coverData.url;
             }
           } catch (error) {
             console.error("Ошибка при поиске обложки по ISBN:", error);
           }
         }
-        // Метод 2: Поиск по названию и авторам
+
         if (!coverUrl && parsedData.title && parsedData.authors) {
           try {
             const coverRes = await fetch(
@@ -308,48 +297,43 @@ const res = await fetch(endpoint, {
             );
             if (coverRes.ok) {
               const coverData = await coverRes.json();
-              if (coverData.url) {
-                coverUrl = coverData.url;
-                console.log("Обложка найдена по названию и автору через bookcover API");
-              }
+              if (coverData.url) coverUrl = coverData.url;
             }
           } catch (error) {
             console.error("Ошибка при поиске обложки по названию и автору:", error);
           }
         }
-        // Метод 3: Поиск через Google Books API
+
         if (!coverUrl && (parsedData.isbn || (parsedData.title && parsedData.authors))) {
           try {
-            const query = parsedData.isbn 
-              ? `isbn:${parsedData.isbn}` 
+            const query = parsedData.isbn
+              ? `isbn:${parsedData.isbn}`
               : `intitle:${parsedData.title} inauthor:${parsedData.authors}`;
             const googleBooksRes = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`
             );
             if (googleBooksRes.ok) {
               const booksData = await googleBooksRes.json();
-              if (booksData.items && booksData.items.length > 0 && 
-                  booksData.items[0].volumeInfo && 
-                  booksData.items[0].volumeInfo.imageLinks) {
-                coverUrl = booksData.items[0].volumeInfo.imageLinks.large || 
-                           booksData.items[0].volumeInfo.imageLinks.medium || 
-                           booksData.items[0].volumeInfo.imageLinks.thumbnail;
-                console.log("Обложка найдена через Google Books API");
+              if (booksData.items && booksData.items.length > 0 && booksData.items[0].volumeInfo?.imageLinks) {
+                coverUrl =
+                  booksData.items[0].volumeInfo.imageLinks.large ||
+                  booksData.items[0].volumeInfo.imageLinks.medium ||
+                  booksData.items[0].volumeInfo.imageLinks.thumbnail;
               }
             }
           } catch (error) {
             console.error("Ошибка при поиске обложки через Google Books API:", error);
           }
         }
-        // Метод 4: Если обложка не найдена, открываем новую вкладку с поиском
+
         if (!coverUrl) {
           const query = encodeURIComponent(formValues.title + " книга обложка");
           const searchUrl = `https://cse.google.com/cse?cx=b421413d1a0984f58#gsc.tab=0&gsc.q=${query}`;
-          window.open(searchUrl, '_blank');
+          window.open(searchUrl, "_blank");
           setShowManualCoverInput(true);
           toast({
             title: "Обложка не найдена",
-            description: "Поиск открыт в новой вкладке. Найдите подходящую обложку и вставьте ссылку на неё.",
+            description: "Поиск открыт в новой вкладке. Вставьте ссылку на обложку.",
             variant: "destructive",
           });
         } else {
@@ -358,11 +342,9 @@ const res = await fetch(endpoint, {
           toast({
             title: "Данные получены",
             description: "Обложка книги успешно получена.",
-            variant: "default",
           });
         }
 
-        // Заполнение остальных полей, если они есть
         if (parsedData.title) setValue("title", parsedData.title);
         if (parsedData.authors) setValue("authors", parsedData.authors);
         if (parsedData.genre) setValue("genre", parsedData.genre);
@@ -402,63 +384,27 @@ const res = await fetch(endpoint, {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col ${themeClasses.mainContainer} p-6`}>
+    <div className={`min-h-screen flex flex-col ${themeClasses.mainContainer}`}>
       {/* Header */}
       <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/30 dark:bg-neutral-100/30 border-b border-white/20 dark:border-neutral-700/20 p-4 flex items-center justify-between shadow-sm mb-6">
-        <h1 className="text-2xl font-bold text-neutral-100 dark:text-neutral-1000">
+        <h1 className="text-2xl font-bold text-neutral-500 dark:text-white">
           {mode === "create" ? "Добавление новой книги" : "Редактирование книги"}
         </h1>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-4xl mx-auto space-y-8">
+      <main className="flex-1 max-w-4xl mx-auto space-y-8 p-6">
         <Card className={themeClasses.card}>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold flex items-center text-neutral-200 dark:text-neutral-100">
-              <BookOpen className="mr-2 h-6 w-6 text-primary-admin dark:text-primary" />
+            <CardTitle className="text-2xl font-bold flex items-center text-neutral-500 dark:text-white">
+              <BookOpen className="mr-2 h-6 w-6 text-primary-admin" />
               {mode === "create" ? "Добавление книги" : "Редактирование книги"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* ISBN Search */}
-            <div className={`${themeClasses.statsCard} p-4`}>
-              <div className="flex gap-4 items-end">
-                <div className="w-full">
-                  <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2 flex items-center">
-                    <Search className="h-4 w-4 mr-2 text-primary-admin dark:text-primary" />
-                    Поиск по ISBN
-                  </label>
-                  <Input
-                    placeholder="Введите ISBN для автозаполнения данных"
-                    value={isbn}
-                    onChange={(e) => setIsbn(e.target.value)}
-                    className={themeClasses.input}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleFetchByISBN}
-                  className={themeClasses.button}
-                  disabled={isSearchLoading}
-                >
-                  {isSearchLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Загрузка...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4 mr-2" />
-                      Поиск по ISBN
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Блок для Gemini AI (поиск обложки) */}
-            <div className={`${themeClasses.statsCard} p-4 mt-4`}>
-              <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+            {/* Gemini AI Block */}
+            <div className={`${themeClasses.statsCard}`}>
+              <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                 Загрузить изображение для сканирования обложки книги
               </label>
               <GeminiFileUpload onFileChange={handleGeminiFileChange} />
@@ -506,7 +452,7 @@ const res = await fetch(endpoint, {
                 <TabsContent value="basic-info" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Название книги *
                       </label>
                       <Input
@@ -518,7 +464,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Авторы *
                       </label>
                       <Input
@@ -530,19 +476,35 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         ISBN *
                       </label>
-                      <Input
-                        placeholder="Введите ISBN книги"
-                        {...register("isbn")}
-                        className={themeClasses.input}
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Введите ISBN книги"
+                          {...register("isbn")}
+                          className={themeClasses.input}
+                          onChange={(e) => setIsbn(e.target.value)}
+                          value={watch("isbn")}
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleFetchByISBN}
+                          className={themeClasses.button}
+                          disabled={isSearchLoading}
+                        >
+                          {isSearchLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Search className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                       {errors.isbn && <p className="text-red-500 text-sm mt-1">{errors.isbn.message}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Жанр
                       </label>
                       <Input
@@ -554,7 +516,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Год публикации
                       </label>
                       <Input
@@ -565,11 +527,13 @@ const res = await fetch(endpoint, {
                         {...register("publicationYear", { valueAsNumber: true })}
                         className={themeClasses.input}
                       />
-                      {errors.publicationYear && <p className="text-red-500 text-sm mt-1">{errors.publicationYear.message}</p>}
+                      {errors.publicationYear && (
+                        <p className="text-red-500 text-sm mt-1">{errors.publicationYear.message}</p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Издательство
                       </label>
                       <Input
@@ -585,9 +549,9 @@ const res = await fetch(endpoint, {
                         <Checkbox
                           id="isEbook"
                           checked={isEbook}
-                          onCheckedChange={(checked) => setValue("isEbook", checked)}
+                          onCheckedChange={(checked) => setValue("isEbook", checked === true)}
                         />
-                        <label className="text-base font-semibold text-neutral-200 dark:text-neutral-100">
+                        <label className="text-base font-semibold text-neutral-500 dark:text-white">
                           Электронная книга
                         </label>
                       </div>
@@ -596,7 +560,7 @@ const res = await fetch(endpoint, {
                     {!isEbook && (
                       <>
                         <div>
-                          <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                          <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                             Доступные экземпляры
                           </label>
                           <Input
@@ -606,11 +570,13 @@ const res = await fetch(endpoint, {
                             {...register("availableCopies", { valueAsNumber: true })}
                             className={themeClasses.input}
                           />
-                          {errors.availableCopies && <p className="text-red-500 text-sm mt-1">{errors.availableCopies.message}</p>}
+                          {errors.availableCopies && (
+                            <p className="text-red-500 text-sm mt-1">{errors.availableCopies.message}</p>
+                          )}
                         </div>
 
                         <div>
-                          <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                          <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                             Состояние книги
                           </label>
                           <Select
@@ -632,11 +598,10 @@ const res = await fetch(endpoint, {
                     )}
 
                     <div className="md:col-span-2">
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2 text-center">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2 text-center">
                         Обложка книги
                       </label>
                       <div className="flex flex-row gap-4 justify-center">
-                        {/* Предпросмотр обложки */}
                         <div className="flex flex-col items-center">
                           {previewUrl ? (
                             <div className="relative w-48 h-64 mb-4 rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-all duration-300">
@@ -650,7 +615,9 @@ const res = await fetch(endpoint, {
                               </button>
                             </div>
                           ) : (
-                            <div className={`${themeClasses.card} w-48 h-64 mb-4 flex items-center justify-center text-neutral-200 dark:text-neutral-400`}>
+                            <div
+                              className={`${themeClasses.card} w-48 h-64 mb-4 flex items-center justify-center text-neutral-500 dark:text-neutral-400`}
+                            >
                               Нет обложки
                             </div>
                           )}
@@ -665,15 +632,14 @@ const res = await fetch(endpoint, {
                             <Button
                               type="button"
                               onClick={async () => {
-                                const formValues = watch();
                                 setShowManualCoverInput(false);
-                                
                                 if (formValues.isbn || (formValues.title && formValues.authors)) {
                                   let coverUrl = null;
-                                  // Метод 1: Поиск по ISBN
                                   if (formValues.isbn) {
                                     try {
-                                      const coverRes = await fetch(`https://bookcover.longitood.com/bookcover/${formValues.isbn}`);
+                                      const coverRes = await fetch(
+                                        `https://bookcover.longitood.com/bookcover/${formValues.isbn}`
+                                      );
                                       if (coverRes.ok) {
                                         const coverData = await coverRes.json();
                                         coverUrl = coverData.url;
@@ -682,12 +648,12 @@ const res = await fetch(endpoint, {
                                       console.error("Ошибка при поиске по ISBN:", error);
                                     }
                                   }
-                                  
-                                  // Метод 2: Поиск по названию и авторам
                                   if (!coverUrl && formValues.title && formValues.authors) {
                                     try {
                                       const coverRes = await fetch(
-                                        `https://bookcover.longitood.com/bookcover?book_title=${encodeURIComponent(formValues.title)}&author_name=${encodeURIComponent(formValues.authors)}`
+                                        `https://bookcover.longitood.com/bookcover?book_title=${encodeURIComponent(
+                                          formValues.title
+                                        )}&author_name=${encodeURIComponent(formValues.authors)}`
                                       );
                                       if (coverRes.ok) {
                                         const coverData = await coverRes.json();
@@ -697,7 +663,6 @@ const res = await fetch(endpoint, {
                                       console.error("Ошибка при поиске по названию и авторам:", error);
                                     }
                                   }
-                                  
                                   if (coverUrl) {
                                     setValue("cover", coverUrl);
                                     setPreviewUrl(coverUrl);
@@ -705,19 +670,19 @@ const res = await fetch(endpoint, {
                                   } else {
                                     const query = encodeURIComponent(formValues.title + " книга обложка");
                                     const searchUrl = `https://cse.google.com/cse?cx=b421413d1a0984f58#gsc.tab=0&gsc.q=${query}`;
-                                    window.open(searchUrl, '_blank');
+                                    window.open(searchUrl, "_blank");
                                     setShowManualCoverInput(true);
                                     toast({
                                       title: "Обложка не найдена",
-                                      description: "Поиск открыт в новой вкладке. Найдите подходящую обложку и вставьте ссылку на неё.",
+                                      description: "Поиск открыт в новой вкладке. Вставьте ссылку на обложку.",
                                       variant: "destructive",
                                     });
                                   }
                                 } else {
-                                  toast({ 
-                                    title: "Ошибка", 
-                                    description: "Необходимо указать ISBN или название и авторов книги", 
-                                    variant: "destructive" 
+                                  toast({
+                                    title: "Ошибка",
+                                    description: "Необходимо указать ISBN или название и авторов книги",
+                                    variant: "destructive",
                                   });
                                 }
                               }}
@@ -734,11 +699,10 @@ const res = await fetch(endpoint, {
                             className="hidden"
                           />
                         </div>
-                        {/* Поле для ручного ввода ссылки (отображается при срабатывании метода 4) */}
                         {showManualCoverInput && (
                           <div className="flex flex-col w-full max-w-xs">
                             <div className="mt-3">
-                              <label className="block text-xs font-semibold text-neutral-200 dark:text-neutral-100 mb-1">
+                              <label className="block text-xs font-semibold text-neutral-500 dark:text-white mb-1">
                                 Вставьте ссылку на обложку
                               </label>
                               <Input
@@ -749,7 +713,7 @@ const res = await fetch(endpoint, {
                                   setValue("cover", e.target.value);
                                   setPreviewUrl(e.target.value);
                                 }}
-                                className={themeClasses.input + " text-xs h-8"}
+                                className={`${themeClasses.input} text-xs h-8`}
                               />
                             </div>
                           </div>
@@ -763,7 +727,7 @@ const res = await fetch(endpoint, {
                 <TabsContent value="details" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Описание книги
                       </label>
                       <Textarea
@@ -776,7 +740,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Количество страниц
                       </label>
                       <Input
@@ -790,7 +754,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Язык
                       </label>
                       <Input
@@ -802,7 +766,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Формат книги
                       </label>
                       <Select
@@ -823,7 +787,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Цена
                       </label>
                       <Input
@@ -838,7 +802,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Категоризация
                       </label>
                       <Input
@@ -846,11 +810,13 @@ const res = await fetch(endpoint, {
                         {...register("categorization")}
                         className={themeClasses.input}
                       />
-                      {errors.categorization && <p className="text-red-500 text-sm mt-1">{errors.categorization.message}</p>}
+                      {errors.categorization && (
+                        <p className="text-red-500 text-sm mt-1">{errors.categorization.message}</p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         УДК
                       </label>
                       <Input
@@ -862,7 +828,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         ББК
                       </label>
                       <Input
@@ -879,7 +845,7 @@ const res = await fetch(endpoint, {
                 <TabsContent value="rare-fields" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Оригинальное название
                       </label>
                       <Input
@@ -887,11 +853,13 @@ const res = await fetch(endpoint, {
                         {...register("originalTitle")}
                         className={themeClasses.input}
                       />
-                      {errors.originalTitle && <p className="text-red-500 text-sm mt-1">{errors.originalTitle.message}</p>}
+                      {errors.originalTitle && (
+                        <p className="text-red-500 text-sm mt-1">{errors.originalTitle.message}</p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Оригинальный язык
                       </label>
                       <Input
@@ -899,11 +867,13 @@ const res = await fetch(endpoint, {
                         {...register("originalLanguage")}
                         className={themeClasses.input}
                       />
-                      {errors.originalLanguage && <p className="text-red-500 text-sm mt-1">{errors.originalLanguage.message}</p>}
+                      {errors.originalLanguage && (
+                        <p className="text-red-500 text-sm mt-1">{errors.originalLanguage.message}</p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Издание
                       </label>
                       <Input
@@ -915,7 +885,7 @@ const res = await fetch(endpoint, {
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-200 dark:text-neutral-100 mb-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
                         Резюме книги
                       </label>
                       <Textarea
@@ -960,24 +930,6 @@ const res = await fetch(endpoint, {
           </CardContent>
         </Card>
       </main>
-
-      {/* Footer */}
-      <footer className="mt-auto p-6 text-center text-sm text-neutral-200 dark:text-neutral-700 border-t border-white/10 dark:border-neutral-700/30">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© 2025 LibraryAdmin. Все права защищены.</p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-primary transition-colors">Помощь</a>
-            <a href="#" className="hover:text-primary transition-colors">Документация</a>
-            <a href="#" className="hover:text-primary transition-colors">Обратная связь</a>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>Версия 2.5.0</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 dark:bg-primary/20 text-primary">
-              Стабильная
-            </span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

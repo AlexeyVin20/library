@@ -1,45 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Calendar from "@/components/admin/Calendar";
-import {
-  Activity, BookOpen, Library, Users, FileText, MessageSquare,
-  Clock, GitPullRequest, BarChart, BookText
-} from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { getInitials } from "@/lib/utils";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { BookOpen } from "lucide-react";
+import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
-// Интерфейсы на основе контроллеров
+// Динамический импорт компонентов с графиками
+const MyChartStats = dynamic(() => import("@/components/admin/ChartStats"), { ssr: false });
+const BorrowedBooksChart = dynamic(() => import("@/components/admin/BorrowedBooksChart"), { ssr: false });
+
+// Определение типов
 interface User {
   id: string;
   fullName: string;
-  email: string;
-  username: string;
-  isActive: boolean;
   borrowedBooksCount: number;
   maxBooksAllowed: number;
-  fineAmount: number;
+  fineAmount?: number;
 }
 
 interface Book {
   id: string;
   title: string;
-  authors: string;
-  isbn: string;
-  cover?: string;
   availableCopies: number;
+  cover?: string;
+  authors?: string;
 }
 
 interface Journal {
-  id: number;
+  id: string;
   title: string;
-  issn: string;
-  publisher?: string;
-  category: string;
   isOpenAccess: boolean;
   isPeerReviewed: boolean;
 }
@@ -52,537 +43,460 @@ interface Reservation {
   expirationDate: string;
   status: string;
   notes?: string;
+  user?: User;
+  book?: Book;
 }
 
+interface MonthlyBorrowedData {
+  month: string;
+  borrowed: number;
+}
+
+// Theme classes с эффектом glassmorphism
+const getThemeClasses = () => {
+  return {
+    card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
+    statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between",
+    mainContainer: "bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6",
+    button: "bg-gradient-to-r from-primary-admin/90 to-primary-admin/70 dark:from-primary-admin/80 dark:to-primary-admin/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
+    bookCard: "flex p-4 bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl rounded-lg border border-white/30 dark:border-neutral-700/30 mb-3 transition-all duration-300 hover:shadow-lg hover:-translate-x-1",
+    sectionTitle: "text-2xl font-bold mb-4 text-neutral-500 dark:text-white border-b pb-2 border-white/30 dark:border-neutral-700/30",
+    requestCard: "mb-4 p-5 rounded-lg border border-white/30 dark:border-neutral-700/30 bg-gradient-to-br from-gray-50/30 to-gray-50/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl hover:shadow-lg transition-all duration-300",
+    statusBadge: {
+      completed: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-green-600/90 backdrop-blur-sm",
+      processing: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-yellow-600/90 backdrop-blur-sm",
+      canceled: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-red-600/90 backdrop-blur-sm",
+    },
+    tableRow: {
+      even: "bg-gradient-to-r from-gray-50/30 to-gray-50/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-sm",
+      odd: "bg-gradient-to-r from-white/30 to-white/20 dark:from-neutral-700/30 dark:to-neutral-800/20 backdrop-blur-sm",
+    },
+    actionButton: {
+      approve: "bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
+      reject: "bg-gradient-to-r from-red-600/90 to-red-700/70 dark:from-red-700/80 dark:to-red-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
+      neutral: "bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
+    },
+  };
+};
+
 export default function DashboardPage() {
-  // Состояния для хранения данных
   const [users, setUsers] = useState<User[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [journals, setJournals] = useState<Journal[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState<Date>(new Date());
+  const [bookRequests, setBookRequests] = useState<Reservation[]>([]);
+  const [userRequests, setUserRequests] = useState<Reservation[]>([]);
+  const [recentActivities, setRecentActivities] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [recentBorrowed, setRecentBorrowed] = useState<number>(5);
+  const [monthlyBorrowedData, setMonthlyBorrowedData] = useState<MonthlyBorrowedData[]>([]);
+  const [recentBooks, setRecentBooks] = useState<Book[]>([]);
 
-  // Загрузка данных
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+  const themeClasses = getThemeClasses();
+
+  // Вычисляемые свойства
+  const activeUsersCount = users.filter((u) => u.borrowedBooksCount > 0).length;
+  const totalUsersCount = users.length;
+  const pendingReservations = reservations.filter((r) => r.status === "Обрабатывается").length;
+  const totalBorrowedBooks = users.reduce((total, user) => total + user.borrowedBooksCount, 0);
+  const totalAvailableBooks = books.reduce((sum, book) => sum + book.availableCopies, 0);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-        
-        // Параллельная загрузка данных
-        const [usersRes, booksRes, journalsRes, reservationsRes] = await Promise.all([
-          fetch(`${baseUrl}/api/User`),
-          fetch(`${baseUrl}/api/Books`),
-          fetch(`${baseUrl}/api/Journals`),
-          fetch(`${baseUrl}/api/Reservation`)
-        ]);
-        
-        if (usersRes.ok && booksRes.ok && journalsRes.ok && reservationsRes.ok) {
-          const [usersData, booksData, journalsData, reservationsData] = await Promise.all([
-            usersRes.json(),
-            booksRes.json(),
-            journalsRes.json(),
-            reservationsRes.json()
-          ]);
-          
-          setUsers(usersData);
-          setBooks(booksData);
-          setJournals(journalsData);
-          setReservations(reservationsData);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        setLoading(true);
+
+        const usersResponse = await fetch(`${baseUrl}/api/User`);
+        if (!usersResponse.ok) throw new Error("Ошибка при загрузке пользователей");
+        const usersData = await usersResponse.json();
+        setUsers(usersData);
+
+        const booksResponse = await fetch(`${baseUrl}/api/Books`);
+        if (!booksResponse.ok) throw new Error("Ошибка при загрузке книг");
+        const booksData = await booksResponse.json();
+        setBooks(booksData);
+
+        const journalsResponse = await fetch(`${baseUrl}/api/Journals`);
+        if (!journalsResponse.ok) throw new Error("Ошибка при загрузке журналов");
+        const journalsData = await journalsResponse.json();
+        setJournals(journalsData);
+
+        const reservationsResponse = await fetch(`${baseUrl}/api/Reservation`);
+        if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резерваций");
+        const reservationsData = await reservationsResponse.json();
+        setReservations(reservationsData);
+
+        const pendingRequests = reservationsData.filter((r: Reservation) => r.status === "Обрабатывается");
+        setBookRequests(pendingRequests);
+
+        const userRequestsData = reservationsData
+          .filter((r: Reservation) => r.status === "Обрабатывается")
+          .sort((a: Reservation, b: Reservation) => new Date(a.reservationDate).getTime() - new Date(b.reservationDate).getTime());
+        setUserRequests(userRequestsData);
+
+        const sortedActivities = [...reservationsData]
+          .sort((a: Reservation, b: Reservation) => new Date(b.reservationDate).getTime() - new Date(a.reservationDate).getTime())
+          .slice(0, 10);
+        setRecentActivities(sortedActivities);
+
+        const lastSixMonths = Array.from({ length: 6 }, (_, i) => {
+          const date = new Date();
+          date.setMonth(date.getMonth() - i);
+          const monthKey = date.toLocaleString("ru-RU", { month: "short", year: "numeric" });
+          const borrowed = reservationsData.filter((r: Reservation) => {
+            const reservationMonth = new Date(r.reservationDate).toLocaleString("ru-RU", { month: "short", year: "numeric" });
+            return reservationMonth === monthKey && r.status === "Выполнена";
+          }).length;
+          return {
+            month: date.toLocaleString("ru-RU", { month: "short" }),
+            borrowed,
+          };
+        }).reverse();
+        setMonthlyBorrowedData(lastSixMonths);
+
+        const recentBooksData = [...booksData]
+          .sort((a, b) => new Date(b.addedDate || "").getTime() - new Date(a.addedDate || "").getTime())
+          .slice(0, 6);
+        setRecentBooks(recentBooksData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
+        console.error("Ошибка:", err);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchData();
-  }, []);
-  
-  // Вычисляемые значения
-  const activeUsersCount = users.filter(user => user.isActive).length;
-  const totalBooksCount = books.length;
-  const totalJournalsCount = journals.length;
-  const totalUsersCount = users.length;
-  const pendingReservations = reservations.filter(res => res.status === "Pending").length;
-  
-  // Форматирование даты
+  }, [baseUrl]);
+
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+    return new Date(dateString).toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
-  
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
-    </div>;
-  }
-  
+
+  const handleApproveRequest = async (id: string) => {
+    try {
+      const reservation = reservations.find((r) => r.id === id);
+      if (!reservation) throw new Error("Резервация не найдена");
+
+      const updatedReservation = {
+        ...reservation,
+        reservationDate: new Date(reservation.reservationDate).toISOString(),
+        expirationDate: new Date(reservation.expirationDate).toISOString(),
+        status: "Выполнена",
+      };
+
+      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedReservation),
+      });
+
+      if (!response.ok) throw new Error("Ошибка при обновлении резервации");
+
+      setBookRequests(bookRequests.filter((r) => r.id !== id));
+      setUserRequests(userRequests.filter((r) => r.id !== id));
+      setReservations(reservations.map((r) => (r.id === id ? { ...r, status: "Выполнена" } : r)));
+      setRecentActivities(recentActivities.map((r) => (r.id === id ? { ...r, status: "Выполнена" } : r)));
+    } catch (err) {
+      console.error("Ошибка при одобрении:", err);
+      alert(err instanceof Error ? err.message : "Ошибка при одобрении запроса");
+    }
+  };
+
+  const handleRejectRequest = async (id: string) => {
+    try {
+      const reservation = reservations.find((r) => r.id === id);
+      if (!reservation) throw new Error("Резервация не найдена");
+
+      const updatedReservation = {
+        ...reservation,
+        reservationDate: new Date(reservation.reservationDate).toISOString(),
+        expirationDate: new Date(reservation.expirationDate).toISOString(),
+        status: "Отменена",
+      };
+
+      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedReservation),
+      });
+
+      if (!response.ok) throw new Error("Ошибка при обновлении резервации");
+
+      setBookRequests(bookRequests.filter((r) => r.id !== id));
+      setUserRequests(userRequests.filter((r) => r.id !== id));
+      setReservations(reservations.map((r) => (r.id === id ? { ...r, status: "Отменена" } : r)));
+      setRecentActivities(recentActivities.map((r) => (r.id === id ? { ...r, status: "Отменена" } : r)));
+    } catch (err) {
+      console.error("Ошибка при отклонении:", err);
+      alert(err instanceof Error ? err.message : "Ошибка при отклонении запроса");
+    }
+  };
+
+  const reservationEvents = reservations.map((reservation) => ({
+    id: reservation.id,
+    userId: reservation.userId,
+    bookId: reservation.bookId,
+    reservationDate: new Date(reservation.reservationDate).toISOString().split("T")[0],
+    expirationDate: new Date(reservation.expirationDate).toISOString().split("T")[0],
+    status: reservation.status,
+    notes: reservation.notes,
+    userName: reservation.user?.fullName || "Неизвестный пользователь",
+    bookTitle: reservation.book?.title || "Неизвестная книга",
+  }));
+
+  if (loading) return <div className="flex justify-center items-center h-screen text-neutral-200 dark:text-neutral-100">Загрузка...</div>;
+  if (error) return <div className="text-red-500 p-4 border border-red-300 rounded">{error}</div>;
+
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold mb-2">Панель управления</h1>
-      <p className="text-gray-500 mb-6">
-        Последнее обновление: {new Date().toLocaleString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-      </p>
-      
-      {/* Статистические карточки */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Взятые книги</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {users.reduce((sum, user) => sum + user.borrowedBooksCount, 0)}
+    <GlassMorphismContainer
+      backgroundPattern={true}
+      isDarkMode={false} // Установите false для светлой темы
+    >
+      <main className="flex-1 space-y-8">
+        {/* Статистические карточки */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={`${themeClasses.statsCard} border-l-4 border-blue-600 min-h-[200px]`}>
+            <h3 className={themeClasses.sectionTitle}>Книги</h3>
+            <p className="text-3xl font-bold text-blue-800 mt-4">{totalAvailableBooks}</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">доступных ресурсов</p>
+            <p className="text-sm text-green-800 mt-2 flex items-center">
+              <span className="mr-1">+</span>{recentBorrowed} <span className="ml-1">за последний месяц</span>
+            </p>
+          </div>
+          <div className={`${themeClasses.statsCard} border-l-4 border-green-600 min-h-[200px]`}>
+            <h3 className={themeClasses.sectionTitle}>Пользователи</h3>
+            <p className="text-3xl font-bold text-green-800 mt-4">{activeUsersCount}</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">взяли книги</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">
+              {totalUsersCount ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0}% от общего числа
+            </p>
+          </div>
+          <div className={`${themeClasses.statsCard} border-l-4 border-red-600 min-h-[200px]`}>
+            <h3 className={themeClasses.sectionTitle}>Штрафы</h3>
+            <p className="text-3xl font-bold text-red-800 mt-4">
+              {users.reduce((sum, user) => sum + (user.fineAmount || 0), 0).toFixed(2)} ₽
+            </p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">общая сумма</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2 flex items-center">
+              <span className={themeClasses.statusBadge.processing}>{pendingReservations}</span>
+              <span className="ml-2">в обработке</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Графики */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={themeClasses.card}>
+            <div className="flex-1 h-[300px]">
+              <MyChartStats totalBooks={totalAvailableBooks} recentBorrowed={recentBorrowed} totalBorrowed={totalBorrowedBooks} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              {users.filter(u => u.borrowedBooksCount > 0).length} пользователей взяли книги
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Активные пользователи</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeUsersCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((activeUsersCount / totalUsersCount) * 100)}% от общего числа
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Всего книг</CardTitle>
-            <Library className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBooksCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {books.reduce((sum, book) => sum + book.availableCopies, 0)} доступных копий
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Всего пользователей</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUsersCount}</div>
-            <p className="text-xs text-muted-foreground">
-              +5 за последний месяц
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Новая строка с дополнительными показателями */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Всего журналов</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalJournalsCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {journals.filter(j => j.isOpenAccess).length} в открытом доступе
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Резервации</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reservations.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {pendingReservations} ожидают подтверждения
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Штрафы</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{users.filter(u => u.fineAmount > 0).length}</div>
-            <p className="text-xs text-muted-foreground">
-              {users.reduce((sum, user) => sum + (user.fineAmount || 0), 0).toFixed(2)} ₽ общая сумма
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Научные журналы</CardTitle>
-            <BookText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {journals.filter(j => j.category === "Scientific").length}
+          </div>
+          <div className={themeClasses.card}>
+            <div className="flex-1 h-[300px]">
+              <BorrowedBooksChart data={monthlyBorrowedData} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              {journals.filter(j => j.isPeerReviewed).length} рецензируемых
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Основной контент */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Статистика библиотеки */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Статистика библиотеки</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Взятые книги</span>
-                  <span className="text-sm font-medium">
-                    {Math.round((users.reduce((sum, user) => sum + user.borrowedBooksCount, 0) / 
-                      totalBooksCount) * 100)}%
-                  </span>
-                </div>
-                <Progress value={(users.reduce((sum, user) => sum + user.borrowedBooksCount, 0) / 
-                  totalBooksCount) * 100} className="h-2 mt-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Активные пользователи</span>
-                  <span className="text-sm font-medium">
-                    {Math.round((activeUsersCount / totalUsersCount) * 100)}%
-                  </span>
-                </div>
-                <Progress value={(activeUsersCount / totalUsersCount) * 100} className="h-2 mt-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Книги в резервации</span>
-                  <span className="text-sm font-medium">
-                    {Math.round((reservations.length / totalBooksCount) * 100)}%
-                  </span>
-                </div>
-                <Progress value={(reservations.length / totalBooksCount) * 100} className="h-2 mt-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Журналы открытого доступа</span>
-                  <span className="text-sm font-medium">
-                    {Math.round((journals.filter(j => j.isOpenAccess).length / totalJournalsCount) * 100)}%
-                  </span>
-                </div>
-                <Progress value={(journals.filter(j => j.isOpenAccess).length / totalJournalsCount) * 100} className="h-2 mt-2" />
-              </div>
+          </div>
+        </div>
+
+        {/* Календарь и последние книги */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={themeClasses.card}>
+            <h2 className={themeClasses.sectionTitle}>Календарь возвратов</h2>
+            <div className="flex-1 h-[400px]">
+              <Calendar initialEvents={reservationEvents} />
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Активность пользователей */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Активность пользователей</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {users.slice(0, 4).map((user, index) => (
-                <div key={user.id} className="flex items-center">
-                  <Avatar className="h-9 w-9 mr-3">
-                    <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.fullName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {user.borrowedBooksCount} книг из {user.maxBooksAllowed} разрешенных
-                    </p>
-                  </div>
-                  <Progress 
-                    value={(user.borrowedBooksCount / user.maxBooksAllowed) * 100} 
-                    className="h-2 w-24" 
-                  />
-                </div>
-              ))}
+          </div>
+          <div className={themeClasses.card}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={themeClasses.sectionTitle}>Последние книги</h2>
+              <Link href="/admin/books" className="text-blue-700 hover:text-blue-800 transition-colors hover:underline text-sm">
+                Все книги →
+              </Link>
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Календарь возвратов книг */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Календарь возвратов книг</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={(newDate) => newDate && setDate(newDate)}
-              className="rounded-md border"
-            />
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Ожидаемые возвраты на {date.toLocaleDateString('ru-RU')}</h4>
-              <div className="space-y-2">
-                {reservations
-                  .filter(r => new Date(r.expirationDate).toDateString() === date.toDateString())
-                  .map((reservation) => {
-                    const user = users.find(u => u.id === reservation.userId);
-                    const book = books.find(b => b.id === reservation.bookId);
-                    return (
-                      <div key={reservation.id} className="flex items-center justify-between text-sm">
-                        <span>{book?.title || 'Неизвестная книга'}</span>
-                        <span className="font-medium">{user?.fullName || 'Неизвестный пользователь'}</span>
+            <div className="space-y-3 flex-1">
+              {recentBooks.length > 0 ? (
+                recentBooks.map((book) => (
+                  <div key={book.id} className={themeClasses.bookCard}>
+                    <div className="flex items-center w-full">
+                      <div className="w-12 h-16 flex-shrink-0 bg-gray-200/50 dark:bg-neutral-700/50 rounded mr-4 overflow-hidden">
+                        {book.cover ? (
+                          <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <BookOpen className="w-6 h-6 text-neutral-400" />
+                          </div>
+                        )}
                       </div>
-                    );
-                  })}
-                {reservations.filter(r => new Date(r.expirationDate).toDateString() === date.toDateString()).length === 0 && (
-                  <p className="text-sm text-muted-foreground">Нет ожидаемых возвратов на этот день</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Запросы на книги */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Запросы на книги</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {reservations.filter(r => r.status === "Pending").slice(0, 3).map((reservation) => {
-                const user = users.find(u => u.id === reservation.userId);
-                const book = books.find(b => b.id === reservation.bookId);
-                
-                return (
-                  <div key={reservation.id} className="border-b pb-4 last:border-0 last:pb-0">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{user?.fullName || 'Неизвестный пользователь'} запросил книгу</p>
-                        <p className="text-sm text-muted-foreground">{formatDate(reservation.reservationDate)}</p>
-                      </div>
-                      <div className="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">
-                        {reservation.status}
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/admin/books/${book.id}`}>
+                          <h3 className="text-neutral-400 dark:text-neutral-100 font-medium truncate hover:text-blue-600 transition-colors">
+                            {book.title}
+                          </h3>
+                        </Link>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                          {book.authors || "Автор не указан"}
+                        </p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 flex items-center">
+                          <span className="inline-block px-2 py-0.5 bg-blue-100/50 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 rounded-full mr-1">
+                            {book.availableCopies}
+                          </span>
+                          экз.
+                        </p>
                       </div>
                     </div>
-                    <p className="mt-2 text-sm">{book?.title || 'Неизвестная книга'}</p>
-                    <div className="mt-2 flex gap-2">
-                      <Button size="sm" variant="outline">Одобрить</Button>
-                      <Button size="sm" variant="outline" className="text-red-500">Отклонить</Button>
-                    </div>
                   </div>
-                );
-              })}
-              {reservations.filter(r => r.status === "Pending").length === 0 && (
-                <p className="text-sm text-muted-foreground">Нет активных запросов на книги</p>
+                ))
+              ) : (
+                <p className="text-neutral-400 dark:text-neutral-400">Нет доступных книг</p>
               )}
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Сообщения пользователей */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Сообщения пользователей</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {users.slice(0, 3).map((user, index) => (
-                <div key={user.id} className="border-b pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-start">
-                    <Avatar className="h-9 w-9 mr-3">
-                      <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center">
-                        <p className="font-medium mr-2">{user.fullName}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(Date.now() - index * 3600000).toLocaleTimeString('ru-RU', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-sm mt-1">
-                        {[
-                          "Здравствуйте, можно ли продлить срок возврата книги?",
-                          "Когда будут новые поступления в разделе научной литературы?",
-                          "У вас есть электронная версия этой книги?"
-                        ][index]}
-                      </p>
-                      <Button size="sm" variant="link" className="p-0 h-auto mt-2">Ответить</Button>
+          </div>
+        </div>
+
+        {/* Запросы */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={themeClasses.card}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={themeClasses.sectionTitle}>Запросы пользователей</h2>
+              <Link href="/admin/requests/users" className="text-blue-600 hover:text-blue-800 transition-colors hover:underline text-sm">
+                Все запросы →
+              </Link>
+            </div>
+            <div className="flex-1 max-h-[400px] overflow-y-auto">
+              {userRequests.length > 0 ? (
+                userRequests.slice(0, 3).map((reservation) => (
+                  <div key={reservation.id} className={`${themeClasses.requestCard} border-l-4 border-yellow-500`}>
+                    <p className="text-lg font-medium text-neutral-500 dark:text-neutral-100">
+                      {reservation.user?.fullName || "Неизвестный пользователь"}
+                    </p>
+                    <p className="text-sm text-neutral-400 dark:text-neutral-400 mt-2">{reservation.book?.title || "Неизвестная книга"}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(reservation.reservationDate)}</p>
+                    <div className="mt-4 flex gap-3">
+                      <button
+                        onClick={() => handleApproveRequest(reservation.id)}
+                        className={themeClasses.actionButton.approve}
+                      >
+                        Одобрить
+                      </button>
+                      <button
+                        onClick={() => handleRejectRequest(reservation.id)}
+                        className={themeClasses.actionButton.reject}
+                      >
+                        Отклонить
+                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-neutral-400 dark:text-neutral-400">Нет запросов пользователей</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Запросы пользователей */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Запросы пользователей</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {users.slice(0, 3).map((user, index) => (
-                <div key={user.id} className="border-b pb-4 last:border-0 last:pb-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{user.fullName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDate(new Date(Date.now() - index * 86400000).toISOString())}
-                      </p>
-                    </div>
-                    <div className={`px-2 py-1 rounded text-xs ${
-                      ["bg-yellow-100 text-yellow-800", "bg-green-100 text-green-800", "bg-red-100 text-red-800"][index]
-                    }`}>
-                      {["В обработке", "Одобрено", "Отклонено"][index]}
+          </div>
+
+          <div className={themeClasses.card}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={themeClasses.sectionTitle}>Запросы на книги</h2>
+              <Link href="/admin/requests/books" className="text-blue-600 hover:text-blue-800 transition-colors hover:underline text-sm">
+                Все запросы →
+              </Link>
+            </div>
+            <div className="flex-1 max-h-[400px] overflow-y-auto">
+              {bookRequests.length > 0 ? (
+                bookRequests.slice(0, 3).map((request) => (
+                  <div key={request.id} className={`${themeClasses.requestCard} border-l-4 border-blue-500`}>
+                    <p className="text-lg font-medium text-neutral-500 dark:text-neutral-100">{request.book?.title || "Неизвестная книга"}</p>
+                    <p className="text-sm text-neutral-400 dark:text-neutral-400 mt-2">
+                      Пользователь: {request.user?.fullName || "Неизвестный пользователь"}
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(request.reservationDate)}</p>
+                    <div className="mt-4 flex gap-3">
+                      <button
+                        onClick={() => handleApproveRequest(request.id)}
+                        className={themeClasses.actionButton.approve}
+                      >
+                        Одобрить
+                      </button>
+                      <button
+                        onClick={() => handleRejectRequest(request.id)}
+                        className={themeClasses.actionButton.reject}
+                      >
+                        Отклонить
+                      </button>
                     </div>
                   </div>
-                  <p className="mt-2 text-sm">
-                    {[
-                      "Запрос на продление абонемента",
-                      "Заявка на доступ к редкому фонду",
-                      "Запрос на изменение личных данных"
-                    ][index]}
-                  </p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-neutral-400 dark:text-neutral-400">Нет активных запросов на книги</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Статистика выдачи книг */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Статистика выдачи книг</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Художественная литература</span>
-                  <span className="text-sm font-medium">45%</span>
-                </div>
-                <Progress value={45} className="h-2 mt-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Научная литература</span>
-                  <span className="text-sm font-medium">28%</span>
-                </div>
-                <Progress value={28} className="h-2 mt-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Учебная литература</span>
-                  <span className="text-sm font-medium">18%</span>
-                </div>
-                <Progress value={18} className="h-2 mt-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Детская литература</span>
-                  <span className="text-sm font-medium">9%</span>
-                </div>
-                <Progress value={9} className="h-2 mt-2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Быстрые действия */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Быстрые действия</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <Button className="h-20 flex flex-col items-center justify-center">
-                <BookOpen className="h-5 w-5 mb-1" />
-                <span>Добавить книгу</span>
-              </Button>
-              <Button className="h-20 flex flex-col items-center justify-center">
-                <Users className="h-5 w-5 mb-1" />
-                <span>Новый пользователь</span>
-              </Button>
-              <Button className="h-20 flex flex-col items-center justify-center">
-                <FileText className="h-5 w-5 mb-1" />
-                <span>Добавить журнал</span>
-              </Button>
-              <Button className="h-20 flex flex-col items-center justify-center">
-                <GitPullRequest className="h-5 w-5 mb-1" />
-                <span>Статус резервации</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Последние активности */}
-      <Card className="col-span-2">
-        <CardHeader>
-          <CardTitle>Последние активности</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left font-medium p-2">Действие</th>
-                  <th className="text-left font-medium p-2">Пользователь</th>
-                  <th className="text-left font-medium p-2">Книга</th>
-                  <th className="text-left font-medium p-2">Дата</th>
-                  <th className="text-left font-medium p-2">Статус</th>
+          </div>
+        </div>
+
+        {/* Последние активности */}
+        <div className={themeClasses.card}>
+          <h2 className={themeClasses.sectionTitle}>Последние активности</h2>
+          <div className="overflow-x-auto flex-1 max-h-[400px]">
+            <table className="min-w-full divide-y divide-gray-200/20 dark:divide-neutral-700/20">
+              <thead className="bg-gradient-to-r from-gray-100/20 to-gray-100/10 dark:from-neutral-800/20 dark:to-neutral-900/10 backdrop-blur-sm rounded-t-lg">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Действие</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Книга</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Дата</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Статус</th>
                 </tr>
               </thead>
               <tbody>
-                {reservations.slice(0, 5).map((reservation, index) => {
-                  const user = users.find(u => u.id === reservation.userId);
-                  const book = books.find(b => b.id === reservation.bookId);
-                  
-                  return (
-                    <tr key={reservation.id} className="border-b last:border-0">
-                      <td className="p-2">Резервация</td>
-                      <td className="p-2">{user?.fullName || "Неизвестный пользователь"}</td>
-                      <td className="p-2">{book?.title || "Неизвестная книга"}</td>
-                      <td className="p-2">{formatDate(reservation.reservationDate)}</td>
-                      <td className="p-2">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          reservation.status === "Approved" ? "bg-green-100 text-green-800" :
-                          reservation.status === "Pending" ? "bg-yellow-100 text-yellow-800" :
-                          "bg-red-100 text-red-800"
-                        }`}>
-                          {reservation.status === "Approved" ? "Одобрено" :
-                           reservation.status === "Pending" ? "В обработке" :
-                           "Отклонено"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {recentActivities.map((reservation, index) => (
+                  <tr key={reservation.id} className={index % 2 === 0 ? themeClasses.tableRow.even : themeClasses.tableRow.odd}>
+                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">Резервация</td>
+                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{reservation.book?.title || "Неизвестная книга"}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{formatDate(reservation.reservationDate)}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={
+                          reservation.status === "Выполнена"
+                            ? themeClasses.statusBadge.completed
+                            : reservation.status === "Обрабатывается"
+                            ? themeClasses.statusBadge.processing
+                            : themeClasses.statusBadge.canceled
+                        }
+                      >
+                        {reservation.status === "Выполнена"
+                          ? "Выполнена"
+                          : reservation.status === "Обрабатывается"
+                          ? "В обработке"
+                          : "Отменена"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        {/* Быстрые действия */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <Link href="/admin/reservations" className={themeClasses.actionButton.neutral}>
+            Посмотреть резервации
+          </Link>
+          <Link href="/admin/books" className={themeClasses.actionButton.approve}>
+            Все книги
+          </Link>
+          <Link href="/admin/users" className={themeClasses.actionButton.neutral}>
+            Управление пользователями
+          </Link>
+        </div>
+      </main>
+    </GlassMorphismContainer>
   );
 }

@@ -32,7 +32,9 @@ interface Book {
   condition?: string | null;
   dateAdded?: string;
   dateModified?: string;
-}interface BookDetailsProps {
+}
+
+interface BookDetailsProps {
   book: Book;
 }
 
@@ -131,7 +133,10 @@ export default function BookDetails({ book }: BookDetailsProps) {
                   <InfoOval label="Цена" value={book.price != null ? book.price.toString() : "Не указана"} />
                   <InfoOval label="УДК" value={book.udk || "Не указан"} />
                   <InfoOval label="ББК" value={book.bbk || "Не указан"} />
-                  <InfoOval label="Описание книги" value={book.description || "Отсутствует"} fullWidth />
+                  <div className={`col-span-full ${themeClasses.infoOval} overflow-auto max-h-60`}>
+                    <span className="font-semibold text-neutral-200 dark:text-primary">Описание книги:</span>{" "}
+                    <span className="text-neutral-400 dark:text-neutral-200">{book.description || "Отсутствует"}</span>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="additional" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -139,7 +144,10 @@ export default function BookDetails({ book }: BookDetailsProps) {
                   <InfoOval label="Оригинальное название" value={book.originalTitle || "Не указано"} />
                   <InfoOval label="Оригинальный язык" value={book.originalLanguage || "Не указан"} />
                   <InfoOval label="Издание" value={book.edition || "Не указано"} />
-                  <InfoOval label="Резюме книги" value={book.summary || "Отсутствует"} fullWidth />
+                  <div className={`col-span-full ${themeClasses.infoOval} overflow-auto max-h-60`}>
+                    <span className="font-semibold text-neutral-200 dark:text-primary">Резюме книги:</span>{" "}
+                    <span className="text-neutral-400 dark:text-neutral-200">{book.summary || "Отсутствует"}</span>
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>
@@ -162,24 +170,6 @@ export default function BookDetails({ book }: BookDetailsProps) {
           </CardContent>
         </Card>
       </main>
-
-      {/* Footer */}
-      <footer className="mt-auto p-6 text-center text-sm text-neutral-500 dark:text-neutral-700 border-t border-white/10 dark:border-neutral-700/30">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© 2025 LibraryAdmin. Все права защищены.</p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-primary transition-colors">Помощь</a>
-            <a href="#" className="hover:text-primary transition-colors">Документация</a>
-            <a href="#" className="hover:text-primary transition-colors">Обратная связь</a>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>Версия 2.5.0</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 dark:bg-primary/20 text-primary">
-              Стабильная
-            </span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -188,7 +178,7 @@ export default function BookDetails({ book }: BookDetailsProps) {
 function InfoOval({ label, value, fullWidth = false }: { label: string; value: string; fullWidth?: boolean }) {
   const themeClasses = getThemeClasses();
   return (
-    <div className={`${fullWidth ? "col-span-full" : ""} ${themeClasses.infoOval}`}>
+    <div className={`${fullWidth ? "col-span-full" : ""} ${themeClasses.infoOval} ${fullWidth ? "overflow-auto max-h-60" : ""}`}>
       <span className="font-semibold text-neutral-200 dark:text-primary">{label}:</span>{" "}
       <span className="text-neutral-400 dark:text-neutral-200">{value}</span>
     </div>

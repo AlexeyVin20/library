@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { ArrowLeft, Loader2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
-interface UserCreateDto {
+interface UserUpdateDto {
   id: string;
   fullName: string;
   email: string;
@@ -22,90 +22,157 @@ interface UserCreateDto {
   passportIssuedDate: string;
   address: string;
   dateRegistered: string;
-  borrowedBooksCount: number;
-  fineAmount: number;
-  isActive: boolean;
-  lastLoginDate: string;
-  loanPeriodDays: number;
-  maxBooksAllowed: number;
-  passwordHash: string;
   username: string;
+  passwordHash: string;
+  isActive: boolean;
+  borrowedBooksCount: number;
+  maxBooksAllowed: number;
+  loanPeriodDays: number;
+  fineAmount: number;
+  userRoles?: string[];
+  borrowedBooks?: any[];
 }
 
-export default function CreateUserPage() {
+export default function UpdateUserPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const userId = params.userId as string;
+  
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<UserUpdateDto | null>(null);
 
-  const [formData, setFormData] = useState<UserCreateDto>({
-    id: crypto.randomUUID(),
-    fullName: "",
-    email: "",
-    phone: "",
-    dateOfBirth: "",
-    passportNumber: "",
-    passportIssuedBy: "",
-    passportIssuedDate: "",
-    address: "",
-    dateRegistered: new Date().toISOString().split("T")[0],
-    borrowedBooksCount: 0,
-    fineAmount: 0,
-    isActive: true,
-    lastLoginDate: new Date().toISOString().split("T")[0],
-    loanPeriodDays: 14,
-    maxBooksAllowed: 5,
-    passwordHash: "",
-    username: "",
-  });
+  // Загрузка данных пользователя при монтировании
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+        const response = await fetch(`${baseUrl}/api/User/${userId}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Ошибка ответа сервера:", errorText);
+          throw new Error(`Ошибка загрузки данных: ${response.status}`);
+        }
+        
+        const userData = await response.json();
+        console.log("Данные пользователя для формы:", userData);
+        
+        // Функция для форматирования даты в формат yyyy-MM-dd для input type="date"
+        const formatDateForInput = (dateString: string | null | undefined): string => {
+          if (!dateString) return "";
+          try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return "";
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}`;
+          } catch (error) {
+            console.error("Ошибка форматирования даты:", error);
+            return "";
+          }
+        };
+        
+        setFormData({
+          id: userData.id,
+          fullName: userData.fullName ?? "",
+          email: userData.email ?? "",
+          phone: userData.phone ?? "",
+          dateOfBirth: formatDateForInput(userData.dateOfBirth),
+          passportNumber: userData.passportNumber ?? "",
+          passportIssuedBy: userData.passportIssuedBy ?? "",
+          passportIssuedDate: formatDateForInput(userData.passportIssuedDate) ?? "",
+          address: userData.address ?? "",
+          dateRegistered: formatDateForInput(userData.dateRegistered),
+          borrowedBooksCount: userData.borrowedBooksCount ?? 0,
+          fineAmount: userData.fineAmount ?? 0,
+          isActive: userData.isActive ?? true,
+          loanPeriodDays: userData.loanPeriodDays ?? 14,
+          maxBooksAllowed: userData.maxBooksAllowed ?? 5,
+          passwordHash: userData.passwordHash ?? "",
+          username: userData.username ?? "",
+          userRoles: userData.userRoles || [],
+          borrowedBooks: userData.borrowedBooks || []
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
+        console.error("Ошибка загрузки данных:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (userId) fetchUserData();
+  }, [userId]);
 
+  // Обработка изменений в форме
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
-
+    
     if (type === "checkbox") {
       const { checked } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: checked }));
+      setFormData((prev) => (prev ? { ...prev, [name]: checked } : null));
     } else if (type === "number") {
-      setFormData((prev) => ({ ...prev, [name]: value ? Number(value) : 0 }));
+      setFormData((prev) => (prev ? { ...prev, [name]: value ? Number(value) : 0 } : null));
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setFormData((prev) => (prev ? { ...prev, [name]: value } : null));
     }
   };
 
+  // Отправка формы для обновления данных
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!formData) return;
+    
+    setSubmitting(true);
     setError(null);
-
+    
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-      const response = await fetch(`${baseUrl}/api/User`, {
-        method: "POST",
+      const response = await fetch(`${baseUrl}/api/User/${userId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : null,
+          dateRegistered: formData.dateRegistered ? new Date(formData.dateRegistered).toISOString() : null,
+          passportIssuedDate: formData.passportIssuedDate ? new Date(formData.passportIssuedDate).toISOString() : null,
+          userRoles: formData.userRoles || [],
+          borrowedBooks: formData.borrowedBooks || []
+        }),
       });
-
+      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Ошибка ответа сервера при создании:", errorText);
+        console.error("Ошибка ответа сервера при обновлении:", errorText);
         throw new Error(`Ошибка: ${response.status}`);
       }
-
-      router.push("/admin/users");
+      
+      router.push(`/admin/users/${userId}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка при создании пользователя");
-      console.error("Ошибка создания пользователя:", err);
+      setError(err instanceof Error ? err.message : "Произошла ошибка при обновлении пользователя");
+      console.error("Ошибка обновления:", err);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  if (loading) return <div className="p-8 flex justify-center">Загрузка...</div>;
+  if (error && !formData) return <div className="p-8 text-red-500">Ошибка: {error}</div>;
+  if (!formData) return <div className="p-8 text-red-500">Пользователь не найден</div>;
 
   return (
     <GlassMorphismContainer>
       <div className="p-6 max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
-            Создание пользователя
+            Редактирование пользователя
           </h1>
           <button
             onClick={() => router.back()}
@@ -148,6 +215,21 @@ export default function CreateUserPage() {
                   id="email"
                   name="email"
                   value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
+                  Имя пользователя
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
                   onChange={handleChange}
                   required
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -322,7 +404,7 @@ export default function CreateUserPage() {
                   name="isActive"
                   checked={formData.isActive}
                   onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, isActive: !!checked }))
+                    setFormData((prev) => (prev ? { ...prev, isActive: !!checked } : null))
                   }
                 />
                 <label
@@ -345,10 +427,10 @@ export default function CreateUserPage() {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting}
               className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Создание..." : "Создать пользователя"}
+              {submitting ? "Сохранение..." : "Сохранить изменения"}
             </button>
           </div>
         </form>
