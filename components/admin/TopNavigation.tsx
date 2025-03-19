@@ -121,31 +121,41 @@ const TopNavigation = ({ session }: { session: Session }) => {
       
       let categorizedResults: SearchResultCategory[] = [];
       
-      try {
-        // Получение базового URL API из переменных окружения или использование значения по умолчанию
-        const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5000';
-        
-        // Замена https на http, если необходимо
-        const apiUrl = apiBaseUrl.replace('https:', 'http:');
-        
-        console.log("Используемый URL API:", apiUrl);
+      // Получение базового URL API из переменных окружения
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) {
+        console.error("NEXT_PUBLIC_BASE_URL не определен");
+        return;
+      }
+      
+      console.log("Используемый URL API:", baseUrl);
 
-        // Выполнение запросов к API для поиска
+      // Выполнение запросов к API для поиска
+      try {
+        // Получаем всех пользователей и книги
         const [usersResponse, booksResponse] = await Promise.all([
-          fetch(`${apiUrl}/api/users/search?query=${encodeURIComponent(query)}`),
-          fetch(`${apiUrl}/api/books/search?query=${encodeURIComponent(query)}`)
+          fetch(`${baseUrl}/api/User`),
+          fetch(`${baseUrl}/api/Books`)
         ]);
-        
-        // Обработка результатов
         
         // Обработка результатов поиска пользователей
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
+          console.log("Получены все пользователи:", usersData);
           
-          if (usersData.length > 0) {
-            const userResults: SearchResult[] = usersData.map((user: any) => ({
+          // Фильтруем пользователей по поисковому запросу
+          const filteredUsers = usersData.filter((user: any) => 
+            (user.fullName && user.fullName.toLowerCase().includes(query.toLowerCase())) ||
+            (user.email && user.email.toLowerCase().includes(query.toLowerCase())) ||
+            (user.username && user.username.toLowerCase().includes(query.toLowerCase()))
+          );
+          
+          console.log("Отфильтрованные пользователи:", filteredUsers);
+          
+          if (filteredUsers && filteredUsers.length > 0) {
+            const userResults: SearchResult[] = filteredUsers.map((user: any) => ({
               id: user.id,
-              title: user.name || user.username,
+              title: user.fullName || user.username || user.name,
               subtitle: user.email,
               type: "user" as const,
               url: `/admin/users/${user.id}`,
@@ -159,15 +169,24 @@ const TopNavigation = ({ session }: { session: Session }) => {
             });
           }
         } else {
-          console.warn("Ошибка при поиске пользователей:", usersResponse.status);
+          console.error("Ошибка при получении пользователей:", usersResponse.status, await usersResponse.text());
         }
         
         // Обработка результатов поиска книг
         if (booksResponse.ok) {
           const booksData = await booksResponse.json();
+          console.log("Получены все книги:", booksData);
           
-          if (booksData.length > 0) {
-            const bookResults: SearchResult[] = booksData.map((book: any) => ({
+          // Фильтруем книги по поисковому запросу
+          const filteredBooks = booksData.filter((book: any) => 
+            (book.title && book.title.toLowerCase().includes(query.toLowerCase())) ||
+            (book.authors && book.authors.toLowerCase().includes(query.toLowerCase()))
+          );
+          
+          console.log("Отфильтрованные книги:", filteredBooks);
+          
+          if (filteredBooks && filteredBooks.length > 0) {
+            const bookResults: SearchResult[] = filteredBooks.map((book: any) => ({
               id: book.id,
               title: book.title,
               subtitle: book.authors,
@@ -183,113 +202,10 @@ const TopNavigation = ({ session }: { session: Session }) => {
             });
           }
         } else {
-          console.warn("Ошибка при поиске книг:", booksResponse.status);
+          console.error("Ошибка при получении книг:", booksResponse.status, await booksResponse.text());
         }
-      } catch (error) {
-        console.error("Ошибка при обращении к API, используем тестовые данные:", error);
-        
-        // В случае ошибки API используем тестовые данные
-        // Поиск пользователей (тестовые данные)
-        const userResults: SearchResult[] = [
-          {
-            id: "1",
-            title: "Админ Иванов",
-            subtitle: "admin@library.com",
-            type: "user" as const,
-            url: "/admin/users/1",
-            icon: <User className="h-4 w-4 text-blue-500" />
-          },
-          {
-            id: "2",
-            title: "Библиотекарь Петров",
-            subtitle: "librarian@library.com",
-            type: "user" as const,
-            url: "/admin/users/2",
-            icon: <User className="h-4 w-4 text-blue-500" />
-          }
-        ].filter(user => 
-          user.title.toLowerCase().includes(query.toLowerCase()) || 
-          (user.subtitle && user.subtitle.toLowerCase().includes(query.toLowerCase()))
-        );
-  
-        // Поиск книг (тестовые данные)
-        const bookResults: SearchResult[] = [
-          {
-            id: "101",
-            title: "Война и мир",
-            subtitle: "Лев Толстой",
-            type: "book" as const,
-            url: "/admin/books/101",
-            icon: <Book className="h-4 w-4 text-amber-500" />
-          },
-          {
-            id: "102",
-            title: "Мастер и Маргарита",
-            subtitle: "Михаил Булгаков",
-            type: "book" as const,
-            url: "/admin/books/102",
-            icon: <Book className="h-4 w-4 text-amber-500" />
-          },
-          {
-            id: "103",
-            title: "Преступление и наказание",
-            subtitle: "Фёдор Достоевский",
-            type: "book" as const,
-            url: "/admin/books/103",
-            icon: <Book className="h-4 w-4 text-amber-500" />
-          }
-        ].filter(book => 
-          book.title.toLowerCase().includes(query.toLowerCase()) || 
-          (book.subtitle && book.subtitle.toLowerCase().includes(query.toLowerCase()))
-        );
-  
-        // Поиск журналов (тестовые данные)
-        const journalResults: SearchResult[] = [
-          {
-            id: 201,
-            title: "Научный вестник",
-            subtitle: "Научный",
-            type: "journal" as const,
-            url: "/admin/journals/201",
-            icon: <BookOpen className="h-4 w-4 text-green-500" />
-          },
-          {
-            id: 202,
-            title: "Литературное обозрение",
-            subtitle: "Литературный",
-            type: "journal" as const,
-            url: "/admin/journals/202",
-            icon: <BookOpen className="h-4 w-4 text-green-500" />
-          }
-        ].filter(journal => 
-          journal.title.toLowerCase().includes(query.toLowerCase()) || 
-          (journal.subtitle && journal.subtitle.toLowerCase().includes(query.toLowerCase()))
-        );
-
-        // Формируем категоризированные результаты из тестовых данных
-        if (userResults.length > 0) {
-          categorizedResults.push({
-            title: "Пользователи",
-            icon: <User className="h-4 w-4" />,
-            results: userResults
-          });
-        }
-        
-        if (bookResults.length > 0) {
-          categorizedResults.push({
-            title: "Книги",
-            icon: <Book className="h-4 w-4" />,
-            results: bookResults
-          });
-        }
-        
-        if (journalResults.length > 0) {
-          categorizedResults.push({
-            title: "Журналы",
-            icon: <BookOpen className="h-4 w-4" />,
-            results: journalResults
-          });
-        }
+      } catch (fetchError) {
+        console.error("Ошибка при выполнении запросов к API:", fetchError);
       }
       
       // Добавляем поиск по страницам сайта (статический, всегда работает)
@@ -321,6 +237,20 @@ const TopNavigation = ({ session }: { session: Session }) => {
           type: "page" as const,
           url: "/admin/journals",
           icon: <FileText className="h-4 w-4 text-purple-500" />
+        },
+        {
+          id: "statistics",
+          title: "Статистика",
+          type: "page" as const,
+          url: "/admin/statistics",
+          icon: <FileText className="h-4 w-4 text-purple-500" />
+        },
+        {
+          id: "Shelfs",
+          title: "Полки",
+          type: "page" as const,
+          url: "/admin/shelfs",
+          icon: <FileText className="h-4 w-4 text-purple-500" />
         }
       ].filter(page => 
         page.title.toLowerCase().includes(query.toLowerCase())
@@ -334,7 +264,7 @@ const TopNavigation = ({ session }: { session: Session }) => {
         });
       }
       
-      console.log("Найдено результатов:", categorizedResults);
+      console.log("Итоговые результаты поиска:", categorizedResults);
       setSearchResults(categorizedResults);
     } catch (error) {
       console.error("Ошибка при поиске:", error);
