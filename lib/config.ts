@@ -1,21 +1,20 @@
-const config = {
-  env: {
-    apiEndpoint: process.env.NEXT_PUBLIC_API_ENDPOINT!,
-    prodApiEndpoint: process.env.NEXT_PUBLIC_PROD_API_ENDPOINT!,
-    imagekit: {
-      publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
-      urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT!,
-      privateKey: process.env.IMAGEKIT_PRIVATE_KEY!,
-    },
-    databaseUrl: process.env.DATABASE_URL!,
-    upstash: {
-      redisUrl: process.env.UPSTASH_REDIS_URL!,
-      redisToken: process.env.UPSTASH_REDIS_TOKEN!,
-      qstashUrl: process.env.QSTASH_URL!,
-      qstashToken: process.env.QSTASH_TOKEN!,
-    },
-    resendToken: process.env.RESEND_TOKEN!,
-  },
+import * as dotenv from "dotenv";
+
+dotenv.config({ path: ".env.local" });
+
+if (!process.env.DB_HOST) throw new Error("DB_HOST is required");
+if (!process.env.DB_PORT) throw new Error("DB_PORT is required");
+if (!process.env.DB_USER) throw new Error("DB_USER is required");
+if (!process.env.DB_PASSWORD) throw new Error("DB_PASSWORD is required");
+if (!process.env.DB_NAME) throw new Error("DB_NAME is required");
+
+export const config = {
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  //databaseUrl: `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}?sslmode=disable&connect_timeout=5`,
 };
 
 export default config;

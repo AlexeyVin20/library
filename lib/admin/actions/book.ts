@@ -1,28 +1,30 @@
 "use server";
 
-import { books } from "@/database/schema";
-import { db } from "@/database/drizzle";
-
-export const createBook = async (params: BookParams) => {
-  try {
-    const newBook = await db
-      .insert(books)
-      .values({
-        ...params,
-        availableCopies: params.totalCopies,
-      })
-      .returning();
-
-    return {
-      success: true,
-      data: JSON.parse(JSON.stringify(newBook[0])),
-    };
-  } catch (error) {
-    console.log(error);
-
-    return {
-      success: false,
-      message: "Произошла ошибка при создании книги",
-    };
-  }
-};
+export interface BookInput {
+  id?: string;
+  title: string;
+  authors: string;
+  genre?: string | null;
+  categorization?: string | null;
+  udk?: string | null;
+  bbk?: string | null;
+  isbn: string;
+  cover?: string | null;
+  description?: string | null;
+  summary?: string | null;
+  publicationYear?: number | null;
+  publisher?: string | null;
+  pageCount?: number | null;
+  language?: string | null;
+  availableCopies: number;
+  shelfId?: number | null;
+  edition?: string | null;
+  price?: number | null;
+  format?: string | null;
+  originalTitle?: string | null;
+  originalLanguage?: string | null;
+  isEbook?: boolean;
+  condition?: string | null;
+  dateAdded?: string;
+  dateModified?: string;
+}
