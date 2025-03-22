@@ -18,6 +18,7 @@ export interface BookInput {
   language?: string | null;
   availableCopies: number;
   shelfId?: number | null;
+  position?: number | null;
   edition?: string | null;
   price?: number | null;
   format?: string | null;

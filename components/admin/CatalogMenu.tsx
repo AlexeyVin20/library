@@ -68,8 +68,8 @@ export default function CatalogMenu() {
         
         // Параллельная загрузка книг и журналов
         const [booksRes, journalsRes] = await Promise.all([
-          fetch(`${baseUrl}/api/books`),
-          fetch(`${baseUrl}/api/journals`)
+          fetch(`${baseUrl}/api/Books`),
+          fetch(`${baseUrl}/api/Journals`)
         ]);
         
         if (booksRes.ok && journalsRes.ok) {

@@ -3,15 +3,43 @@
 import { useRouter } from "next/navigation";
 import BookForm from "@/components/admin/forms/BookForm";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { BookInput } from "@/lib/admin/actions/book";
+import { Shelf } from "@/lib/types";
 
 export default function CreateBookPage() {
   const router = useRouter();
+  const [shelves, setShelves] = useState<Shelf[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCreateBook = async (data) => {
+  useEffect(() => {
+    fetchShelves();
+  }, []);
+
+  const fetchShelves = async () => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+
+      const response = await fetch(`${baseUrl}/api/shelf`);
+      if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
+      const data = await response.json();
+      setShelves(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка при загрузке полок');
+      console.error("Ошибка при загрузке полок:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateBook = async (data: BookInput) => {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
     
     try {
+      console.log("Отправляем данные книги:", data);
       const res = await fetch(`${baseUrl}/api/books`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -19,6 +47,8 @@ export default function CreateBookPage() {
       });
       
       if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Ошибка ответа сервера:", errorText);
         throw new Error("Не удалось создать книгу");
       }
       
@@ -38,7 +68,22 @@ export default function CreateBookPage() {
           </button>
         </Link>
       </div>
-      <BookForm type="create" onSubmit={handleCreateBook} isSubmitting={false} />
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          Ошибка: {error}
+        </div>
+      ) : (
+        <BookForm 
+          mode="create" 
+          onSubmit={handleCreateBook} 
+          isSubmitting={false} 
+          shelves={shelves}
+        />
+      )}
     </div>
   );
 }

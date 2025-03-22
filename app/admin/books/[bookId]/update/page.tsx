@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import BookForm from "@/components/admin/forms/BookForm"; // Предполагается, что у вас есть этот компонент
+import { Shelf } from "@/lib/types";
 
 // Интерфейс Book
 interface Book {
@@ -35,37 +36,48 @@ export default function BookUpdatePage({
   const [loading, setLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [shelves, setShelves] = useState<Shelf[]>([]);
   const router = useRouter();
 
   // Распарсим params
   const resolvedParams = use(params);
 
   useEffect(() => {
-    const fetchBook = async () => {
+    const fetchData = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
         if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
 
-        const res = await fetch(`${baseUrl}/api/books/${resolvedParams.bookId}`, {
+        // Загружаем книгу
+        const bookRes = await fetch(`${baseUrl}/api/books/${resolvedParams.bookId}`, {
           headers: { "Content-Type": "application/json" },
         });
 
-        if (!res.ok) {
+        if (!bookRes.ok) {
           setError(true);
           return;
         }
 
-        const bookData = await res.json();
+        const bookData = await bookRes.json();
         setBook(bookData);
+        
+        // Загружаем полки
+        const shelvesRes = await fetch(`${baseUrl}/api/shelf`);
+        if (shelvesRes.ok) {
+          const shelvesData = await shelvesRes.json();
+          setShelves(shelvesData);
+        } else {
+          console.error("Ошибка при загрузке полок:", shelvesRes.statusText);
+        }
       } catch (error) {
-        console.error("Error fetching book:", error);
+        console.error("Error fetching data:", error);
         setError(true);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBook();
+    fetchData();
   }, [resolvedParams.bookId]);
 
   const handleSubmit = async (updatedBook: Omit<Book, 'id' | 'dateAdded' | 'dateModified'>) => {
@@ -119,6 +131,7 @@ export default function BookUpdatePage({
         onSubmit={handleSubmit} 
         isSubmitting={updating} 
         mode="update"
+        shelves={shelves}
       />
       
       <div className="mt-4">

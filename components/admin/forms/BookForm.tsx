@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Loader2, BookOpen, Search, FileText, BookmarkIcon, LayoutGrid } from "lucide-react";
+import { Loader2, BookOpen, Search, FileText, BookmarkIcon, LayoutGrid, BookCopy, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { bookSchema } from "@/lib/validations";
 import { BookInput } from "@/lib/admin/actions/book";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+interface Position {
+  x: number;
+  y: number;
+}
 
 // Определение стилей glassmorphism, аналогичных главной странице
 const getThemeClasses = () => {
@@ -44,7 +52,7 @@ interface BookFormProps extends Partial<BookInput> {
   onSubmit: (data: BookInput) => Promise<void>;
   isSubmitting: boolean;
   mode: "create" | "update";
-  shelves?: Array<{ id: number; category: string; shelfNumber: number }>;
+  shelves?: Array<{ id: number; category: string; shelfNumber: number; capacity: number; posX: number; posY: number }>;
 }
 
 const BookForm = ({
@@ -59,12 +67,21 @@ const BookForm = ({
 
   const [showManualCoverInput, setShowManualCoverInput] = useState(false);
   const [manualCoverUrl, setManualCoverUrl] = useState("");
-  const [isbn, setIsbn] = useState("");
+  const [isbn, setIsbn] = useState<string>(initialData?.isbn || "");
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic-info");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [geminiImage, setGeminiImage] = useState<string | null>(null);
   const [geminiLoading, setGeminiLoading] = useState(false);
+  const [showShelvesModal, setShowShelvesModal] = useState(false);
+  const [selectedShelf, setSelectedShelf] = useState<number | undefined>(
+    initialData?.shelfId !== undefined ? Number(initialData.shelfId) : undefined
+  );
+  const [selectedPosition, setSelectedPosition] = useState<number | undefined>(
+    initialData?.position !== undefined ? Number(initialData.position) : undefined
+  );
+  const [draggedShelf, setDraggedShelf] = useState<any | null>(null);
+  const [mousePosition, setMousePosition] = useState<Position>({ x: 0, y: 0 });
 
   const {
     register,
@@ -91,6 +108,7 @@ const BookForm = ({
       summary: initialData?.summary || "",
       availableCopies: initialData?.availableCopies || 1,
       shelfId: initialData?.shelfId || undefined,
+      position: initialData?.position || undefined,
       edition: initialData?.edition || "",
       price: initialData?.price || undefined,
       format: initialData?.format || "",
@@ -105,6 +123,15 @@ const BookForm = ({
   const formValues = watch();
 
   useEffect(() => {
+    if (initialData) {
+      setIsbn(initialData.isbn || "");
+      if (initialData.shelfId !== undefined) {
+        setSelectedShelf(Number(initialData.shelfId));
+      } 
+      if (initialData.position !== undefined) {
+        setSelectedPosition(Number(initialData.position));
+      }
+    }
     if (initialData?.cover) setPreviewUrl(initialData.cover);
   }, [initialData]);
 
@@ -379,8 +406,156 @@ const BookForm = ({
     }
   };
 
+  const handleDragStart = (e: React.MouseEvent, shelf: any) => {
+    const container = document.getElementById('shelf-editor');
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    
+    setMousePosition({
+      x: e.clientX - rect.left - shelf.posX,
+      y: e.clientY - rect.top - shelf.posY,
+    });
+    
+    setDraggedShelf(shelf);
+    e.preventDefault();
+  };
+
+  const handleDragMove = (e: React.MouseEvent) => {
+    if (!draggedShelf) return;
+    
+    const container = document.getElementById('shelf-editor');
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left - mousePosition.x;
+    const y = e.clientY - rect.top - mousePosition.y;
+    
+    // Ограничиваем перемещение в пределах контейнера
+    const newX = Math.max(0, Math.min(rect.width - 250, x));
+    const newY = Math.max(0, Math.min(rect.height - 150, y));
+    
+    setDraggedShelf({...draggedShelf, posX: newX, posY: newY});
+  };
+
+  const handleDragEnd = () => {
+    setDraggedShelf(null);
+  };
+
+  const handleEmptySlotClick = (shelfId: number, position: number) => {
+    setSelectedShelf(shelfId);
+    setSelectedPosition(position);
+    setValue("shelfId", shelfId);
+    setValue("position", position);
+    setShowShelvesModal(false);
+  };
+
   const onFormSubmit = async (values: z.infer<typeof bookSchema>) => {
     await onSubmit(values);
+  };
+
+  const ShelvesModal = () => {
+    return (
+      <Dialog open={showShelvesModal} onOpenChange={setShowShelvesModal}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Выберите полку и позицию</DialogTitle>
+            <DialogDescription>
+              Нажмите на полку, затем выберите позицию для книги
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-6 my-4">
+            <div className="grid gap-3">
+              <Label>Доступные полки</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto p-2">
+                {shelves && shelves.length > 0 ? (
+                  shelves.map((shelf) => (
+                    <div
+                      key={shelf.id}
+                      className={`p-3 rounded-md border ${
+                        selectedShelf === shelf.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border"
+                      } cursor-pointer hover:bg-accent transition-colors`}
+                      onClick={() => setSelectedShelf(shelf.id)}
+                    >
+                      <div className="font-medium">{shelf.category}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Мест: {shelf.capacity}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Категория: {shelf.category || "Общая"}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-muted-foreground col-span-full text-center py-4">
+                    Нет доступных полок
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {selectedShelf && (
+              <div className="grid gap-3">
+                <Label>Выберите позицию на полке {shelves.find(s => s.id === selectedShelf)?.category || 'N/A'}</Label>
+                <div className="flex flex-wrap gap-2 bg-accent/50 p-3 rounded-md max-h-[200px] overflow-y-auto">
+                  {Array.from({ length: shelves.find(s => s.id === selectedShelf)?.capacity || 0 }).map((_, i) => {
+                    // Проверяем занятость позиции (если в модели есть такой метод)
+                    const isOccupied = false; // По умолчанию считаем позицию свободной
+                    
+                    // Проверяем, является ли это текущей редактируемой книгой
+                    const isCurrentBook = 
+                      initialData?.shelfId === selectedShelf && 
+                      initialData?.position === i;
+                      
+                    return (
+                      <div
+                        key={i}
+                        className={`w-10 h-12 flex items-center justify-center rounded-md cursor-pointer transition-all ${
+                          selectedPosition === i
+                            ? "bg-primary text-primary-foreground"
+                            : isOccupied && !isCurrentBook
+                            ? "bg-red-500/30 cursor-not-allowed"
+                            : "bg-background border border-border hover:bg-accent"
+                        }`}
+                        onClick={() => {
+                          if (!isOccupied || isCurrentBook) {
+                            setSelectedPosition(i);
+                          }
+                        }}
+                      >
+                        {i}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowShelvesModal(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedShelf !== undefined && selectedPosition !== undefined) {
+                  setValue("shelfId", selectedShelf);
+                  setValue("position", selectedPosition);
+                  setShowShelvesModal(false);
+                }
+              }}
+              disabled={selectedShelf === undefined || selectedPosition === undefined}
+            >
+              Выбрать
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   return (
@@ -475,32 +650,29 @@ const BookForm = ({
                       {errors.authors && <p className="text-red-500 text-sm mt-1">{errors.authors.message}</p>}
                     </div>
 
-                    <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
-                        ISBN *
-                      </label>
-                      <div className="flex gap-2">
+                    <div className="grid gap-3">
+                      <Label htmlFor="isbn">ISBN</Label>
+                      <div className="relative">
                         <Input
-                          placeholder="Введите ISBN книги"
-                          {...register("isbn")}
-                          className={themeClasses.input}
-                          onChange={(e) => setIsbn(e.target.value)}
-                          value={watch("isbn")}
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleFetchByISBN}
-                          className={themeClasses.button}
-                          disabled={isSearchLoading}
-                        >
-                          {isSearchLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Search className="h-4 w-4" />
+                          id="isbn"
+                          placeholder="000-0000000000"
+                          className={cn(
+                            errors.isbn && "focus-visible:ring-red-500"
                           )}
-                        </Button>
+                          value={isbn}
+                          {...register("isbn", {
+                            onChange: (e) => {
+                              setIsbn(e.target.value);
+                            },
+                            value: isbn
+                          })}
+                        />
+                        {errors.isbn && (
+                          <p className="text-xs text-red-500 mt-1">
+                            {errors.isbn.message}
+                          </p>
+                        )}
                       </div>
-                      {errors.isbn && <p className="text-red-500 text-sm mt-1">{errors.isbn.message}</p>}
                     </div>
 
                     <div>
@@ -593,6 +765,48 @@ const BookForm = ({
                             </SelectContent>
                           </Select>
                           {errors.condition && <p className="text-red-500 text-sm mt-1">{errors.condition.message}</p>}
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                            Расположение на полке
+                          </label>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1">
+                                <Button
+                                  type="button"
+                                  onClick={() => setShowShelvesModal(true)}
+                                  className={`${themeClasses.button} w-full flex items-center justify-center`}
+                                >
+                                  <BookCopy className="h-4 w-4 mr-2" />
+                                  {selectedShelf && selectedPosition !== undefined 
+                                    ? `Полка: ${shelves.find(s => s.id === selectedShelf)?.category || 'N/A'} #${shelves.find(s => s.id === selectedShelf)?.shelfNumber || 'N/A'}, Позиция: ${selectedPosition + 1}` 
+                                    : "Выбрать расположение"}
+                                </Button>
+                              </div>
+                              {selectedShelf && selectedPosition !== undefined && (
+                                <Button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedShelf(undefined);
+                                    setSelectedPosition(undefined);
+                                    setValue("shelfId", undefined);
+                                    setValue("position", undefined);
+                                  }}
+                                  variant="outline"
+                                  className="px-3"
+                                >
+                                  <X size={16} />
+                                </Button>
+                              )}
+                            </div>
+                            {(errors.shelfId) && (
+                              <p className="text-red-500 text-sm mt-1">Выберите расположение на полке</p>
+                            )}
+                            <input type="hidden" {...register("shelfId")} />
+                            <input type="hidden" {...register("position")} />
+                          </div>
                         </div>
                       </>
                     )}
@@ -930,6 +1144,9 @@ const BookForm = ({
           </CardContent>
         </Card>
       </main>
+
+      {/* Модальное окно для выбора полки */}
+      <ShelvesModal />
     </div>
   );
 };

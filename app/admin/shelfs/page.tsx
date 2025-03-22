@@ -55,9 +55,9 @@ export default function ShelfsPage() {
 
   const getThemeClasses = () => {
     return {
-      card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
-      shelfCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300",
-      statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between",
+      card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] h-full flex flex-col",
+      shelfCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)]",
+      statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] h-full flex flex-col justify-between",
       mainContainer: "bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6",
       button: "bg-gradient-to-r from-primary-admin/90 to-primary-admin/70 dark:from-primary-admin/80 dark:to-primary-admin/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
       iconButton: "flex items-center justify-center p-2 rounded-lg bg-gradient-to-r from-gray-200/90 to-gray-300/70 dark:from-gray-700/80 dark:to-gray-800/60 backdrop-blur-xl text-gray-700 dark:text-gray-200 shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300",
@@ -85,7 +85,7 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
 
-      const response = await fetch(`${baseUrl}/api/shelf`);
+      const response = await fetch(`${baseUrl}/api/Shelves`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
       setShelves(data);
@@ -101,7 +101,7 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
 
-      const response = await fetch(`${baseUrl}/api/books`);
+      const response = await fetch(`${baseUrl}/api/Books`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
       setBooks(data);
@@ -116,7 +116,7 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
 
-      const response = await fetch(`${baseUrl}/api/journals`);
+      const response = await fetch(`${baseUrl}/api/Journals`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
       setJournals(data);
@@ -209,16 +209,25 @@ export default function ShelfsPage() {
     handleBookFound(bookId);
     setShowSearchDropdown(false);
     
-    // Добавляем пульсирующую анимацию вокруг найденной книги
+    // Скроллим к книге
     const bookElement = document.querySelector(`[data-book-id="${bookId}"]`);
     if (bookElement) {
-      // Исправление: разбиваем строку классов и добавляем их с помощью spread-оператора
-      bookElement.classList.add(...themeClasses.highlightedBook.split(' '));
-      
-      // Также исправляем удаление классов
-      setTimeout(() => {
-        bookElement.classList.remove(...themeClasses.highlightedBook.split(' '));
-      }, 5000);
+      // Найдем родительскую полку
+      const book = books.find(b => b.id === bookId);
+      if (book?.shelfId) {
+        const shelfElement = document.getElementById(`shelf-${book.shelfId}`);
+        if (shelfElement) {
+          shelfElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Подсвечиваем книгу
+          setHighlightedBookId(bookId);
+          
+          // Убираем подсветку через 5 секунд
+          setTimeout(() => {
+            setHighlightedBookId(null);
+          }, 5000);
+        }
+      }
     }
   };
   
@@ -523,59 +532,65 @@ export default function ShelfsPage() {
 
   const ShelfContent = ({ shelf }: { shelf: Shelf }) => {
     return (
-        <div className="flex flex-wrap gap-1">
-            {Array.from({ length: shelf.capacity }).map((_, i) => {
-                const book = books.find(b => b.shelfId === shelf.id && b.position === i);
-                const journal = journals.find(j => j.shelfId === shelf.id && j.position === i);
-                const item = book || journal;
+      <div className="flex flex-wrap gap-1">
+        {Array.from({ length: shelf.capacity }).map((_, i) => {
+          const book = books.find(b => b.shelfId === shelf.id && b.position === i);
+          const journal = journals.find(j => j.shelfId === shelf.id && j.position === i);
+          const item = book || journal;
 
-                const getBackground = () => {
-                    if (item) {
-                        if (book) {
-                            return book.availableCopies && book.availableCopies > 0 
-                                ? 'bg-green-500 hover:scale-105' 
-                                : 'bg-red-500 hover:scale-105';
-                        } else {
-                            return 'bg-blue-500 hover:scale-105'; // Журналы
-                        }
-                    } 
-                    return 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600';
-                };
+          const getBackground = () => {
+            if (item) {
+              if (book) {
+                // Проверяем, является ли книга подсвеченной
+                const isHighlighted = book.id === highlightedBookId;
+                if (isHighlighted) {
+                  return 'bg-yellow-400 border-2 border-yellow-600 shadow-yellow-300/50 shadow-lg animate-pulse';
+                }
+                return book.availableCopies && book.availableCopies > 0 
+                  ? 'bg-green-500 hover:scale-105 hover:shadow-md' 
+                  : 'bg-red-500 hover:scale-105 hover:shadow-md';
+              } else {
+                return 'bg-blue-500 hover:scale-105 hover:shadow-md'; // Журналы
+              }
+            } 
+            return 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600';
+          };
 
-                const handleContextMenu = (e: React.MouseEvent) => {
-                    e.preventDefault();
-                    if (item) {
-                        // Открываем контекстное меню с передачей данных
-                        setContextMenuData({ 
-                            item, 
-                            isJournal: !!journal, 
-                            position: { x: e.pageX, y: e.pageY },
-                            shelfId: shelf.id,
-                            itemPosition: i
-                        });
-                        setShowContextMenu(true);
-                    }
-                };
+          const handleContextMenu = (e: React.MouseEvent) => {
+            e.preventDefault();
+            if (item) {
+              // Открываем контекстное меню с передачей данных
+              setContextMenuData({ 
+                item, 
+                isJournal: !!journal, 
+                position: { x: e.pageX, y: e.pageY },
+                shelfId: shelf.id,
+                itemPosition: i
+              });
+              setShowContextMenu(true);
+            }
+          };
 
-                return (
-                    <div
-                        key={i}
-                        data-book-id={book?.id || ''}
-                        className={`${themeClasses.bookOnShelf} ${getBackground()}`}
-                        onClick={() => {
-                            if (item) {
-                                // Если место занято, открываем контекстное меню
-                                handleContextMenu({ preventDefault: () => {}, pageX: window.innerWidth / 2, pageY: window.innerHeight / 2 } as React.MouseEvent);
-                            } else {
-                                // Если место пустое, открываем селектор для добавления
-                                handleEmptySlotClick(shelf.id, i);
-                            }
-                        }}
-                        onContextMenu={handleContextMenu}
-                    ></div>
-                );
-            })}
-        </div>
+          return (
+            <div
+              key={i}
+              data-book-id={book?.id || ''}
+              title={item ? `${item.title} (${journal ? 'Журнал' : 'Книга'})${book?.authors ? ` - ${book.authors}` : ''}` : 'Пустое место'}
+              className={`${themeClasses.bookOnShelf} ${getBackground()}`}
+              onClick={() => {
+                if (item) {
+                  // Если место занято, открываем контекстное меню
+                  handleContextMenu({ preventDefault: () => {}, pageX: window.innerWidth / 2, pageY: window.innerHeight / 2 } as React.MouseEvent);
+                } else {
+                  // Если место пустое, открываем селектор для добавления
+                  handleEmptySlotClick(shelf.id, i);
+                }
+              }}
+              onContextMenu={handleContextMenu}
+            ></div>
+          );
+        })}
+      </div>
     );
   };
 

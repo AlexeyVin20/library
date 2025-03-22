@@ -113,7 +113,7 @@ export default function UserDetailPage() {
   const handleDeleteUser = async () => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-      const response = await fetch(`${baseUrl}/api/User/${userId}`, {
+      const response = await fetch(`${baseUrl}/api/Users/${userId}`, {
         method: "DELETE",
       });
       
