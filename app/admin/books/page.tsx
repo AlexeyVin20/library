@@ -15,6 +15,7 @@ import { CreditCard, Box, BookOpen, List } from "lucide-react";
 import BookCover from "@/components/BookCover";
 import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import "@/styles/admin.css";
+import api from "@/lib/api";
 
 /**
  * Interface for book item
@@ -298,22 +299,23 @@ export default function BooksPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
   const [viewMode, setViewMode] = useState("cards");
+  const [loading, setLoading] = useState(true);
   const themeClasses = getThemeClasses();
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-        if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-        const res = await fetch(`${baseUrl}/api/Books`);
-        if (res.ok) {
-          const data = await res.json();
-          setBooks(data);
-        } else {
-          console.error("Ошибка получения книг");
-        }
+        const data = await api.books.getAll();
+        setBooks(data);
       } catch (error) {
         console.error("Ошибка получения книг", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить книги",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -330,29 +332,19 @@ export default function BooksPage() {
   );
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Вы уверены, что хотите удалить эту книгу?")) return;
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      const res = await fetch(`${baseUrl}/api/Books/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast({
-          title: "Книга удалена",
-          description: "Книга успешно удалена",
-        });
-        setBooks((prev) => prev.filter((book) => book.id !== id));
-      } else {
-        toast({
-          title: "Ошибка",
-          description: "Не удалось удалить книгу",
-          variant: "destructive",
-        });
-      }
+      await api.books.delete(id);
+      setBooks(books.filter((book) => book.id !== id));
+      toast({
+        title: "Успешно",
+        description: "Книга успешно удалена"
+      });
     } catch (error) {
-      console.error("Ошибка при удалении книги:", error);
+      console.error("Ошибка удаления книги", error);
       toast({
         title: "Ошибка",
-        description: "Ошибка при удалении книги",
-        variant: "destructive",
+        description: "Не удалось удалить книгу",
+        variant: "destructive"
       });
     }
   };
@@ -386,7 +378,11 @@ export default function BooksPage() {
         </header>
 
         <main className="flex-1 space-y-8 px-6">
-          {sortedBooks.length === 0 ? (
+          {loading ? (
+            <div className={`${themeClasses.card} py-20 text-center`}>
+              <p className="text-xl text-neutral-700 dark:text-white">Загрузка...</p>
+            </div>
+          ) : sortedBooks.length === 0 ? (
             <div className={`${themeClasses.card} py-20 text-center`}>
               <p className="text-xl text-neutral-700 dark:text-white">Книги не найдены</p>
               <p className="mt-2 text-neutral-600 dark:text-neutral-300">

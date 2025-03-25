@@ -50,8 +50,8 @@ export default function AllUsersPage() {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
         
         const [usersResponse, reservationsResponse] = await Promise.all([
-          fetch(`${baseUrl}/api/Users`),
-          fetch(`${baseUrl}/api/Reservations`),
+          fetch(`${baseUrl}/api/User`),
+          fetch(`${baseUrl}/api/Reservation`),
         ]);
         
         if (!usersResponse.ok) throw new Error(`Ошибка загрузки пользователей: ${usersResponse.status}`);

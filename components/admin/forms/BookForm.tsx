@@ -26,7 +26,7 @@ interface Position {
   y: number;
 }
 
-// Определение стилей glassmorphism, аналогичных главной странице
+// Определение стилей glassmorphism
 const getThemeClasses = () => {
   return {
     card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
@@ -47,8 +47,8 @@ const getThemeClasses = () => {
   };
 };
 
-interface BookFormProps extends Partial<BookInput> {
-  initialData?: Omit<BookInput, "id" | "dateAdded" | "dateModified">;
+interface BookFormProps {
+  initialData?: Partial<BookInput>;
   onSubmit: (data: BookInput) => Promise<void>;
   isSubmitting: boolean;
   mode: "create" | "update";
@@ -64,13 +64,12 @@ const BookForm = ({
 }: BookFormProps) => {
   const router = useRouter();
   const themeClasses = getThemeClasses();
-
   const [showManualCoverInput, setShowManualCoverInput] = useState(false);
   const [manualCoverUrl, setManualCoverUrl] = useState("");
-  const [isbn, setIsbn] = useState<string>(initialData?.isbn || "");
+  const [isbn, setIsbn] = useState(initialData?.isbn || "");
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic-info");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.cover || null);
   const [geminiImage, setGeminiImage] = useState<string | null>(null);
   const [geminiLoading, setGeminiLoading] = useState(false);
   const [showShelvesModal, setShowShelvesModal] = useState(false);
@@ -80,7 +79,7 @@ const BookForm = ({
   const [selectedPosition, setSelectedPosition] = useState<number | undefined>(
     initialData?.position !== undefined ? Number(initialData.position) : undefined
   );
-  const [draggedShelf, setDraggedShelf] = useState<any | null>(null);
+  const [draggedShelf, setDraggedShelf] = useState<any>(null);
   const [mousePosition, setMousePosition] = useState<Position>({ x: 0, y: 0 });
 
   const {
@@ -110,7 +109,7 @@ const BookForm = ({
       shelfId: initialData?.shelfId || undefined,
       position: initialData?.position || undefined,
       edition: initialData?.edition || "",
-      price: initialData?.price || undefined,
+      price: initialData?.price || 0,
       format: initialData?.format || "",
       originalTitle: initialData?.originalTitle || "",
       originalLanguage: initialData?.originalLanguage || "",
@@ -127,12 +126,12 @@ const BookForm = ({
       setIsbn(initialData.isbn || "");
       if (initialData.shelfId !== undefined) {
         setSelectedShelf(Number(initialData.shelfId));
-      } 
+      }
       if (initialData.position !== undefined) {
         setSelectedPosition(Number(initialData.position));
       }
+      if (initialData?.cover) setPreviewUrl(initialData.cover);
     }
-    if (initialData?.cover) setPreviewUrl(initialData.cover);
   }, [initialData]);
 
   useEffect(() => {
@@ -144,6 +143,7 @@ const BookForm = ({
       toast({ title: "Ошибка", description: "Введите ISBN для поиска", variant: "destructive" });
       return;
     }
+    
     setIsSearchLoading(true);
     try {
       const res = await fetch(
@@ -227,6 +227,7 @@ const BookForm = ({
     onFileChange: (base64: string) => void;
   }) => {
     const [fileName, setFileName] = useState("");
+
     const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
@@ -239,15 +240,24 @@ const BookForm = ({
         onFileChange(base64);
       }
     };
+
     return (
-      <label className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50">
-        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-          <FileText className="w-8 h-8 text-gray-400" />
-          <p className="mb-2 text-sm text-gray-500">Перетащите файл сюда или нажмите для загрузки</p>
-          {fileName && <p className="text-xs text-gray-400">{fileName}</p>}
-        </div>
-        <input type="file" accept="image/*" onChange={handleChange} className="absolute inset-0 opacity-0" />
-      </label>
+      <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-white/10 hover:bg-white/20 transition-all">
+        <input
+          type="file"
+          className="hidden"
+          accept="image/*"
+          onChange={handleChange}
+          id="gemini-file-input"
+        />
+        <label htmlFor="gemini-file-input" className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
+          <BookOpen className="w-10 h-10 mb-2 text-primary-admin" />
+          <p className="mb-2 text-sm text-center text-gray-500 dark:text-gray-400">
+            Перетащите файл сюда или нажмите для загрузки
+          </p>
+          {fileName && <p className="text-xs text-primary-admin">{fileName}</p>}
+        </label>
+      </div>
     );
   };
 
@@ -293,16 +303,18 @@ const BookForm = ({
         },
         body: JSON.stringify(requestBody),
       });
+
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       const responseText = data?.choices?.[0]?.message?.content;
+
       if (responseText) {
         let jsonString = responseText.trim();
         if (jsonString.startsWith("```json")) jsonString = jsonString.slice(7).trim();
         if (jsonString.endsWith("```")) jsonString = jsonString.slice(0, -3).trim();
         const parsedData = JSON.parse(jsonString);
-        let coverUrl = null;
 
+        let coverUrl = null;
         if (parsedData.isbn) {
           try {
             const coverRes = await fetch(`https://bookcover.longitood.com/bookcover/${parsedData.isbn}`);
@@ -406,35 +418,71 @@ const BookForm = ({
     }
   };
 
+  const fillFormFromJson = (data: any) => {
+    if (data.Title) setValue("title", data.Title);
+    if (data.Authors) setValue("authors", data.Authors);
+    if (data.Genre) setValue("genre", data.Genre);
+    if (data.Categorization) setValue("categorization", data.Categorization);
+    if (data.UDK) setValue("udk", data.UDK);
+    if (data.BBK) setValue("bbk", data.BBK);
+    if (data.ISBN) {
+      setValue("isbn", data.ISBN);
+      setIsbn(data.ISBN);
+    }
+    if (data.Cover) {
+      setValue("cover", data.Cover);
+      setPreviewUrl(data.Cover);
+    }
+    if (data.Description) setValue("description", data.Description);
+    if (data.Summary) setValue("summary", data.Summary);
+    if (data.PublicationYear) setValue("publicationYear", data.PublicationYear);
+    if (data.Publisher) setValue("publisher", data.Publisher);
+    if (data.PageCount) setValue("pageCount", data.PageCount);
+    if (data.Language) setValue("language", data.Language);
+    if (data.AvailableCopies !== undefined) setValue("availableCopies", data.AvailableCopies);
+    if (data.Edition) setValue("edition", data.Edition);
+    if (data.Price !== undefined) setValue("price", data.Price);
+    if (data.Format) setValue("format", data.Format);
+    if (data.OriginalTitle) setValue("originalTitle", data.OriginalTitle);
+    if (data.OriginalLanguage) setValue("originalLanguage", data.OriginalLanguage);
+    if (data.IsEbook !== undefined) setValue("isEbook", data.IsEbook);
+    if (data.Condition) setValue("condition", data.Condition);
+    if (data.ShelfId) {
+      setValue("shelfId", Number(data.ShelfId));
+      setSelectedShelf(Number(data.ShelfId));
+    }
+    if (data.Position !== undefined) {
+      setValue("position", Number(data.Position));
+      setSelectedPosition(Number(data.Position));
+    }
+    toast({ 
+      title: "Данные загружены", 
+      description: "Информация из JSON успешно импортирована" 
+    });
+  };
+
   const handleDragStart = (e: React.MouseEvent, shelf: any) => {
     const container = document.getElementById('shelf-editor');
     if (!container) return;
-    
     const rect = container.getBoundingClientRect();
-    
     setMousePosition({
       x: e.clientX - rect.left - shelf.posX,
       y: e.clientY - rect.top - shelf.posY,
     });
-    
     setDraggedShelf(shelf);
     e.preventDefault();
   };
 
   const handleDragMove = (e: React.MouseEvent) => {
     if (!draggedShelf) return;
-    
     const container = document.getElementById('shelf-editor');
     if (!container) return;
-    
     const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left - mousePosition.x;
     const y = e.clientY - rect.top - mousePosition.y;
-    
     // Ограничиваем перемещение в пределах контейнера
     const newX = Math.max(0, Math.min(rect.width - 250, x));
     const newY = Math.max(0, Math.min(rect.height - 150, y));
-    
     setDraggedShelf({...draggedShelf, posX: newX, posY: newY});
   };
 
@@ -457,67 +505,59 @@ const BookForm = ({
   const ShelvesModal = () => {
     return (
       <Dialog open={showShelvesModal} onOpenChange={setShowShelvesModal}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Выберите полку и позицию</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">Выберите полку и позицию</DialogTitle>
             <DialogDescription>
               Нажмите на полку, затем выберите позицию для книги
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 my-4">
-            <div className="grid gap-3">
-              <Label>Доступные полки</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto p-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-lg font-semibold mb-2">Доступные полки</h4>
+              <div className="space-y-2 max-h-80 overflow-y-auto p-2">
                 {shelves && shelves.length > 0 ? (
                   shelves.map((shelf) => (
                     <div
                       key={shelf.id}
-                      className={`p-3 rounded-md border ${
+                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
                         selectedShelf === shelf.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border"
-                      } cursor-pointer hover:bg-accent transition-colors`}
+                          ? "bg-primary-admin/20 border-primary-admin"
+                          : "bg-white/10 hover:bg-white/20 border-white/20"
+                      }`}
                       onClick={() => setSelectedShelf(shelf.id)}
                     >
-                      <div className="font-medium">{shelf.category}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Мест: {shelf.capacity}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Категория: {shelf.category || "Общая"}
-                      </div>
+                      <h5 className="font-medium">{shelf.category}</h5>
+                      <p className="text-sm text-gray-500">Мест: {shelf.capacity}</p>
+                      <p className="text-sm text-gray-500">Категория: {shelf.category || "Общая"}</p>
                     </div>
                   ))
                 ) : (
-                  <div className="text-muted-foreground col-span-full text-center py-4">
-                    Нет доступных полок
-                  </div>
+                  <p>Нет доступных полок</p>
                 )}
               </div>
             </div>
-            
             {selectedShelf && (
-              <div className="grid gap-3">
-                <Label>Выберите позицию на полке {shelves.find(s => s.id === selectedShelf)?.category || 'N/A'}</Label>
-                <div className="flex flex-wrap gap-2 bg-accent/50 p-3 rounded-md max-h-[200px] overflow-y-auto">
+              <div>
+                <h4 className="text-lg font-semibold mb-2">Выберите позицию на полке {shelves.find(s => s.id === selectedShelf)?.category || 'N/A'}</h4>
+                <div className="grid grid-cols-5 gap-2 max-h-80 overflow-y-auto p-2">
                   {Array.from({ length: shelves.find(s => s.id === selectedShelf)?.capacity || 0 }).map((_, i) => {
-                    // Проверяем занятость позиции (если в модели есть такой метод)
+                    // Проверяем занятость позиции
                     const isOccupied = false; // По умолчанию считаем позицию свободной
-                    
                     // Проверяем, является ли это текущей редактируемой книгой
-                    const isCurrentBook = 
-                      initialData?.shelfId === selectedShelf && 
+                    const isCurrentBook =
+                      initialData?.shelfId === selectedShelf &&
                       initialData?.position === i;
-                      
+
                     return (
                       <div
                         key={i}
-                        className={`w-10 h-12 flex items-center justify-center rounded-md cursor-pointer transition-all ${
+                        className={`aspect-square border rounded-lg flex items-center justify-center p-2 cursor-pointer transition-all ${
                           selectedPosition === i
-                            ? "bg-primary text-primary-foreground"
+                            ? "bg-primary-admin/20 border-primary-admin"
                             : isOccupied && !isCurrentBook
-                            ? "bg-red-500/30 cursor-not-allowed"
-                            : "bg-background border border-border hover:bg-accent"
+                            ? "bg-gray-300/30 border-gray-400/30 cursor-not-allowed"
+                            : "bg-white/10 hover:bg-white/20 border-white/20"
                         }`}
                         onClick={() => {
                           if (!isOccupied || isCurrentBook) {
@@ -533,7 +573,7 @@ const BookForm = ({
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex justify-between">
             <Button
               variant="outline"
               onClick={() => setShowShelvesModal(false)}
@@ -556,6 +596,103 @@ const BookForm = ({
         </DialogContent>
       </Dialog>
     );
+  };
+
+  // Функция для импорта данных полки из JSON
+  const importShelfFromJson = async (data: any) => {
+    if (!data || !data.Id) {
+      toast({ 
+        title: "Ошибка", 
+        description: "Неверный формат данных полки", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+      
+      const shelfData = {
+        id: data.Id,
+        category: data.Category,
+        capacity: data.Capacity,
+        shelfNumber: data.ShelfNumber,
+        posX: data.PosX,
+        posY: data.PosY
+      };
+      
+      const response = await fetch(`${baseUrl}/api/shelves/${data.Id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shelfData)
+      });
+      
+      if (response.ok) {
+        toast({ 
+          title: "Успех", 
+          description: `Полка "${data.Category}" обновлена` 
+        });
+      } else {
+        const errorText = await response.text();
+        toast({ 
+          title: "Ошибка", 
+          description: `Не удалось обновить полку: ${errorText}`, 
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      console.error("Ошибка при обновлении полки:", error);
+      toast({ 
+        title: "Ошибка", 
+        description: "Не удалось обновить полку из-за ошибки сервера", 
+        variant: "destructive" 
+      });
+    }
+  };
+  
+  // Функция для импорта данных журнала из JSON
+  const importJournalFromJson = async (data: any) => {
+    if (!data || !data.Id) {
+      toast({ 
+        title: "Ошибка", 
+        description: "Неверный формат данных журнала", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+      
+      const response = await fetch(`${baseUrl}/api/journals/${data.Id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      if (response.ok) {
+        toast({ 
+          title: "Успех", 
+          description: `Журнал "${data.Title}" обновлен` 
+        });
+      } else {
+        const errorText = await response.text();
+        toast({ 
+          title: "Ошибка", 
+          description: `Не удалось обновить журнал: ${errorText}`, 
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      console.error("Ошибка при обновлении журнала:", error);
+      toast({ 
+        title: "Ошибка", 
+        description: "Не удалось обновить журнал из-за ошибки сервера", 
+        variant: "destructive" 
+      });
+    }
   };
 
   return (
@@ -1115,6 +1252,54 @@ const BookForm = ({
               </Tabs>
 
               <div className="pt-4 border-t border-white/10 dark:border-neutral-700/30 flex flex-col md:flex-row gap-4">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      // Ожидаем, что пользователь скопировал JSON в буфер обмена
+                      navigator.clipboard.readText().then(text => {
+                        try {
+                          const jsonData = JSON.parse(text);
+                          
+                          // Определение типа данных и выбор соответствующей функции импорта
+                          if (jsonData.Title !== undefined && jsonData.Authors !== undefined) {
+                            // Это книга
+                            fillFormFromJson(jsonData);
+                          } else if (jsonData.Category !== undefined && jsonData.Capacity !== undefined && jsonData.ShelfNumber !== undefined) {
+                            // Это полка
+                            importShelfFromJson(jsonData);
+                          } else if (jsonData.ISSN !== undefined || (jsonData.Title !== undefined && jsonData.Publisher !== undefined)) {
+                            // Это журнал
+                            importJournalFromJson(jsonData);
+                          } else {
+                            toast({
+                              title: "Неизвестный формат",
+                              description: "Формат JSON не распознан. Поддерживаются: книги, полки, журналы",
+                              variant: "destructive",
+                            });
+                          }
+                        } catch (e) {
+                          toast({
+                            title: "Ошибка",
+                            description: "Не удалось распарсить JSON из буфера обмена",
+                            variant: "destructive",
+                          });
+                        }
+                      });
+                    } catch (e) {
+                      toast({
+                        title: "Ошибка",
+                        description: "Не удалось получить доступ к буферу обмена",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className={`${themeClasses.button} py-3 w-full md:w-1/3`}
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  Импорт из JSON
+                </Button>
+
                 <Button
                   type="button"
                   onClick={() => router.back()}

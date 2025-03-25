@@ -14,6 +14,7 @@ import {
 import { CreditCard, Box, BookOpen } from "lucide-react";
 import "@/styles/admin.css";
 import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
+import api from "@/lib/api";
 
 // Интерфейс для модели журнала
 interface Journal {
@@ -229,17 +230,15 @@ export default function JournalsPage() {
   useEffect(() => {
     const fetchJournals = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-        if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-        const res = await fetch(`${baseUrl}/api/journals`);
-        if (res.ok) {
-          const data = await res.json();
-          setJournals(data);
-        } else {
-          console.error("Ошибка получения журналов");
-        }
+        const data = await api.journals.getAll();
+        setJournals(data);
       } catch (error) {
         console.error("Ошибка получения журналов", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить журналы",
+          variant: "destructive",
+        });
       }
     };
 
@@ -256,28 +255,18 @@ export default function JournalsPage() {
   );
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Вы уверены, что хотите удалить этот журнал?")) return;
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      const res = await fetch(`${baseUrl}/api/journals/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast({
-          title: "Журнал удален",
-          description: "Журнал успешно удален",
-        });
-        setJournals((prev) => prev.filter((journal) => journal.id !== id));
-      } else {
-        toast({
-          title: "Ошибка",
-          description: "Не удалось удалить журнал",
-          variant: "destructive",
-        });
-      }
+      await api.journals.delete(id);
+      setJournals(journals.filter((journal) => journal.id !== id));
+      toast({
+        title: "Успешно",
+        description: "Журнал успешно удален",
+      });
     } catch (error) {
-      console.error("Ошибка при удалении журнала:", error);
+      console.error("Ошибка удаления журнала", error);
       toast({
         title: "Ошибка",
-        description: "Ошибка при удалении журнала",
+        description: "Не удалось удалить журнал",
         variant: "destructive",
       });
     }

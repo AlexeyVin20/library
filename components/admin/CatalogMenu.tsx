@@ -31,6 +31,7 @@ import {
   BookMarked
 } from "lucide-react";
 import { motion } from "framer-motion";
+import api from "@/lib/api";
 
 // Интерфейсы для данных
 interface Book {
@@ -50,7 +51,7 @@ type JournalCategory = "Scientific" | "Popular" | "Entertainment" | "Professiona
 
 // Интерфейс для иконок категорий
 interface CategoryIcons {
-  [key: string]: JSX.Element;
+  [key: string]: React.ReactNode;
 }
 
 export default function CatalogMenu() {
@@ -63,22 +64,14 @@ export default function CatalogMenu() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-        if (!baseUrl) return;
-        
-        // Параллельная загрузка книг и журналов
-        const [booksRes, journalsRes] = await Promise.all([
-          fetch(`${baseUrl}/api/Books`),
-          fetch(`${baseUrl}/api/Journals`)
+        // Параллельная загрузка книг и журналов через API утилиту
+        const [booksData, journalsData] = await Promise.all([
+          api.books.getAll(),
+          api.journals.getAll()
         ]);
         
-        if (booksRes.ok && journalsRes.ok) {
-          const booksData = await booksRes.json();
-          const journalsData = await journalsRes.json();
-          
-          setBooks(booksData);
-          setJournals(journalsData);
-        }
+        setBooks(booksData);
+        setJournals(journalsData);
       } catch (error) {
         console.error("Ошибка при загрузке данных:", error);
       } finally {

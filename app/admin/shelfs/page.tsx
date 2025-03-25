@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, MouseEvent, useRef } from 'react';
-import { Plus, Lock, Unlock, X, Search } from 'lucide-react';
+import { Plus, Lock, Unlock, X, Search, Upload } from 'lucide-react';
 import { Book, Shelf, Journal } from '@/lib/types';
 import Link from 'next/link';
 import Modal from '@/components/Modal';
@@ -38,6 +38,8 @@ export default function ShelfsPage() {
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuData, setContextMenuData] = useState<{ item: Book | Journal | null; isJournal: boolean; position: { x: number; y: number }; shelfId: number; itemPosition: number } | null>(null);
+  const [showJsonImport, setShowJsonImport] = useState(false);
+  const [jsonData, setJsonData] = useState('');
 
   const [newShelf, setNewShelf] = useState({
     category: '',
@@ -85,7 +87,7 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
 
-      const response = await fetch(`${baseUrl}/api/Shelves`);
+      const response = await fetch(`${baseUrl}/api/Shelf`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
       setShelves(data);
@@ -144,7 +146,7 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
 
-      const response = await fetch(`${baseUrl}/api/shelf/auto-position`, {
+      const response = await fetch(`${baseUrl}/api/shelfs/auto-position`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -249,7 +251,7 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
       
-      const response = await fetch(`${baseUrl}/api/shelf/${id}`, {
+      const response = await fetch(`${baseUrl}/api/shelfs/${id}`, {
         method: 'DELETE'
       });
       
@@ -272,7 +274,7 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
       
-      const response = await fetch(`${baseUrl}/api/shelf/${editingShelf.id}`, {
+      const response = await fetch(`${baseUrl}/api/shelfs/${editingShelf.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -343,7 +345,7 @@ export default function ShelfsPage() {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
         if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
         
-        await fetch(`${baseUrl}/api/shelf/${draggedShelfNew.id}`, {
+        await fetch(`${baseUrl}/api/shelfs/${draggedShelfNew.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(draggedShelfNew)
@@ -662,6 +664,54 @@ export default function ShelfsPage() {
     };
   }, [showContextMenu]);
 
+  // Функция для импорта данных полки из JSON
+  const importShelfFromJson = async () => {
+    try {
+      let data;
+      try {
+        data = JSON.parse(jsonData);
+      } catch (err) {
+        setError('Неверный формат JSON');
+        return;
+      }
+      
+      if (!data || !data.Id) {
+        setError('Неверный формат данных полки');
+        return;
+      }
+      
+      setLoading(true);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+      
+      const shelfData = {
+        id: data.Id,
+        category: data.Category,
+        capacity: data.Capacity,
+        shelfNumber: data.ShelfNumber,
+        posX: data.PosX,
+        posY: data.PosY
+      };
+      
+      const response = await fetch(`${baseUrl}/api/shelfs/${data.Id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shelfData)
+      });
+      
+      if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
+      
+      await fetchShelves();
+      setShowJsonImport(false);
+      setJsonData('');
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка при импорте данных полки');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <GlassMorphismContainer
       backgroundPattern={true}
@@ -673,6 +723,13 @@ export default function ShelfsPage() {
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-neutral-500 dark:text-white">Управление полками библиотеки</h1>
             <div className="flex space-x-2">
+              <button
+                onClick={() => setShowJsonImport(true)}
+                className={`${themeClasses.iconButton}`}
+                title="Импорт данных полки из JSON"
+              >
+                <Upload size={18} />
+              </button>
               <button
                 onClick={toggleEditMode}
                 className={`${themeClasses.iconButton} ${isEditMode ? 'bg-yellow-200/80 dark:bg-yellow-700/80' : ''}`}
@@ -850,6 +907,35 @@ export default function ShelfsPage() {
                 </button>
               </div>
             </form>
+          )}
+
+          {showJsonImport && (
+            <div className={themeClasses.card}>
+              <div className="flex justify-between items-center p-4 border-b border-primary-300/30 dark:border-primary-700/30">
+                <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Импорт данных полки из JSON</h2>
+                <button type="button" onClick={() => setShowJsonImport(false)} className="text-neutral-500 hover:text-neutral-700">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-4">
+                <textarea
+                  rows={8}
+                  value={jsonData}
+                  onChange={(e) => setJsonData(e.target.value)}
+                  placeholder='{"Id": 11, "Category": "Фантастика", ...}'
+                  className={`${themeClasses.input} w-full font-mono text-sm`}
+                />
+              </div>
+              <div className="p-4 border-t border-primary-300/30 dark:border-primary-700/30">
+                <button 
+                  type="button" 
+                  onClick={importShelfFromJson}
+                  className={themeClasses.button}
+                >
+                  Импортировать данные
+                </button>
+              </div>
+            </div>
           )}
 
           <div

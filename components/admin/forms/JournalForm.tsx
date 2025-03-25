@@ -391,6 +391,76 @@ const JournalForm = ({
     }
   };
 
+  // Функция для импорта данных журнала из JSON
+  const fillFormFromJson = (data: any) => {
+    if (data.Title) setValue("title", data.Title);
+    if (data.ISSN) setValue("issn", data.ISSN);
+    if (data.RegistrationNumber) setValue("registrationNumber", data.RegistrationNumber);
+    if (data.Format) {
+      // Преобразуем числовой формат в строковый
+      let formatValue: "Print" | "Electronic" | "Mixed" = "Print";
+      if (data.Format === "3" || data.Format === 3) formatValue = "Mixed";
+      else if (data.Format === "2" || data.Format === 2) formatValue = "Electronic";
+      setValue("format", formatValue);
+    }
+    if (data.Periodicity) {
+      // Преобразуем числовой формат в строковый
+      let periodicityValue: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually" = "Monthly";
+      
+      // Если это число или строка с числом, определяем значение
+      if (data.Periodicity === "1" || data.Periodicity === 1) periodicityValue = "Weekly";
+      else if (data.Periodicity === "2" || data.Periodicity === 2) periodicityValue = "BiWeekly";
+      else if (data.Periodicity === "3" || data.Periodicity === 3) periodicityValue = "Monthly";
+      else if (data.Periodicity === "4" || data.Periodicity === 4) periodicityValue = "Quarterly";
+      else if (data.Periodicity === "5" || data.Periodicity === 5) periodicityValue = "BiAnnually";
+      else if (data.Periodicity === "6" || data.Periodicity === 6) periodicityValue = "Annually";
+      
+      setValue("periodicity", periodicityValue);
+    }
+    if (data.PagesPerIssue !== undefined) setValue("pagesPerIssue", data.PagesPerIssue);
+    if (data.Description) setValue("description", data.Description);
+    if (data.Publisher) setValue("publisher", data.Publisher);
+    if (data.FoundationDate) setValue("foundationDate", new Date(data.FoundationDate));
+    if (data.Circulation !== undefined) setValue("circulation", data.Circulation);
+    if (data.IsOpenAccess !== undefined) setValue("isOpenAccess", data.IsOpenAccess);
+    if (data.Category) {
+      // Преобразуем строковое числовое значение в категорию
+      let categoryValue: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News" = "Scientific";
+      
+      // Если категория пришла в виде числа или строки с числом
+      if (data.Category === "1" || data.Category === 1) categoryValue = "Scientific";
+      else if (data.Category === "2" || data.Category === 2) categoryValue = "Popular";
+      else if (data.Category === "3" || data.Category === 3) categoryValue = "Entertainment";
+      else if (data.Category === "4" || data.Category === 4) categoryValue = "Professional";
+      else if (data.Category === "5" || data.Category === 5) categoryValue = "Educational";
+      else if (data.Category === "6" || data.Category === 6) categoryValue = "Literary";
+      else if (data.Category === "7" || data.Category === 7) categoryValue = "News";
+      // Если пришло значение не из списка, используем Scientific
+      else if (typeof data.Category === "string" && !isNaN(Number(data.Category))) {
+        // Дополнительная обработка для значений, которые не в диапазоне 1-7
+        categoryValue = "Scientific";
+      }
+      
+      setValue("category", categoryValue);
+    }
+    if (data.TargetAudience) setValue("targetAudience", data.TargetAudience);
+    if (data.IsPeerReviewed !== undefined) setValue("isPeerReviewed", data.IsPeerReviewed);
+    if (data.IsIndexedInRINTS !== undefined) setValue("isIndexedInRINTS", data.IsIndexedInRINTS);
+    if (data.IsIndexedInScopus !== undefined) setValue("isIndexedInScopus", data.IsIndexedInScopus);
+    if (data.IsIndexedInWebOfScience !== undefined) setValue("isIndexedInWebOfScience", data.IsIndexedInWebOfScience);
+    if (data.PublicationDate) setValue("publicationDate", new Date(data.PublicationDate));
+    if (data.PageCount !== undefined) setValue("pageCount", data.PageCount);
+    if (data.Cover) {
+      setValue("coverImageUrl", data.Cover);
+      setPreviewUrl(data.Cover);
+    }
+    
+    toast({ 
+      title: "Данные загружены", 
+      description: "Информация из JSON успешно импортирована" 
+    });
+  };
+
   const onFormSubmit = async (values: z.infer<typeof journalSchema>) => await onSubmit(values);
 
   return (
@@ -644,6 +714,36 @@ const JournalForm = ({
               </Tabs>
 
               <div className="pt-4 border-t border-white/10 dark:border-neutral-700/30 flex flex-col md:flex-row gap-4">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      // Ожидаем, что пользователь скопировал JSON в буфер обмена
+                      navigator.clipboard.readText().then(text => {
+                        try {
+                          const jsonData = JSON.parse(text);
+                          fillFormFromJson(jsonData);
+                        } catch (e) {
+                          toast({
+                            title: "Ошибка",
+                            description: "Не удалось распарсить JSON из буфера обмена",
+                            variant: "destructive",
+                          });
+                        }
+                      });
+                    } catch (e) {
+                      toast({
+                        title: "Ошибка",
+                        description: "Не удалось получить доступ к буферу обмена",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className={`${themeClasses.button} py-3 w-full md:w-1/3`}
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  Импорт из JSON
+                </Button>
                 <Button
                   type="button"
                   onClick={() => router.back()}
