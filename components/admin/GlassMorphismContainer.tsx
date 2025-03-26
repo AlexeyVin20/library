@@ -16,11 +16,28 @@ const GlassMorphismContainer: React.FC<GlassMorphismContainerProps> = ({
       <div className="relative min-h-screen">
         {/* Фоновый паттерн */}
         {backgroundPattern && (
-          <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)]" />
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle, ${
+                isDarkMode ? '#1f2937' : '#e5e7eb'
+              } 1px, transparent 1px)`,
+              backgroundSize: '16px 16px',
+            }}
+          />
         )}
         
         {/* Основной контент */}
-        <div className="relative z-10 bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6">
+        <div
+          className="relative z-10 min-h-screen p-6"
+          style={{
+            backgroundColor: isDarkMode
+              ? 'rgba(23, 23, 28, 0.7)'
+              : 'rgba(255, 255, 255, 0.25)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
           {children}
         </div>
       </div>

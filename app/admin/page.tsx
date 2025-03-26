@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Calendar from "@/components/admin/Calendar";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { BookOpen } from "lucide-react";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
+import GlassMorphismContainer from "@/components/admin/GlassMorphismContainer";
+import { TableVirtuoso } from "react-virtuoso";
+import React from "react";
 
 // Динамический импорт компонентов с графиками
 const MyChartStats = dynamic(() => import("@/components/admin/ChartStats"), { ssr: false });
@@ -53,31 +55,32 @@ interface MonthlyBorrowedData {
 }
 
 // Theme classes с эффектом glassmorphism
-const getThemeClasses = () => {
-  return {
-    card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
-    statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between",
-    mainContainer: "bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6",
-    button: "bg-gradient-to-r from-primary-admin/90 to-primary-admin/70 dark:from-primary-admin/80 dark:to-primary-admin/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
-    bookCard: "flex p-4 bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl rounded-lg border border-white/30 dark:border-neutral-700/30 mb-3 transition-all duration-300 hover:shadow-lg hover:-translate-x-1",
-    sectionTitle: "text-2xl font-bold mb-4 text-neutral-500 dark:text-white border-b pb-2 border-white/30 dark:border-neutral-700/30",
-    requestCard: "mb-4 p-5 rounded-lg border border-white/30 dark:border-neutral-700/30 bg-gradient-to-br from-gray-50/30 to-gray-50/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl hover:shadow-lg transition-all duration-300",
-    statusBadge: {
-      completed: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-green-600/90 backdrop-blur-sm",
-      processing: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-yellow-600/90 backdrop-blur-sm",
-      canceled: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-red-600/90 backdrop-blur-sm",
-    },
-    tableRow: {
-      even: "bg-gradient-to-r from-gray-50/30 to-gray-50/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-sm",
-      odd: "bg-gradient-to-r from-white/30 to-white/20 dark:from-neutral-700/30 dark:to-neutral-800/20 backdrop-blur-sm",
-    },
-    actionButton: {
-      approve: "bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
-      reject: "bg-gradient-to-r from-red-600/90 to-red-700/70 dark:from-red-700/80 dark:to-red-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
-      neutral: "bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
-    },
-  };
-};
+const getThemeClasses = () => ({
+  card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
+  statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between",
+  mainContainer: "bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6",
+  button: "bg-gradient-to-r from-primary-admin/90 to-primary-admin/70 dark:from-primary-admin/80 dark:to-primary-admin/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
+  bookCard: "flex p-4 bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl rounded-lg border border-white/30 dark:border-neutral-700/30 mb-3 transition-all duration-300 hover:shadow-lg hover:-translate-x-1",
+  sectionTitle: "text-2xl font-bold mb-4 text-neutral-500 dark:text-white border-b pb-2 border-white/30 dark:border-neutral-700/30",
+  requestCard: "mb-4 p-5 rounded-lg border border-white/30 dark:border-neutral-700/30 bg-gradient-to-br from-gray-50/30 to-gray-50/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl hover:shadow-lg transition-all duration-300",
+  statusBadge: {
+    completed: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-green-600/90 backdrop-blur-sm",
+    processing: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-yellow-600/90 backdrop-blur-sm",
+    canceled: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-red-600/90 backdrop-blur-sm",
+  },
+  tableRow: {
+    even: "bg-gradient-to-r from-gray-50/30 to-gray-50/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-sm",
+    odd: "bg-gradient-to-r from-white/30 to-white/20 dark:from-neutral-700/30 dark:to-neutral-800/20 backdrop-blur-sm",
+  },
+  actionButton: {
+    approve: "bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
+    reject: "bg-gradient-to-r from-red-600/90 to-red-700/70 dark:from-red-700/80 dark:to-red-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
+    neutral: "bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
+  },
+});
+
+// Мемоизация компонента GlassMorphismContainer
+const GlassMorphismContainerMemo = React.memo(GlassMorphismContainer);
 
 export default function DashboardPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -96,34 +99,37 @@ export default function DashboardPage() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
   const themeClasses = getThemeClasses();
 
-  // Вычисляемые свойства
-  const activeUsersCount = users.filter((u) => u.borrowedBooksCount > 0).length;
-  const totalUsersCount = users.length;
-  const pendingReservations = reservations.filter((r) => r.status === "Обрабатывается").length;
-  const totalBorrowedBooks = users.reduce((total, user) => total + user.borrowedBooksCount, 0);
-  const totalAvailableBooks = books.reduce((sum, book) => sum + book.availableCopies, 0);
+  // Мемоизация вычисляемых свойств
+  const activeUsersCount = useMemo(() => users.filter((u) => u.borrowedBooksCount > 0).length, [users]);
+  const totalUsersCount = useMemo(() => users.length, [users]);
+  const pendingReservations = useMemo(() => reservations.filter((r) => r.status === "Обрабатывается").length, [reservations]);
+  const totalBorrowedBooks = useMemo(() => users.reduce((total, user) => total + user.borrowedBooksCount, 0), [users]);
+  const totalAvailableBooks = useMemo(() => books.reduce((sum, book) => sum + book.availableCopies, 0), [books]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const usersResponse = await fetch(`${baseUrl}/api/User`);
+        const [usersResponse, booksResponse, journalsResponse, reservationsResponse] = await Promise.all([
+          fetch(`${baseUrl}/api/User`),
+          fetch(`${baseUrl}/api/Books`),
+          fetch(`${baseUrl}/api/Journals`),
+          fetch(`${baseUrl}/api/Reservation`),
+        ]);
+
         if (!usersResponse.ok) throw new Error("Ошибка при загрузке пользователей");
         const usersData = await usersResponse.json();
         setUsers(usersData);
 
-        const booksResponse = await fetch(`${baseUrl}/api/Books`);
         if (!booksResponse.ok) throw new Error("Ошибка при загрузке книг");
         const booksData = await booksResponse.json();
         setBooks(booksData);
 
-        const journalsResponse = await fetch(`${baseUrl}/api/Journals`);
         if (!journalsResponse.ok) throw new Error("Ошибка при загрузке журналов");
         const journalsData = await journalsResponse.json();
         setJournals(journalsData);
 
-        const reservationsResponse = await fetch(`${baseUrl}/api/Reservation`);
         if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резерваций");
         const reservationsData = await reservationsResponse.json();
         setReservations(reservationsData);
@@ -149,10 +155,7 @@ export default function DashboardPage() {
             const reservationMonth = new Date(r.reservationDate).toLocaleString("ru-RU", { month: "short", year: "numeric" });
             return reservationMonth === monthKey && r.status === "Выполнена";
           }).length;
-          return {
-            month: date.toLocaleString("ru-RU", { month: "short" }),
-            borrowed,
-          };
+          return { month: date.toLocaleString("ru-RU", { month: "short" }), borrowed };
         }).reverse();
         setMonthlyBorrowedData(lastSixMonths);
 
@@ -171,7 +174,7 @@ export default function DashboardPage() {
     fetchData();
   }, [baseUrl]);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleString("ru-RU", {
       day: "2-digit",
       month: "long",
@@ -179,9 +182,9 @@ export default function DashboardPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+  }, []);
 
-  const handleApproveRequest = async (id: string) => {
+  const handleApproveRequest = useCallback(async (id: string) => {
     try {
       const reservation = reservations.find((r) => r.id === id);
       if (!reservation) throw new Error("Резервация не найдена");
@@ -201,17 +204,17 @@ export default function DashboardPage() {
 
       if (!response.ok) throw new Error("Ошибка при обновлении резервации");
 
-      setBookRequests(bookRequests.filter((r) => r.id !== id));
-      setUserRequests(userRequests.filter((r) => r.id !== id));
-      setReservations(reservations.map((r) => (r.id === id ? { ...r, status: "Выполнена" } : r)));
-      setRecentActivities(recentActivities.map((r) => (r.id === id ? { ...r, status: "Выполнена" } : r)));
+      setBookRequests((prev) => prev.filter((r) => r.id !== id));
+      setUserRequests((prev) => prev.filter((r) => r.id !== id));
+      setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Выполнена" } : r)));
+      setRecentActivities((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Выполнена" } : r)));
     } catch (err) {
       console.error("Ошибка при одобрении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при одобрении запроса");
     }
-  };
+  }, [reservations, baseUrl]);
 
-  const handleRejectRequest = async (id: string) => {
+  const handleRejectRequest = useCallback(async (id: string) => {
     try {
       const reservation = reservations.find((r) => r.id === id);
       if (!reservation) throw new Error("Резервация не найдена");
@@ -231,36 +234,36 @@ export default function DashboardPage() {
 
       if (!response.ok) throw new Error("Ошибка при обновлении резервации");
 
-      setBookRequests(bookRequests.filter((r) => r.id !== id));
-      setUserRequests(userRequests.filter((r) => r.id !== id));
-      setReservations(reservations.map((r) => (r.id === id ? { ...r, status: "Отменена" } : r)));
-      setRecentActivities(recentActivities.map((r) => (r.id === id ? { ...r, status: "Отменена" } : r)));
+      setBookRequests((prev) => prev.filter((r) => r.id !== id));
+      setUserRequests((prev) => prev.filter((r) => r.id !== id));
+      setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Отменена" } : r)));
+      setRecentActivities((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Отменена" } : r)));
     } catch (err) {
       console.error("Ошибка при отклонении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при отклонении запроса");
     }
-  };
+  }, [reservations, baseUrl]);
 
-  const reservationEvents = reservations.map((reservation) => ({
-    id: reservation.id,
-    userId: reservation.userId,
-    bookId: reservation.bookId,
-    reservationDate: new Date(reservation.reservationDate).toISOString().split("T")[0],
-    expirationDate: new Date(reservation.expirationDate).toISOString().split("T")[0],
-    status: reservation.status,
-    notes: reservation.notes,
-    userName: reservation.user?.fullName || "Неизвестный пользователь",
-    bookTitle: reservation.book?.title || "Неизвестная книга",
-  }));
+  const reservationEvents = useMemo(() =>
+    reservations.map((reservation) => ({
+      id: reservation.id,
+      userId: reservation.userId,
+      bookId: reservation.bookId,
+      reservationDate: new Date(reservation.reservationDate).toISOString().split("T")[0],
+      expirationDate: new Date(reservation.expirationDate).toISOString().split("T")[0],
+      status: reservation.status,
+      notes: reservation.notes,
+      userName: reservation.user?.fullName || "Неизвестный пользователь",
+      bookTitle: reservation.book?.title || "Неизвестная книга",
+    })),
+    [reservations]
+  );
 
   if (loading) return <div className="flex justify-center items-center h-screen text-neutral-200 dark:text-neutral-100">Загрузка...</div>;
   if (error) return <div className="text-red-500 p-4 border border-red-300 rounded">{error}</div>;
 
   return (
-    <GlassMorphismContainer
-      backgroundPattern={true}
-      isDarkMode={false} // Установите false для светлой темы
-    >
+    <GlassMorphismContainerMemo backgroundPattern={true} isDarkMode={false}>
       <main className="flex-1 space-y-8">
         {/* Статистические карточки */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -329,7 +332,7 @@ export default function DashboardPage() {
                     <div className="flex items-center w-full">
                       <div className="w-12 h-16 flex-shrink-0 bg-gray-200/50 dark:bg-neutral-700/50 rounded mr-4 overflow-hidden">
                         {book.cover ? (
-                          <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                          <img src={book.cover} alt={book.title} className="w-full h-full object-cover" loading="lazy" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <BookOpen className="w-6 h-6 text-neutral-400" />
@@ -381,16 +384,10 @@ export default function DashboardPage() {
                     <p className="text-sm text-neutral-400 dark:text-neutral-400 mt-2">{reservation.book?.title || "Неизвестная книга"}</p>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(reservation.reservationDate)}</p>
                     <div className="mt-4 flex gap-3">
-                      <button
-                        onClick={() => handleApproveRequest(reservation.id)}
-                        className={themeClasses.actionButton.approve}
-                      >
+                      <button onClick={() => handleApproveRequest(reservation.id)} className={themeClasses.actionButton.approve}>
                         Одобрить
                       </button>
-                      <button
-                        onClick={() => handleRejectRequest(reservation.id)}
-                        className={themeClasses.actionButton.reject}
-                      >
+                      <button onClick={() => handleRejectRequest(reservation.id)} className={themeClasses.actionButton.reject}>
                         Отклонить
                       </button>
                     </div>
@@ -419,16 +416,10 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(request.reservationDate)}</p>
                     <div className="mt-4 flex gap-3">
-                      <button
-                        onClick={() => handleApproveRequest(request.id)}
-                        className={themeClasses.actionButton.approve}
-                      >
+                      <button onClick={() => handleApproveRequest(request.id)} className={themeClasses.actionButton.approve}>
                         Одобрить
                       </button>
-                      <button
-                        onClick={() => handleRejectRequest(request.id)}
-                        className={themeClasses.actionButton.reject}
-                      >
+                      <button onClick={() => handleRejectRequest(request.id)} className={themeClasses.actionButton.reject}>
                         Отклонить
                       </button>
                     </div>
@@ -441,22 +432,26 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Последние активности */}
+        {/* Последние активности с виртуализацией через react-virtuoso */}
         <div className={themeClasses.card}>
           <h2 className={themeClasses.sectionTitle}>Последние активности</h2>
-          <div className="overflow-x-auto flex-1 max-h-[400px]">
-            <table className="min-w-full divide-y divide-gray-200/20 dark:divide-neutral-700/20">
-              <thead className="bg-gradient-to-r from-gray-100/20 to-gray-100/10 dark:from-neutral-800/20 dark:to-neutral-900/10 backdrop-blur-sm rounded-t-lg">
-                <tr>
+          <div className="flex-1 max-h-[400px]">
+            <TableVirtuoso
+              style={{ height: 400 }}
+              data={recentActivities}
+              totalCount={recentActivities.length}
+              fixedHeaderContent={() => (
+                <tr className="bg-gradient-to-r from-gray-100/20 to-gray-100/10 dark:from-neutral-800/20 dark:to-neutral-900/10 backdrop-blur-sm rounded-t-lg">
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Действие</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Книга</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Дата</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Статус</th>
                 </tr>
-              </thead>
-              <tbody>
-                {recentActivities.map((reservation, index) => (
-                  <tr key={reservation.id} className={index % 2 === 0 ? themeClasses.tableRow.even : themeClasses.tableRow.odd}>
+              )}
+              itemContent={(index) => {
+                const reservation = recentActivities[index];
+                return (
+                  <>
                     <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">Резервация</td>
                     <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{reservation.book?.title || "Неизвестная книга"}</td>
                     <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{formatDate(reservation.reservationDate)}</td>
@@ -477,10 +472,10 @@ export default function DashboardPage() {
                           : "Отменена"}
                       </span>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </>
+                );
+              }}
+            />
           </div>
         </div>
 
@@ -497,6 +492,6 @@ export default function DashboardPage() {
           </Link>
         </div>
       </main>
-    </GlassMorphismContainer>
+    </GlassMorphismContainerMemo>
   );
 }

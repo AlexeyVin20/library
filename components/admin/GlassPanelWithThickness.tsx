@@ -22,19 +22,28 @@ const GlassPanelWithThickness: React.FC<GlassPanelWithThicknessProps> = ({
   sideColor = 'rgba(255, 255, 255, 0.2)',
 }) => {
   return (
-    <div className={`relative ${className}`} style={{ width, height, perspective: '1000px' }}>
-      {/* Боковая грань слева */}
+    <div
+      className={`relative ${className}`}
+      style={{
+        width,
+        height,
+        perspective: '1000px',
+        transformStyle: 'preserve-3d',
+      }}
+    >
+      {/* Боковая грань */}
       <div
-        className="absolute top-0 left-0 w-full h-full"
         style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
           width: `${thickness}px`,
           height: '100%',
+          backgroundColor: sideColor,
           transform: `rotateY(-90deg) translateX(-${thickness / 2}px)`,
           transformOrigin: 'left',
-          backgroundColor: sideColor,
           filter: `blur(${blur}px)`,
-          opacity: opacity,
-          borderRadius: `${borderRadius}px 0 0 ${borderRadius}px`,
+          opacity,
         }}
       />
       

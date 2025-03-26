@@ -12,65 +12,49 @@ const GlassMorphism: React.FC<GlassMorphismProps> = ({
   highlightOpacity = 0.15,
   borderRadius = 16,
   bgColor = 'rgba(255, 255, 255, 0.1)',
-  thickness = 0, // Новый параметр для толщины
+  thickness = 0,
 }) => {
-  const svgId = `glass-morphism-${Math.random().toString(36).substring(2, 9)}`;
-  const filterId = `blur-filter-${Math.random().toString(36).substring(2, 9)}`;
-  const gradientId = `glass-gradient-${Math.random().toString(36).substring(2, 9)}`;
-
   return (
-    <div className={`relative ${className}`} style={{ width, height }}>
-      {/* SVG для создания эффекта стекла */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none z-0"
-        xmlns="http://www.w3.org/2000/svg"
-        id={svgId}
+    <div
+      className={`relative ${className}`}
+      style={{
+        width,
+        height,
+        perspective: '1000px',
+        transformStyle: 'preserve-3d',
+      }}
+    >
+      {/* Основной контейнер с эффектом стекла */}
+      <div
         style={{
-          transform: `perspective(1000px) rotateX(${rotationAngle}deg)`,
+          width: '100%',
+          height: '100%',
+          backgroundColor: bgColor,
+          borderRadius: `${borderRadius}px`,
+          backdropFilter: `blur(${blur}px)`,
+          WebkitBackdropFilter: `blur(${blur}px)`, // Поддержка Safari
+          opacity,
+          transform: `rotateX(${rotationAngle}deg)`,
           transformOrigin: 'center bottom',
+          boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
         }}
       >
-        <defs>
-          {/* Фильтр для размытия */}
-          <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation={blur} />
-          </filter>
-          
-          {/* Градиент для эффекта блеска стекла */}
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.5)" stopOpacity={highlightOpacity} />
-            <stop offset="50%" stopColor="rgba(255, 255, 255, 0)" stopOpacity="0" />
-            <stop offset="100%" stopColor="rgba(255, 255, 255, 0.2)" stopOpacity={highlightOpacity / 2} />
-          </linearGradient>
-        </defs>
-        
-        {/* Основной прямоугольник стекла */}
-        <rect
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill={bgColor}
-          rx={borderRadius}
-          ry={borderRadius}
-          opacity={opacity}
-          style={{ filter: `url(#${filterId})` }}
+        {/* Блик */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: `linear-gradient(135deg, rgba(255, 255, 255, ${highlightOpacity}) 0%, transparent 50%, rgba(255, 255, 255, ${highlightOpacity / 2}) 100%)`,
+            borderRadius: `${borderRadius}px`,
+            pointerEvents: 'none',
+          }}
         />
-        
-        {/* Блик на стекле */}
-        <rect
-          x="5%"
-          y="5%"
-          width="90%"
-          height="90%"
-          fill={`url(#${gradientId})`}
-          rx={borderRadius - 2}
-          ry={borderRadius - 2}
-        />
-      </svg>
-      
-      {/* Контейнер для контента */}
-      <div className="relative z-10 w-full h-full">{children}</div>
+        {/* Контент */}
+        <div className="relative z-10 w-full h-full">{children}</div>
+      </div>
     </div>
   );
 };
