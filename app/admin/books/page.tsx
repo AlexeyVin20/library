@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/navigation-menu";
 import { CreditCard, Box, BookOpen, List } from "lucide-react";
 import BookCover from "@/components/BookCover";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import "@/styles/admin.css";
 import api from "@/lib/api";
 
@@ -350,10 +349,6 @@ export default function BooksPage() {
   };
 
   return (
-    <GlassMorphismContainer
-      backgroundPattern={true}
-      isDarkMode={false}
-    >
       <div className={`min-h-screen flex flex-col ${themeClasses.mainContainer}`}>
         <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/30 dark:bg-neutral-800/30 border-b border-white/30 dark:border-neutral-700/30 p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between shadow-[0_5px_20px_rgba(0,0,0,0.1)] mb-6">
           <div className="flex flex-wrap gap-4 items-center">
@@ -404,6 +399,5 @@ export default function BooksPage() {
           )}
         </main>
       </div>
-    </GlassMorphismContainer>
   );
 }

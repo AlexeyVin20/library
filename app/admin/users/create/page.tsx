@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface UserCreateDto {
   id: string;
@@ -101,10 +100,9 @@ export default function CreateUserPage() {
   };
 
   return (
-    <GlassMorphismContainer>
-      <div className="p-6 max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
+    <div className="p-6 max-w-2xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
             Создание пользователя
           </h1>
           <button
@@ -353,6 +351,5 @@ export default function CreateUserPage() {
           </div>
         </form>
       </div>
-    </GlassMorphismContainer>
   );
 }

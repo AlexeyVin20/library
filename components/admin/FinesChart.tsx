@@ -22,7 +22,7 @@ export function FinesChart({ data }: FinesChartProps) {
     : data;
   
   return (
-    <div className="h-[200px] w-full">
+    <div className="h-[200px] w-full bg-transparent">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -40,7 +40,7 @@ export function FinesChart({ data }: FinesChartProps) {
             ))}
           </Pie>
           <Tooltip 
-            formatter={(value) => [`${value.toFixed(2)} ₽`, ""]}
+            formatter={(value) => [`${typeof value === 'number' ? value.toFixed(2) : value} ₽`, ""]}
             contentStyle={{
               borderRadius: '8px',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',

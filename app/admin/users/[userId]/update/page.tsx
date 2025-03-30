@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface UserUpdateDto {
   id: string;
@@ -168,7 +167,6 @@ export default function UpdateUserPage() {
   if (!formData) return <div className="p-8 text-red-500">Пользователь не найден</div>;
 
   return (
-    <GlassMorphismContainer>
       <div className="p-6 max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
@@ -435,6 +433,5 @@ export default function UpdateUserPage() {
           </div>
         </form>
       </div>
-    </GlassMorphismContainer>
   );
 }

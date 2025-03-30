@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/navigation-menu";
 import { CreditCard, Box, BookOpen } from "lucide-react";
 import "@/styles/admin.css";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import api from "@/lib/api";
 
 // Интерфейс для модели журнала
@@ -273,10 +272,7 @@ export default function JournalsPage() {
   };
 
   return (
-    <GlassMorphismContainer
-      backgroundPattern={true}
-      isDarkMode={false}
-    >
+    <div className="flex flex-col">
       <div className="flex flex-col">
         <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/30 dark:bg-neutral-800/30 border-b border-white/20 dark:border-neutral-700/20 p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between shadow-sm mb-6">
           <div className="flex flex-wrap gap-4 items-center">
@@ -320,6 +316,6 @@ export default function JournalsPage() {
           )}
         </main>
       </div>
-    </GlassMorphismContainer>
+    </div>
   );
 }

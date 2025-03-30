@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import Link from "next/link";
 import { PlusCircle, BookOpen, Users, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 
@@ -235,26 +234,21 @@ export default function RequestsPage() {
   };
 
   if (loading) return (
-    <GlassMorphismContainer>
       <div className="flex justify-center items-center h-screen text-neutral-500 dark:text-neutral-200">
         Загрузка...
       </div>
-    </GlassMorphismContainer>
   );
 
   if (error) return (
-    <GlassMorphismContainer>
-      <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
-        {error}
-      </div>
-    </GlassMorphismContainer>
+    <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
+      {error}
+    </div>
   );
 
   return (
-    <GlassMorphismContainer>
-      <div className="p-6 space-y-6">
-        {showCreateForm ? (
-          <div className="space-y-6">
+    <div className="p-6 space-y-6">
+      {showCreateForm ? (
+        <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
                 Создание запроса
@@ -552,6 +546,5 @@ export default function RequestsPage() {
           </>
         )}
       </div>
-    </GlassMorphismContainer>
   );
 } 

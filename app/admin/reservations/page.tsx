@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import Link from "next/link";
 
 interface Reservation {
@@ -90,26 +89,21 @@ export default function ReservationsPage() {
     : reservations.filter(r => r.status === filter);
 
   if (loading) return (
-    <GlassMorphismContainer>
-      <div className="flex justify-center items-center h-screen text-neutral-500 dark:text-neutral-200">
-        Загрузка...
-      </div>
-    </GlassMorphismContainer>
+    <div className="flex justify-center items-center h-screen text-neutral-500 dark:text-neutral-200">
+      Загрузка...
+    </div>
   );
 
   if (error) return (
-    <GlassMorphismContainer>
       <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
         {error}
       </div>
-    </GlassMorphismContainer>
   );
 
   return (
-    <GlassMorphismContainer>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
             Резервации
           </h1>
           <div className="flex gap-4">
@@ -251,7 +245,6 @@ export default function ReservationsPage() {
             </div>
           )}
         </div>
-      </div>
-    </GlassMorphismContainer>
+    </div>
   );
 } 

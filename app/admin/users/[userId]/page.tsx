@@ -14,7 +14,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface UserDetail {
   id: string;
@@ -130,27 +129,21 @@ export default function UserDetailPage() {
   };
 
   if (loading) return (
-    <GlassMorphismContainer>
       <div className="flex justify-center items-center h-screen text-neutral-500 dark:text-neutral-200">
         Загрузка...
       </div>
-    </GlassMorphismContainer>
   );
 
   if (error) return (
-    <GlassMorphismContainer>
       <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
         {error}
       </div>
-    </GlassMorphismContainer>
   );
 
   if (!user) return (
-    <GlassMorphismContainer>
       <div className="p-4 bg-yellow-100/80 dark:bg-yellow-900/80 backdrop-blur-xl border border-yellow-400 text-yellow-700 dark:text-yellow-200 rounded-lg">
         Пользователь не найден
       </div>
-    </GlassMorphismContainer>
   );
 
   const formatDate = (dateString: string) => {
@@ -166,7 +159,6 @@ export default function UserDetailPage() {
   };
 
   return (
-    <GlassMorphismContainer>
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6 flex justify-between items-center">
           <Link href="/admin/users" className="text-blue-600 hover:underline flex items-center">
@@ -403,6 +395,5 @@ export default function UserDetailPage() {
           </Card>
         </div>
       </div>
-    </GlassMorphismContainer>
   );
 }

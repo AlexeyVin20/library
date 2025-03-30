@@ -17,7 +17,7 @@ export function UsersPieChart({ activeUsers, inactiveUsers }: UsersPieChartProps
   const COLORS = ["#10B981", "#EF4444"];
   
   return (
-    <div className="h-[200px] w-full">
+    <div className="h-[250px] w-full bg-transparent">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

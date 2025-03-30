@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { UsersPieChart } from "@/components/admin/UsersPieChart";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 import { FinesChart } from "@/components/admin/FinesChart";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface User {
   id: string;
@@ -148,23 +147,18 @@ export default function AllUsersPage() {
   };
 
   if (loading) return (
-    <GlassMorphismContainer>
       <div className="flex justify-center items-center h-screen text-neutral-500 dark:text-neutral-200">
         Загрузка...
       </div>
-    </GlassMorphismContainer>
   );
 
   if (error) return (
-    <GlassMorphismContainer>
       <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
         {error}
       </div>
-    </GlassMorphismContainer>
   );
 
   return (
-    <GlassMorphismContainer>
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
@@ -188,7 +182,7 @@ export default function AllUsersPage() {
 
         {/* Графики статистики */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
+          <Card className="bg-transparent backdrop-blur-xl border-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Активность пользователей</CardTitle>
               <CardDescription>Распределение активных/неактивных</CardDescription>
@@ -198,7 +192,7 @@ export default function AllUsersPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-transparent backdrop-blur-xl border-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Использование библиотеки</CardTitle>
               <CardDescription>Статистика по всем пользователям</CardDescription>
@@ -208,7 +202,7 @@ export default function AllUsersPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-transparent backdrop-blur-xl border-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Штрафы пользователей</CardTitle>
               <CardDescription>Общая сумма: {totalFines.toFixed(2)} ₽</CardDescription>
@@ -226,7 +220,7 @@ export default function AllUsersPage() {
             placeholder="Поиск по имени или email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-admin"
+            className="bg-transparent backdrop-blur-xl w-full p-2 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-primary-admin transform hover:-translate-y-1 transition-all duration-300"
           />
         </div>
 
@@ -298,6 +292,5 @@ export default function AllUsersPage() {
           </div>
         )}
       </div>
-    </GlassMorphismContainer>
   );
 }

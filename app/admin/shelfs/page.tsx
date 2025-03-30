@@ -6,7 +6,6 @@ import { Book, Shelf, Journal } from '@/lib/types';
 import Link from 'next/link';
 import Modal from '@/components/Modal';
 import ShelfItemContextMenu from '@/components/admin/ShelfItemContextMenu';
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface Position {
   x: number;
@@ -713,10 +712,6 @@ export default function ShelfsPage() {
   };
 
   return (
-    <GlassMorphismContainer
-      backgroundPattern={true}
-      isDarkMode={false}
-    >
       <div className="flex flex-col">
         {/* Header */}
         <header className="mb-8">
@@ -1040,6 +1035,5 @@ export default function ShelfsPage() {
           />
         )}
       </div>
-    </GlassMorphismContainer>
   );
 }

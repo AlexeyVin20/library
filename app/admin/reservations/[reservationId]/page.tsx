@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import Link from "next/link";
 import { use } from "react";
 
@@ -89,34 +88,27 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
   };
 
   if (loading) return (
-    <GlassMorphismContainer>
       <div className="flex justify-center items-center h-screen text-neutral-500 dark:text-neutral-200">
         Загрузка...
       </div>
-    </GlassMorphismContainer>
   );
 
   if (error) return (
-    <GlassMorphismContainer>
-      <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
-        {error}
-      </div>
-    </GlassMorphismContainer>
+    <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
+      {error}
+    </div>
   );
 
   if (!reservation) return (
-    <GlassMorphismContainer>
-      <div className="p-4 bg-yellow-100/80 dark:bg-yellow-900/80 backdrop-blur-xl border border-yellow-400 text-yellow-700 dark:text-yellow-200 rounded-lg">
-        Резервация не найдена
-      </div>
-    </GlassMorphismContainer>
+    <div className="p-4 bg-yellow-100/80 dark:bg-yellow-900/80 backdrop-blur-xl border border-yellow-400 text-yellow-700 dark:text-yellow-200 rounded-lg">
+      Резервация не найдена
+    </div>
   );
 
   return (
-    <GlassMorphismContainer>
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
             Детали резервации
           </h1>
           <Link 
@@ -220,6 +212,5 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
           )}
         </div>
       </div>
-    </GlassMorphismContainer>
   );
 } 

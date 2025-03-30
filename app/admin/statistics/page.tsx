@@ -11,7 +11,6 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AreaChart,
@@ -247,11 +246,8 @@ export default function StatisticsPage() {
   };
 
   return (
-    <GlassMorphismContainer
-      backgroundPattern={true}
-      isDarkMode={false}
-    >
-      <div className="mb-6 flex items-center justify-between">
+    <div className="container p-4">
+      <div className="mb-6 flex items-center">
         <div className="flex items-center gap-2">
           <Link 
             href="/admin" 
@@ -757,6 +753,6 @@ export default function StatisticsPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </GlassMorphismContainer>
+    </div>
   );
 } 
