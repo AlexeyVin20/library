@@ -37,20 +37,20 @@ export default function ShelfsPage() {
   const [isJournalTab, setIsJournalTab] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenuData, setContextMenuData] = useState<{ item: Book | Journal | null; isJournal: boolean; position: { x: number; y: number }; shelfId: number; itemPosition: number } | null>(null);
+  const [contextMenuData, setContextMenuData] = useState<{ Item: Book | Journal | null; IsJournal: boolean; Position: { X: number; Y: number }; ShelfId: number; ItemPosition: number } | null>(null);
 
   const [newShelf, setNewShelf] = useState({
-    category: '',
-    capacity: '',
-    shelfNumber: '',
+    Category: '',
+    Capacity: '',
+    ShelfNumber: '',
   });
 
   const [editShelfData, setEditShelfData] = useState({
-    category: '',
-    capacity: '',
-    shelfNumber: '',
-    posX: '',
-    posY: '',
+    Category: '',
+    Capacity: '',
+    ShelfNumber: '',
+    PosX: '',
+    PosY: '',
   });
 
   const getThemeClasses = () => {
@@ -88,7 +88,14 @@ export default function ShelfsPage() {
       const response = await fetch(`${baseUrl}/api/Shelves`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
-      setShelves(data);
+      
+      // Проверяем и фильтруем полки без id
+      const validShelves = data.filter((shelf: Shelf) => shelf && shelf.Id !== undefined);
+      if (data.length !== validShelves.length) {
+        console.warn(`Получено ${data.length - validShelves.length} полок без ID, которые были отфильтрованы`);
+      }
+      
+      setShelves(validShelves);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при загрузке полок');
     } finally {
@@ -144,13 +151,13 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
 
-      const response = await fetch(`${baseUrl}/api/shelf/auto-position`, {
+      const response = await fetch(`${baseUrl}/api/shelves/auto-position`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          category: newShelf.category,
-          capacity: parseInt(newShelf.capacity),
-          shelfNumber: parseInt(newShelf.shelfNumber)
+          category: newShelf.Category,
+          capacity: parseInt(newShelf.Capacity),
+          shelfNumber: parseInt(newShelf.ShelfNumber)
         }),
       });
 
@@ -158,7 +165,7 @@ export default function ShelfsPage() {
       
       await fetchShelves();
       setShowAddForm(false);
-      setNewShelf({ category: '', capacity: '', shelfNumber: '' });
+      setNewShelf({ Category: '', Capacity: '', ShelfNumber: '' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при добавлении полки');
     } finally {
@@ -177,11 +184,11 @@ export default function ShelfsPage() {
       setHighlightedBookId(null);
     }, 5000);
     
-    const bookWithShelf = books.find(b => b.id === bookId);
-    if (bookWithShelf?.shelfId) {
-      const shelf = shelves.find(s => s.id === bookWithShelf.shelfId);
+    const bookWithShelf = books.find(b => b.Id === bookId);
+    if (bookWithShelf?.ShelfId) {
+      const shelf = shelves.find(s => s.Id === bookWithShelf.ShelfId);
       if (shelf) {
-        const shelfElement = document.getElementById(`shelf-${shelf.id}`);
+        const shelfElement = document.getElementById(`shelf-${shelf.Id}`);
         shelfElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
@@ -195,8 +202,8 @@ export default function ShelfsPage() {
       setShowSearchDropdown(true);
       
       const filteredResults = books.filter(b => 
-        b.title.toLowerCase().includes(term.toLowerCase()) || 
-        (b.authors && b.authors.toLowerCase().includes(term.toLowerCase()))
+        b.Title.toLowerCase().includes(term.toLowerCase()) || 
+        (b.Authors && b.Authors.toLowerCase().includes(term.toLowerCase()))
       );
       
       setFilteredBooks(filteredResults.slice(0, 5)); // Ограничиваем список до 5 элементов
@@ -213,9 +220,9 @@ export default function ShelfsPage() {
     const bookElement = document.querySelector(`[data-book-id="${bookId}"]`);
     if (bookElement) {
       // Найдем родительскую полку
-      const book = books.find(b => b.id === bookId);
-      if (book?.shelfId) {
-        const shelfElement = document.getElementById(`shelf-${book.shelfId}`);
+      const book = books.find(b => b.Id === bookId);
+      if (book?.ShelfId) {
+        const shelfElement = document.getElementById(`shelf-${book.ShelfId}`);
         if (shelfElement) {
           shelfElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
           
@@ -235,11 +242,11 @@ export default function ShelfsPage() {
   const startEditShelf = (shelf: Shelf) => {
     setEditingShelf(shelf);
     setEditShelfData({
-      category: shelf.category,
-      capacity: String(shelf.capacity),
-      shelfNumber: String(shelf.shelfNumber),
-      posX: String(shelf.posX),
-      posY: String(shelf.posY)
+      Category: shelf.Category,
+      Capacity: String(shelf.Capacity),
+      ShelfNumber: String(shelf.ShelfNumber),
+      PosX: String(shelf.PosX),
+      PosY: String(shelf.PosY)
     });
   };
 
@@ -249,13 +256,13 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
       
-      const response = await fetch(`${baseUrl}/api/shelf/${id}`, {
+      const response = await fetch(`${baseUrl}/api/shelves/${id}`, {
         method: 'DELETE'
       });
       
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       
-      setShelves(shelves.filter(shelf => shelf.id !== id));
+      setShelves(shelves.filter(shelf => shelf.Id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при удалении полки');
     } finally {
@@ -272,16 +279,16 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
       
-      const response = await fetch(`${baseUrl}/api/shelf/${editingShelf.id}`, {
+      const response = await fetch(`${baseUrl}/api/shelves/${editingShelf.Id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: editingShelf.id,
-          category: editShelfData.category,
-          capacity: parseInt(editShelfData.capacity),
-          shelfNumber: parseInt(editShelfData.shelfNumber),
-          posX: parseFloat(editShelfData.posX),
-          posY: parseFloat(editShelfData.posY),
+          Id: editingShelf.Id,
+          Category: editShelfData.Category,
+          Capacity: parseInt(editShelfData.Capacity),
+          ShelfNumber: parseInt(editShelfData.ShelfNumber),
+          PosX: parseFloat(editShelfData.PosX),
+          PosY: parseFloat(editShelfData.PosY),
         }),
       });
       
@@ -305,8 +312,8 @@ export default function ShelfsPage() {
     const rect = container.getBoundingClientRect();
     
     setMousePosition({
-      x: e.clientX - rect.left - shelf.posX,
-      y: e.clientY - rect.top - shelf.posY,
+      x: e.clientX - rect.left - shelf.PosX,
+      y: e.clientY - rect.top - shelf.PosY,
     });
     
     setDraggedShelf(shelf);
@@ -328,8 +335,8 @@ export default function ShelfsPage() {
     const newY = Math.max(0, Math.min(rect.height - 150, y));
     
     setShelves(shelves.map(shelf => 
-      shelf.id === draggedShelf.id
-        ? { ...shelf, posX: newX, posY: newY }
+      shelf.Id === draggedShelf.Id
+        ? { ...shelf, PosX: newX, PosY: newY }
         : shelf
     ));
   };
@@ -337,13 +344,13 @@ export default function ShelfsPage() {
   const handleDragEnd = async () => {
     if (!draggedShelf) return;
     
-    const draggedShelfNew = shelves.find(s => s.id === draggedShelf.id);
+    const draggedShelfNew = shelves.find(s => s.Id === draggedShelf.Id);
     if (draggedShelfNew) {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
         if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
         
-        await fetch(`${baseUrl}/api/shelf/${draggedShelfNew.id}`, {
+        await fetch(`${baseUrl}/api/shelves/${draggedShelfNew.Id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(draggedShelfNew)
@@ -371,14 +378,14 @@ export default function ShelfsPage() {
     
     if (isJournalTab) {
       const filtered = journals.filter(journal => 
-        journal.title.toLowerCase().includes(term) || 
-        (journal.publisher && journal.publisher.toLowerCase().includes(term))
+        journal.Title.toLowerCase().includes(term) || 
+        (journal.Publisher && journal.Publisher.toLowerCase().includes(term))
       );
       setFilteredJournals(filtered);
     } else {
       const filtered = books.filter(book => 
-        book.title.toLowerCase().includes(term) || 
-        (book.authors && book.authors.toLowerCase().includes(term))
+        book.Title.toLowerCase().includes(term) || 
+        (book.Authors && book.Authors.toLowerCase().includes(term))
       );
       setFilteredBooks(filtered);
     }
@@ -473,13 +480,13 @@ export default function ShelfsPage() {
               ) : (
                 filteredJournals.map(journal => (
                   <div
-                    key={journal.id}
+                    key={journal.Id ? `journal-${journal.Id}` : `journal-${Math.random().toString(36).substring(2, 11)}`}
                     className="p-3 border-b hover:bg-gray-100 cursor-pointer flex items-start"
-                    onClick={() => addItemToShelf(journal.id.toString(), true)}
+                    onClick={() => journal.Id && addItemToShelf(journal.Id.toString(), true)}
                   >
                     <div className="w-10 h-14 bg-blue-200 rounded mr-3 flex-shrink-0">
-                      {journal.coverImageUrl ? (
-                        <img src={journal.coverImageUrl} alt={journal.title} className="w-full h-full object-cover rounded" />
+                      {journal.CoverImageUrl ? (
+                        <img src={journal.CoverImageUrl} alt={journal.Title} className="w-full h-full object-cover rounded" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-blue-700 text-sm">
                           Журнал
@@ -487,9 +494,9 @@ export default function ShelfsPage() {
                       )}
                     </div>
                     <div>
-                      <h3 className="font-medium">{journal.title}</h3>
-                      <p className="text-sm text-gray-600">{journal.publisher || 'Издатель не указан'}</p>
-                      <p className="text-xs text-gray-500">ISSN: {journal.issn || 'Нет'}</p>
+                      <h3 className="font-medium">{journal.Title}</h3>
+                      <p className="text-sm text-gray-600">{journal.Publisher || 'Издатель не указан'}</p>
+                      <p className="text-xs text-gray-500">ISSN: {journal.ISSN || 'Нет'}</p>
                     </div>
                   </div>
                 ))
@@ -500,13 +507,13 @@ export default function ShelfsPage() {
               ) : (
                 filteredBooks.map(book => (
                   <div
-                    key={book.id}
+                    key={`search-result-${book.Id}`}
                     className="p-3 border-b hover:bg-gray-100 cursor-pointer flex items-start"
-                    onClick={() => addItemToShelf(book.id, false)}
+                    onClick={() => addItemToShelf(book.Id, false)}
                   >
                     <div className="w-10 h-14 bg-green-200 rounded mr-3 flex-shrink-0">
-                      {book.cover ? (
-                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover rounded" />
+                      {book.Cover ? (
+                        <img src={book.Cover} alt={book.Title} className="w-full h-full object-cover rounded" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-green-700 text-sm">
                           Книга
@@ -514,9 +521,9 @@ export default function ShelfsPage() {
                       )}
                     </div>
                     <div>
-                      <h3 className="font-medium">{book.title}</h3>
-                      <p className="text-sm text-gray-600">{book.authors || 'Автор не указан'}</p>
-                      <p className="text-xs text-gray-500">ISBN: {book.isbn || 'Нет'}</p>
+                      <h3 className="font-medium">{book.Title}</h3>
+                      <p className="text-sm text-gray-600">{book.Authors || 'Автор не указан'}</p>
+                      <p className="text-xs text-gray-500">ISBN: {book.ISBN || 'Нет'}</p>
                     </div>
                   </div>
                 ))
@@ -533,20 +540,20 @@ export default function ShelfsPage() {
   const ShelfContent = ({ shelf }: { shelf: Shelf }) => {
     return (
       <div className="flex flex-wrap gap-1">
-        {Array.from({ length: shelf.capacity }).map((_, i) => {
-          const book = books.find(b => b.shelfId === shelf.id && b.position === i);
-          const journal = journals.find(j => j.shelfId === shelf.id && j.position === i);
+        {Array.from({ length: shelf.Capacity }).map((_, i) => {
+          const book = books.find(b => b.ShelfId === shelf.Id && b.Position === i);
+          const journal = journals.find(j => j.ShelfId === shelf.Id && j.Position === i);
           const item = book || journal;
 
           const getBackground = () => {
             if (item) {
               if (book) {
                 // Проверяем, является ли книга подсвеченной
-                const isHighlighted = book.id === highlightedBookId;
+                const isHighlighted = book.Id === highlightedBookId;
                 if (isHighlighted) {
                   return 'bg-yellow-400 border-2 border-yellow-600 shadow-yellow-300/50 shadow-lg animate-pulse';
                 }
-                return book.availableCopies && book.availableCopies > 0 
+                return book.AvailableCopies && book.AvailableCopies > 0 
                   ? 'bg-green-500 hover:scale-105 hover:shadow-md' 
                   : 'bg-red-500 hover:scale-105 hover:shadow-md';
               } else {
@@ -561,11 +568,11 @@ export default function ShelfsPage() {
             if (item) {
               // Открываем контекстное меню с передачей данных
               setContextMenuData({ 
-                item, 
-                isJournal: !!journal, 
-                position: { x: e.pageX, y: e.pageY },
-                shelfId: shelf.id,
-                itemPosition: i
+                Item: item, 
+                IsJournal: !!journal, 
+                Position: { X: e.pageX, Y: e.pageY },
+                ShelfId: shelf.Id,
+                ItemPosition: i
               });
               setShowContextMenu(true);
             }
@@ -573,9 +580,9 @@ export default function ShelfsPage() {
 
           return (
             <div
-              key={i}
-              data-book-id={book?.id || ''}
-              title={item ? `${item.title} (${journal ? 'Журнал' : 'Книга'})${book?.authors ? ` - ${book.authors}` : ''}` : 'Пустое место'}
+              key={shelf.Id ? `shelf-${shelf.Id}-position-${i}` : `shelf-position-${i}`}
+              data-book-id={book?.Id || ''}
+              title={item ? `${item.Title} (${journal ? 'Журнал' : 'Книга'})${book?.Authors ? ` - ${book.Authors}` : ''}` : 'Пустое место'}
               className={`${themeClasses.bookOnShelf} ${getBackground()}`}
               onClick={() => {
                 if (item) {
@@ -583,7 +590,7 @@ export default function ShelfsPage() {
                   handleContextMenu({ preventDefault: () => {}, pageX: window.innerWidth / 2, pageY: window.innerHeight / 2 } as React.MouseEvent);
                 } else {
                   // Если место пустое, открываем селектор для добавления
-                  handleEmptySlotClick(shelf.id, i);
+                  handleEmptySlotClick(shelf.Id, i);
                 }
               }}
               onContextMenu={handleContextMenu}
@@ -603,12 +610,12 @@ export default function ShelfsPage() {
   // Обработчик для удаления элемента
   const handleRemoveItem = () => {
     if (contextMenuData) {
-      const { shelfId, itemPosition, isJournal } = contextMenuData;
-      removeItemFromShelf(shelfId, itemPosition, isJournal);
+      const { ShelfId, ItemPosition, IsJournal } = contextMenuData;
+      removeItemFromShelf(ShelfId, ItemPosition, IsJournal);
     }
   };
 
-  const removeItemFromShelf = async (shelfId: number, position: number, isJournal: boolean) => {
+  const removeItemFromShelf = async (ShelfId: number, ItemPosition: number, IsJournal: boolean) => {
     if (!contextMenuData) return;
     
     try {
@@ -616,22 +623,22 @@ export default function ShelfsPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
       
-      const itemId = contextMenuData.item?.id;
-      const endpoint = isJournal ? 'journals' : 'books';
+      const itemId = contextMenuData.Item?.Id;
+      const endpoint = IsJournal ? 'journals' : 'books';
       
       const response = await fetch(`${baseUrl}/api/${endpoint}/${itemId}/position`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          shelfId,
-          position
+          ShelfId,
+          ItemPosition
         }),
       });
       
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       
       // Обновляем данные
-      if (isJournal) {
+      if (IsJournal) {
         await fetchJournals();
       } else {
         await fetchBooks();
@@ -718,7 +725,7 @@ export default function ShelfsPage() {
                         type="text"
                         name="category"
                         placeholder="Рубрика (например, Фантастика)"
-                        value={newShelf.category}
+                        value={newShelf.Category}
                         onChange={handleNewShelfChange}
                         className={`${themeClasses.input} text-gray-900 dark:text-gray-100`}
                         required
@@ -731,7 +738,7 @@ export default function ShelfsPage() {
                         type="number"
                         name="capacity"
                         placeholder="Количество мест для книг/журналов"
-                        value={newShelf.capacity}
+                        value={newShelf.Capacity}
                         onChange={handleNewShelfChange}
                         className={themeClasses.input}
                         min="1"
@@ -744,7 +751,7 @@ export default function ShelfsPage() {
                         type="number"
                         name="shelfNumber"
                         placeholder="Номер полки"
-                        value={newShelf.shelfNumber}
+                        value={newShelf.ShelfNumber}
                         onChange={handleNewShelfChange}
                         className={themeClasses.input}
                         min="1"
@@ -779,12 +786,12 @@ export default function ShelfsPage() {
                 <div className={themeClasses.searchDropdown}>
                   {filteredBooks.map(book => (
                     <div 
-                      key={book.id}
+                      key={`search-result-${book.Id}`}
                       className={themeClasses.searchItem}
-                      onMouseDown={() => animateHighlightedBook(book.id)}
+                      onMouseDown={() => animateHighlightedBook(book.Id)}
                     >
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{book.title}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{book.authors || 'Автор не указан'}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{book.Title}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{book.Authors || 'Автор не указан'}</div>
                     </div>
                   ))}
                 </div>
@@ -795,7 +802,7 @@ export default function ShelfsPage() {
           {editingShelf && (
             <form onSubmit={updateShelf} className={themeClasses.card}>
               <div className="p-4 border-b border-primary-300/30 dark:border-primary-700/30">
-                <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Редактировать полку #{editingShelf.id}</h2>
+                <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Редактировать полку #{editingShelf.Id}</h2>
               </div>
               <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -804,7 +811,7 @@ export default function ShelfsPage() {
                     type="text"
                     name="category"
                     placeholder="Рубрика"
-                    value={editShelfData.category}
+                    value={editShelfData.Category}
                     onChange={handleEditShelfChange}
                     className={themeClasses.input}
                     required
@@ -816,7 +823,7 @@ export default function ShelfsPage() {
                     type="number"
                     name="capacity"
                     placeholder="Кол-во мест"
-                    value={editShelfData.capacity}
+                    value={editShelfData.Capacity}
                     onChange={handleEditShelfChange}
                     className={themeClasses.input}
                     min="1"
@@ -829,7 +836,7 @@ export default function ShelfsPage() {
                     type="number"
                     name="shelfNumber"
                     placeholder="Номер полки"
-                    value={editShelfData.shelfNumber}
+                    value={editShelfData.ShelfNumber}
                     onChange={handleEditShelfChange}
                     className={themeClasses.input}
                     min="1"
@@ -869,16 +876,16 @@ export default function ShelfsPage() {
                 Нет полок для отображения. Добавьте первую полку.
               </div>
             ) : (
-              shelves.map((shelf) => (
+              shelves.map((shelf, index) => (
                 <div
-                  key={shelf.id}
-                  id={`shelf-${shelf.id}`}
+                  key={shelf.Id ? `shelf-container-${shelf.Id}` : `shelf-container-index-${index}`}
+                  id={`shelf-${shelf.Id || index}`}
                   className={`${themeClasses.shelfCard} absolute p-3 ${isEditMode ? 'cursor-move' : ''}`}
                   style={{
-                    left: shelf.posX,
-                    top: shelf.posY,
-                    transition: draggedShelf?.id === shelf.id ? 'none' : 'all 0.2s ease',
-                    zIndex: draggedShelf?.id === shelf.id ? 100 : 10,
+                    left: shelf.PosX,
+                    top: shelf.PosY,
+                    transition: draggedShelf?.Id === shelf.Id ? 'none' : 'all 0.2s ease',
+                    zIndex: draggedShelf?.Id === shelf.Id ? 100 : 10,
                   }}
                   onMouseDown={isEditMode ? (e) => handleDragStart(e, shelf) : undefined}
                   onMouseEnter={() => setHoveredShelf(shelf)}
@@ -886,9 +893,9 @@ export default function ShelfsPage() {
                 >
                   <div className="shelf-container">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-blue-900 dark:text-blue-300">{shelf.category}</span>
+                      <span className="font-semibold text-blue-900 dark:text-blue-300">{shelf.Category}</span>
                       <span className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs text-blue-800 dark:text-blue-200">
-                        #{shelf.shelfNumber}
+                        #{shelf.ShelfNumber}
                       </span>
                     </div>
                     
@@ -902,7 +909,7 @@ export default function ShelfsPage() {
                         Изменить
                       </button>
                       <button
-                        onClick={() => { if (confirm('Вы уверены, что хотите удалить эту полку?')) deleteShelf(shelf.id); }}
+                        onClick={() => { if (confirm('Вы уверены, что хотите удалить эту полку?')) deleteShelf(shelf.Id); }}
                         className="bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs"
                       >
                         Удалить
@@ -946,9 +953,12 @@ export default function ShelfsPage() {
 
         {showContextMenu && contextMenuData && (
           <ShelfItemContextMenu
-            item={contextMenuData.item}
-            isJournal={contextMenuData.isJournal}
-            position={contextMenuData.position}
+            item={contextMenuData.Item as any}
+            isJournal={contextMenuData.IsJournal}
+            position={{
+              x: contextMenuData.Position.X,
+              y: contextMenuData.Position.Y
+            }}
             onClose={handleCloseMenu}
             onRemove={handleRemoveItem}
           />

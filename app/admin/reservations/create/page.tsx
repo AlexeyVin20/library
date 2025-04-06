@@ -6,17 +6,17 @@ import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import Link from "next/link";
 
 interface User {
-  id: string;
-  fullName: string;
-  email?: string;
-  phone?: string;
+  Id: string;
+  FullName: string;
+  Email?: string;
+  Phone?: string;
 }
 
 interface Book {
-  id: string;
-  title: string;
-  authors?: string;
-  availableCopies: number;
+  Id: string;
+  Title: string;
+  Authors?: string;
+  AvailableCopies: number;
 }
 
 export default function CreateReservationPage() {
@@ -26,11 +26,11 @@ export default function CreateReservationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    userId: "",
-    bookId: "",
-    reservationDate: new Date().toISOString().split("T")[0],
-    expirationDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    notes: "",
+    UserId: "",
+    BookId: "",
+    ReservationDate: new Date().toISOString().split("T")[0],
+    ExpirationDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    Notes: "",
   });
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
@@ -55,7 +55,7 @@ export default function CreateReservationPage() {
       ]);
 
       setUsers(usersData);
-      setBooks(booksData.filter((book: Book) => book.availableCopies > 0));
+      setBooks(booksData.filter((book: Book) => book.AvailableCopies > 0));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
     } finally {
@@ -66,12 +66,12 @@ export default function CreateReservationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${baseUrl}/api/Reservation`, {
+      const response = await fetch(`${baseUrl}/api/Reservations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          status: "Обрабатывается",
+          Status: "Обрабатывается",
         }),
       });
 
@@ -129,15 +129,15 @@ export default function CreateReservationPage() {
                 <select
                   id="userId"
                   name="userId"
-                  value={formData.userId}
+                  value={formData.UserId}
                   onChange={handleChange}
                   required
                   className="w-full bg-white/20 dark:bg-neutral-700/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-lg px-4 py-2 text-neutral-500 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Выберите пользователя</option>
                   {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.fullName}
+                    <option key={user.Id} value={user.Id}>
+                      {user.FullName}
                     </option>
                   ))}
                 </select>
@@ -150,15 +150,15 @@ export default function CreateReservationPage() {
                 <select
                   id="bookId"
                   name="bookId"
-                  value={formData.bookId}
+                  value={formData.BookId}
                   onChange={handleChange}
                   required
                   className="w-full bg-white/20 dark:bg-neutral-700/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-lg px-4 py-2 text-neutral-500 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Выберите книгу</option>
                   {books.map((book) => (
-                    <option key={book.id} value={book.id}>
-                      {book.title} - {book.authors || "Автор не указан"} (Доступно: {book.availableCopies})
+                    <option key={book.Id} value={book.Id}>
+                      {book.Title} - {book.Authors || "Автор не указан"} (Доступно: {book.AvailableCopies})
                     </option>
                   ))}
                 </select>
@@ -173,7 +173,7 @@ export default function CreateReservationPage() {
                     type="date"
                     id="reservationDate"
                     name="reservationDate"
-                    value={formData.reservationDate}
+                    value={formData.ReservationDate}
                     onChange={handleChange}
                     required
                     className="w-full bg-white/20 dark:bg-neutral-700/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-lg px-4 py-2 text-neutral-500 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -188,10 +188,10 @@ export default function CreateReservationPage() {
                     type="date"
                     id="expirationDate"
                     name="expirationDate"
-                    value={formData.expirationDate}
+                    value={formData.ExpirationDate}
                     onChange={handleChange}
                     required
-                    min={formData.reservationDate}
+                    min={formData.ReservationDate}
                     className="w-full bg-white/20 dark:bg-neutral-700/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-lg px-4 py-2 text-neutral-500 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -204,7 +204,7 @@ export default function CreateReservationPage() {
                 <textarea
                   id="notes"
                   name="notes"
-                  value={formData.notes}
+                  value={formData.Notes}
                   onChange={handleChange}
                   rows={3}
                   className="w-full bg-white/20 dark:bg-neutral-700/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-lg px-4 py-2 text-neutral-500 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500"

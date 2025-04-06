@@ -4,15 +4,15 @@ import { useState, useEffect } from "react";
 
 // Определение типов
 export type CalendarEvent = {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  userName?: string;
-  bookTitle?: string;
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Notes?: string;
+  UserName?: string;
+  BookTitle?: string;
 };
 
 interface CalendarProps {
@@ -41,7 +41,7 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${baseUrl}/api/Reservation`, {
+      const response = await fetch(`${baseUrl}/api/Reservations`, {
         headers: { "Content-Type": "application/json" },
       });
 
@@ -51,15 +51,15 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
 
       const data = await response.json();
       const calendarEvents = data.map((reservation: any) => ({
-        id: reservation.id,
-        userId: reservation.userId,
-        bookId: reservation.bookId,
-        reservationDate: new Date(reservation.reservationDate).toISOString().split('T')[0],
-        expirationDate: new Date(reservation.expirationDate).toISOString().split('T')[0],
-        status: reservation.status,
-        notes: reservation.notes,
-        userName: reservation.user?.fullName || "Неизвестный пользователь",
-        bookTitle: reservation.book?.title || "Неизвестная книга"
+        Id: reservation.Id,
+        UserId: reservation.UserId,
+        BookId: reservation.BookId,
+        ReservationDate: new Date(reservation.ReservationDate).toISOString().split('T')[0],
+        ExpirationDate: new Date(reservation.ExpirationDate).toISOString().split('T')[0],
+        Status: reservation.Status,
+        Notes: reservation.Notes,
+        UserName: reservation.User?.FullName || "Неизвестный пользователь",
+        BookTitle: reservation.Book?.Title || "Неизвестная книга"
       }));
 
       setEvents(calendarEvents);
@@ -114,12 +114,12 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
 
   const getDayEvents = (day: Date) => {
     const dayStr = day.toISOString().split("T")[0];
-    return events.filter((event) => event.expirationDate === dayStr && event.status === "Выполнена");
+    return events.filter((event) => event.ExpirationDate === dayStr && event.Status === "Выполнена");
   };
 
   const handleDayClick = (day: Date) => {
     const dayStr = day.toISOString().split("T")[0];
-    const eventsOnDay = events.filter((event) => event.expirationDate === dayStr);
+    const eventsOnDay = events.filter((event) => event.ExpirationDate === dayStr);
     setSelectedDay(day);
     setSelectedDayEvents(eventsOnDay);
     setShowModal(true);
@@ -195,12 +195,12 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
 
               {dayEvents.map(event => (
                 <div
-                  key={event.id}
-                  className={`${getEventColor(event.status)} p-2 my-1 rounded-lg text-xs shadow-sm backdrop-blur-sm`}
-                  title={`${event.userName} - ${event.bookTitle}`}
+                  key={event.Id}
+                  className={`${getEventColor(event.Status)} p-2 my-1 rounded-lg text-xs shadow-sm backdrop-blur-sm`}
+                  title={`${event.UserName} - ${event.BookTitle}`}
                 >
-                  <div className="font-bold truncate">{event.bookTitle}</div>
-                  <div className="truncate">{event.userName}</div>
+                  <div className="font-bold truncate">{event.BookTitle}</div>
+                  <div className="truncate">{event.UserName}</div>
                 </div>
               ))}
             </div>
@@ -225,36 +225,36 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
                 <div className="space-y-4">
                   {selectedDayEvents.map((event) => (
                     <div 
-                      key={event.id}
+                      key={event.Id}
                       className={`p-4 rounded-lg border-l-4 backdrop-blur-xl ${
-                        event.status === "Выполнена" 
+                        event.Status === "Выполнена" 
                           ? "border-green-500 bg-green-50/80 dark:bg-green-900/20" 
-                          : event.status === "Отменена" 
+                          : event.Status === "Отменена" 
                           ? "border-red-500 bg-red-50/80 dark:bg-red-900/20"
                           : "border-yellow-500 bg-yellow-50/80 dark:bg-yellow-900/20"
                       }`}
                     >
                       <div className="flex justify-between">
-                        <h4 className="font-medium text-lg text-neutral-700 dark:text-neutral-200">{event.bookTitle}</h4>
-                        <span className={`px-2 py-1 text-xs rounded-full ${getEventColor(event.status)} backdrop-blur-sm`}>
-                          {event.status}
+                        <h4 className="font-medium text-lg text-neutral-700 dark:text-neutral-200">{event.BookTitle}</h4>
+                        <span className={`px-2 py-1 text-xs rounded-full ${getEventColor(event.Status)} backdrop-blur-sm`}>
+                          {event.Status}
                         </span>
                       </div>
-                      <p className="text-sm mt-2 text-neutral-600 dark:text-neutral-300">Пользователь: <span className="font-medium">{event.userName}</span></p>
+                      <p className="text-sm mt-2 text-neutral-600 dark:text-neutral-300">Пользователь: <span className="font-medium">{event.UserName}</span></p>
                       <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400 grid grid-cols-2 gap-2">
                         <div>
                           <p>Дата резервации:</p>
-                          <p className="font-medium">{formatEventDate(event.reservationDate)}</p>
+                          <p className="font-medium">{formatEventDate(event.ReservationDate)}</p>
                         </div>
                         <div>
                           <p>Дата возврата:</p>
-                          <p className="font-medium">{formatEventDate(event.expirationDate)}</p>
+                          <p className="font-medium">{formatEventDate(event.ExpirationDate)}</p>
                         </div>
                       </div>
-                      {event.notes && (
+                      {event.Notes && (
                         <div className="mt-3 pt-3 border-t border-white/30 dark:border-neutral-700/30">
                           <p className="text-sm text-neutral-600 dark:text-neutral-300">Примечания:</p>
-                          <p className="text-sm text-neutral-500 dark:text-neutral-400">{event.notes}</p>
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">{event.Notes}</p>
                         </div>
                       )}
                     </div>

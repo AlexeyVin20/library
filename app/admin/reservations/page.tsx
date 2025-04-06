@@ -5,21 +5,21 @@ import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import Link from "next/link";
 
 interface Reservation {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  user?: {
-    fullName: string;
-    email?: string;
-    phone?: string;
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Notes?: string;
+  User?: {
+    FullName: string;
+    Email?: string;
+    Phone?: string;
   };
-  book?: {
-    title: string;
-    authors?: string;
+  Book?: {
+    Title: string;
+    Authors?: string;
   };
 }
 
@@ -37,7 +37,7 @@ export default function ReservationsPage() {
   const fetchReservations = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${baseUrl}/api/Reservation`);
+      const response = await fetch(`${baseUrl}/api/Reservations`);
       if (!response.ok) throw new Error("Ошибка при загрузке резерваций");
       const data = await response.json();
       setReservations(data);
@@ -50,15 +50,15 @@ export default function ReservationsPage() {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+      const response = await fetch(`${baseUrl}/api/Reservations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ Status: newStatus }),
       });
 
       if (!response.ok) throw new Error("Ошибка при обновлении статуса");
       setReservations(reservations.map(r => 
-        r.id === id ? { ...r, status: newStatus } : r
+        r.Id === id ? { ...r, Status: newStatus } : r
       ));
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
@@ -87,7 +87,7 @@ export default function ReservationsPage() {
 
   const filteredReservations = filter === "all" 
     ? reservations 
-    : reservations.filter(r => r.status === filter);
+    : reservations.filter(r => r.Status === filter);
 
   if (loading) return (
     <GlassMorphismContainer>
@@ -166,33 +166,33 @@ export default function ReservationsPage() {
           {filteredReservations.length > 0 ? (
             filteredReservations.map((reservation) => (
               <div
-                key={reservation.id}
-                className={`bg-gradient-to-br ${getCardGradient(reservation.status)} backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300`}
+                key={reservation.Id}
+                className={`bg-gradient-to-br ${getCardGradient(reservation.Status)} backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300`}
               >
                 <div className="flex justify-between items-start">
                   <div className="space-y-4">
                     <div>
                       <h2 className="text-xl font-semibold text-neutral-500 dark:text-neutral-200">
-                        {reservation.book?.title || "Неизвестная книга"}
+                        {reservation.Book?.Title || "Неизвестная книга"}
                       </h2>
                       <p className="text-neutral-300 dark:text-neutral-300 mt-1">
-                        {reservation.book?.authors || "Автор не указан"}
+                        {reservation.Book?.Authors || "Автор не указан"}
                       </p>
                     </div>
 
                     <div className={`rounded-lg p-4 border border-white/20 dark:border-neutral-700/20`}>
                       <h3 className="font-medium text-neutral-500 dark:text-neutral-200">
-                        {reservation.user?.fullName || "Неизвестный пользователь"}
+                        {reservation.User?.FullName || "Неизвестный пользователь"}
                       </h3>
                       <div className="mt-2 space-y-1">
-                        {reservation.user?.email && (
+                        {reservation.User?.Email && (
                           <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                            Email: {reservation.user.email}
+                            Email: {reservation.User?.Email}
                           </p>
                         )}
-                        {reservation.user?.phone && (
+                        {reservation.User?.Phone && (
                           <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                            Телефон: {reservation.user.phone}
+                            Телефон: {reservation.User?.Phone}
                           </p>
                         )}
                       </div>
@@ -200,17 +200,17 @@ export default function ReservationsPage() {
 
                     <div className="space-y-2">
                       <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                        Дата запроса: {formatDate(reservation.reservationDate)}
+                        Дата запроса: {formatDate(reservation.ReservationDate)}
                       </p>
                       <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                        Дата возврата: {formatDate(reservation.expirationDate)}
+                        Дата возврата: {formatDate(reservation.ExpirationDate)}
                       </p>
                     </div>
 
-                    {reservation.notes && (
+                    {reservation.Notes && (
                       <div className={`mt-4 p-3 rounded-lg border border-white/20 dark:border-neutral-700/20`}>
                         <p className="text-sm text-neutral-300 dark:text-neutral-300">
-                          Примечания: {reservation.notes}
+                          Примечания: {reservation.Notes}
                         </p>
                       </div>
                     )}
@@ -218,21 +218,21 @@ export default function ReservationsPage() {
 
                   <div className="flex flex-col gap-3">
                     <Link
-                      href={`/admin/reservations/${reservation.id}`}
+                      href={`/admin/reservations/${reservation.Id}`}
                       className="bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 text-center"
                     >
                       Подробнее
                     </Link>
-                    {reservation.status === "Обрабатывается" && (
+                    {reservation.Status === "Обрабатывается" && (
                       <>
                         <button
-                          onClick={() => handleStatusChange(reservation.id, "Выполнена")}
+                          onClick={() => handleStatusChange(reservation.Id, "Выполнена")}
                           className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
                         >
                           Выполнена
                         </button>
                         <button
-                          onClick={() => handleStatusChange(reservation.id, "Отменена")}
+                          onClick={() => handleStatusChange(reservation.Id, "Отменена")}
                           className="bg-gradient-to-r from-red-600/90 to-red-700/70 dark:from-red-700/80 dark:to-red-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
                         >
                           Отменить

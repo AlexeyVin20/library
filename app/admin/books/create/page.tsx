@@ -22,7 +22,7 @@ export default function CreateBookPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
 
-      const response = await fetch(`${baseUrl}/api/shelf`);
+      const response = await fetch(`${baseUrl}/api/shelves`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
       setShelves(data);

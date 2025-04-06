@@ -10,27 +10,27 @@ import { toast } from "@/hooks/use-toast";
 
 // Интерфейс модели журнала
 interface Journal {
-  id: number;
-  title: string;
-  issn: string;
-  registrationNumber?: string | null;
-  format: "Print" | "Electronic" | "Mixed";
-  periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
-  pagesPerIssue: number;
-  description?: string | null;
-  publisher?: string | null;
-  foundationDate: string;
-  circulation: number;
-  isOpenAccess: boolean;
-  category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
-  targetAudience?: string | null;
-  isPeerReviewed: boolean;
-  isIndexedInRINTS: boolean;
-  isIndexedInScopus: boolean;
-  isIndexedInWebOfScience: boolean;
-  publicationDate: string;
-  pageCount: number;
-  coverImageUrl?: string | null;
+  Id: number;
+  Title: string;
+  ISSN: string;
+  RegistrationNumber?: string | null;
+  Format: "Print" | "Electronic" | "Mixed";
+  Periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
+  PagesPerIssue: number;
+  Description?: string | null;
+  Publisher?: string | null;
+  FoundationDate: string;
+  Circulation: number;
+  IsOpenAccess: boolean;
+  Category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
+  TargetAudience?: string | null;
+  IsPeerReviewed: boolean;
+  IsIndexedInRINTS: boolean;
+  IsIndexedInScopus: boolean;
+  IsIndexedInWebOfScience: boolean;
+  PublicationDate: string;
+  PageCount: number;
+  Cover?: string | null;
 }
 
 // Theme classes
@@ -55,7 +55,7 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
       
-      const res = await fetch(`${baseUrl}/api/journals/${journal.id}`, {
+      const res = await fetch(`${baseUrl}/api/journals/${journal.Id}`, {
         method: "DELETE",
       });
       
@@ -133,7 +133,7 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
           </button>
           
           <div className="flex space-x-3">
-            <Link href={`/admin/journals/${journal.id}/update`}>
+            <Link href={`/admin/journals/${journal.Id}/update`}>
               <button className={themeClasses.button}>
                 <Edit className="h-4 w-4 mr-2 inline" />
                 Редактировать
@@ -154,10 +154,10 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
           {/* Левая колонка - обложка */}
           <div className="md:col-span-1">
             <div className={`${themeClasses.card} overflow-hidden aspect-[3/4] relative`}>
-              {journal.coverImageUrl ? (
+              {journal.Cover ? (
                 <Image
-                  src={journal.coverImageUrl}
-                  alt={journal.title}
+                  src={journal.Cover}
+                  alt={journal.Title}
                   fill
                   className="object-cover"
                   unoptimized
@@ -175,71 +175,71 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
             {/* Основная информация */}
             <div className={`${themeClasses.card} p-6`}>
               <h1 className="text-2xl font-bold text-neutral-800 dark:text-neutral-100 mb-2">
-                {journal.title}
+                {journal.Title}
               </h1>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">ISSN:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{journal.issn}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{journal.ISSN}</p>
                 </div>
                 
-                {journal.registrationNumber && (
+                {journal.RegistrationNumber && (
                   <div>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">Регистрационный номер:</p>
-                    <p className="text-neutral-800 dark:text-neutral-200">{journal.registrationNumber}</p>
+                    <p className="text-neutral-800 dark:text-neutral-200">{journal.RegistrationNumber}</p>
                   </div>
                 )}
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Формат:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{formatEnum(journal.format, 'format')}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{formatEnum(journal.Format, 'format')}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Категория:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{formatEnum(journal.category, 'category')}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{formatEnum(journal.Category, 'category')}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Издательство:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{journal.publisher || "Не указано"}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{journal.Publisher || "Не указано"}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Дата основания:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{formatDate(journal.foundationDate)}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{formatDate(journal.FoundationDate)}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Периодичность:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{formatEnum(journal.periodicity, 'periodicity')}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{formatEnum(journal.Periodicity, 'periodicity')}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Тираж:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{journal.circulation}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{journal.Circulation}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Страниц в выпуске:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{journal.pagesPerIssue}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{journal.PagesPerIssue}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Количество страниц:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{journal.pageCount}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{journal.PageCount}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Дата публикации:</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">{formatDate(journal.publicationDate)}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{formatDate(journal.PublicationDate)}</p>
                 </div>
                 
-                {journal.targetAudience && (
+                {journal.TargetAudience && (
                   <div>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">Целевая аудитория:</p>
-                    <p className="text-neutral-800 dark:text-neutral-200">{journal.targetAudience}</p>
+                    <p className="text-neutral-800 dark:text-neutral-200">{journal.TargetAudience}</p>
                   </div>
                 )}
               </div>
@@ -253,39 +253,39 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isOpenAccess ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <div className={`h-5 w-5 rounded-full ${journal.IsOpenAccess ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                   <span>Открытый доступ</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isPeerReviewed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <div className={`h-5 w-5 rounded-full ${journal.IsPeerReviewed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                   <span>Рецензируемый</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isIndexedInRINTS ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <div className={`h-5 w-5 rounded-full ${journal.IsIndexedInRINTS ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                   <span>Индексируется в РИНЦ</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isIndexedInScopus ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <div className={`h-5 w-5 rounded-full ${journal.IsIndexedInScopus ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                   <span>Индексируется в Scopus</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isIndexedInWebOfScience ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <div className={`h-5 w-5 rounded-full ${journal.IsIndexedInWebOfScience ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                   <span>Индексируется в Web of Science</span>
                 </div>
               </div>
             </div>
             
             {/* Описание */}
-            {journal.description && (
+              {journal.Description && (
               <div className={`${themeClasses.card} p-6`}>
                 <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100 mb-4">
                   Описание
                 </h2>
-                <p className="text-neutral-700 dark:text-neutral-300 whitespace-pre-line">{journal.description}</p>
+                <p className="text-neutral-700 dark:text-neutral-300 whitespace-pre-line">{journal.Description}</p>
               </div>
             )}
           </div>

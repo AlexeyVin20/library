@@ -12,24 +12,24 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface UserCreateDto {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  dateOfBirth: string;
-  passportNumber: string;
-  passportIssuedBy: string;
-  passportIssuedDate: string;
-  address: string;
-  dateRegistered: string;
-  borrowedBooksCount: number;
-  fineAmount: number;
-  isActive: boolean;
-  lastLoginDate: string;
-  loanPeriodDays: number;
-  maxBooksAllowed: number;
-  passwordHash: string;
-  username: string;
+  Id: string;
+  FullName: string;
+  Email: string;
+  Phone: string;
+  DateOfBirth: string;
+  PassportNumber: string;
+  PassportIssuedBy: string;
+  PassportIssuedDate: string;
+  Address: string;
+  DateRegistered: string;
+  BorrowedBooksCount: number;
+  FineAmount: number;
+  IsActive: boolean;
+  LastLoginDate: string;
+  LoanPeriodDays: number;
+  MaxBooksAllowed: number;
+  PasswordHash: string;
+  Username: string;
 }
 
 export default function CreateUserPage() {
@@ -38,24 +38,24 @@ export default function CreateUserPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<UserCreateDto>({
-    id: crypto.randomUUID(),
-    fullName: "",
-    email: "",
-    phone: "",
-    dateOfBirth: "",
-    passportNumber: "",
-    passportIssuedBy: "",
-    passportIssuedDate: "",
-    address: "",
-    dateRegistered: new Date().toISOString().split("T")[0],
-    borrowedBooksCount: 0,
-    fineAmount: 0,
-    isActive: true,
-    lastLoginDate: new Date().toISOString().split("T")[0],
-    loanPeriodDays: 14,
-    maxBooksAllowed: 5,
-    passwordHash: "",
-    username: "",
+    Id: crypto.randomUUID(),
+    FullName: "",
+    Email: "",
+    Phone: "",
+    DateOfBirth: "",
+    PassportNumber: "",
+    PassportIssuedBy: "",
+    PassportIssuedDate: "",
+    Address: "",
+    DateRegistered: new Date().toISOString().split("T")[0],
+    BorrowedBooksCount: 0,
+    FineAmount: 0,
+    IsActive: true,
+    LastLoginDate: new Date().toISOString().split("T")[0],
+    LoanPeriodDays: 14,
+    MaxBooksAllowed: 5,
+    PasswordHash: "",
+    Username: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,7 +132,7 @@ export default function CreateUserPage() {
                   type="text"
                   id="fullName"
                   name="fullName"
-                  value={formData.fullName}
+                  value={formData.FullName}
                   onChange={handleChange}
                   required
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -147,7 +147,7 @@ export default function CreateUserPage() {
                   type="email"
                   id="email"
                   name="email"
-                  value={formData.email}
+                  value={formData.Email}
                   onChange={handleChange}
                   required
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -162,7 +162,7 @@ export default function CreateUserPage() {
                   type="tel"
                   id="phone"
                   name="phone"
-                  value={formData.phone}
+                  value={formData.Phone}
                   onChange={handleChange}
                   required
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -177,7 +177,7 @@ export default function CreateUserPage() {
                   type="date"
                   id="dateOfBirth"
                   name="dateOfBirth"
-                  value={formData.dateOfBirth}
+                  value={formData.DateOfBirth}
                   onChange={handleChange}
                   required
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -192,7 +192,7 @@ export default function CreateUserPage() {
                   type="text"
                   id="passportNumber"
                   name="passportNumber"
-                  value={formData.passportNumber}
+                  value={formData.PassportNumber}
                   onChange={handleChange}
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
@@ -206,7 +206,7 @@ export default function CreateUserPage() {
                   type="text"
                   id="passportIssuedBy"
                   name="passportIssuedBy"
-                  value={formData.passportIssuedBy}
+                  value={formData.PassportIssuedBy}
                   onChange={handleChange}
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
@@ -220,7 +220,7 @@ export default function CreateUserPage() {
                   type="date"
                   id="passportIssuedDate"
                   name="passportIssuedDate"
-                  value={formData.passportIssuedDate}
+                  value={formData.PassportIssuedDate}
                   onChange={handleChange}
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
@@ -234,7 +234,7 @@ export default function CreateUserPage() {
                   type="text"
                   id="address"
                   name="address"
-                  value={formData.address}
+                  value={formData.Address}
                   onChange={handleChange}
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
@@ -248,7 +248,7 @@ export default function CreateUserPage() {
                   type="date"
                   id="dateRegistered"
                   name="dateRegistered"
-                  value={formData.dateRegistered}
+                  value={formData.DateRegistered}
                   onChange={handleChange}
                   required
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -263,7 +263,7 @@ export default function CreateUserPage() {
                   type="number"
                   id="loanPeriodDays"
                   name="loanPeriodDays"
-                  value={formData.loanPeriodDays}
+                  value={formData.LoanPeriodDays}
                   onChange={handleChange}
                   min="1"
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -278,7 +278,7 @@ export default function CreateUserPage() {
                   type="number"
                   id="maxBooksAllowed"
                   name="maxBooksAllowed"
-                  value={formData.maxBooksAllowed}
+                  value={formData.MaxBooksAllowed}
                   onChange={handleChange}
                   min="1"
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -293,7 +293,7 @@ export default function CreateUserPage() {
                   type="number"
                   id="borrowedBooksCount"
                   name="borrowedBooksCount"
-                  value={formData.borrowedBooksCount}
+                  value={formData.BorrowedBooksCount}
                   onChange={handleChange}
                   min="0"
                   className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -308,7 +308,7 @@ export default function CreateUserPage() {
                   type="number"
                   id="fineAmount"
                   name="fineAmount"
-                  value={formData.fineAmount}
+                  value={formData.FineAmount}
                   onChange={handleChange}
                   min="0"
                   step="0.01"
@@ -320,9 +320,9 @@ export default function CreateUserPage() {
                 <Checkbox
                   id="isActive"
                   name="isActive"
-                  checked={formData.isActive}
+                  checked={formData.IsActive}
                   onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, isActive: !!checked }))
+                    setFormData((prev) => ({ ...prev, IsActive: !!checked }))
                   }
                 />
                 <label

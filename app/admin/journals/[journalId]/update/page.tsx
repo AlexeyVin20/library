@@ -27,7 +27,7 @@ interface Journal {
   isIndexedInWebOfScience: boolean;
   publicationDate: string;
   pageCount: number;
-  coverImageUrl?: string | null;
+  Cover?: string | null;
 }
 
 export default function JournalUpdatePage({

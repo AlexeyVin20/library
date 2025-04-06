@@ -29,36 +29,37 @@ import {
   ResponsiveContainer,
   Label
 } from 'recharts';
+import React from 'react';
 
 // Типы данных для статистики
 interface User {
-  id: string;
-  fullName: string;
-  borrowedBooksCount: number;
-  maxBooksAllowed: number;
-  fineAmount?: number;
+  Id: string;
+  FullName: string;
+  BorrowedBooksCount: number;
+  MaxBooksAllowed: number;
+  FineAmount?: number;
 }
 
 interface Book {
-  id: string;
-  title: string;
-  availableCopies: number;
-  cover?: string;
-  authors?: string;
-  category?: string;
-  addedDate?: string;
+  Id: string;
+  Title: string;
+  AvailableCopies: number;
+  Cover?: string;
+  Authors?: string;
+  Category?: string;
+  AddedDate?: string;
 }
 
 interface Reservation {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  user?: User;
-  book?: Book;
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Notes?: string;
+  User?: User;
+  Book?: Book;
 }
 
 interface MonthlyBorrowedData {
@@ -96,14 +97,14 @@ export default function StatisticsPage() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   // Расчет базовой статистики
-  const activeUsersCount = users.filter((u) => u.borrowedBooksCount > 0).length;
+  const activeUsersCount = users.filter((u) => u.BorrowedBooksCount > 0).length;
   const totalUsersCount = users.length;
-  const pendingReservations = reservations.filter((r) => r.status === "Обрабатывается").length;
-  const completedReservations = reservations.filter((r) => r.status === "Выполнена").length;
-  const canceledReservations = reservations.filter((r) => r.status === "Отменена").length;
-  const totalBorrowedBooks = users.reduce((total, user) => total + user.borrowedBooksCount, 0);
-  const totalAvailableBooks = books.reduce((sum, book) => sum + book.availableCopies, 0);
-  const totalFines = users.reduce((sum, user) => sum + (user.fineAmount || 0), 0);
+  const pendingReservations = reservations.filter((r) => r.Status === "Обрабатывается").length;
+  const completedReservations = reservations.filter((r) => r.Status === "Выполнена").length;
+  const canceledReservations = reservations.filter((r) => r.Status === "Отменена").length;
+  const totalBorrowedBooks = users.reduce((total, user) => total + user.BorrowedBooksCount, 0);
+  const totalAvailableBooks = books.reduce((sum, book) => sum + book.AvailableCopies, 0);
+  const totalFines = users.reduce((sum, user) => sum + (user.FineAmount || 0), 0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,7 +112,7 @@ export default function StatisticsPage() {
         setLoading(true);
 
         // Загрузка пользователей
-        const usersResponse = await fetch(`${baseUrl}/api/User`);
+        const usersResponse = await fetch(`${baseUrl}/api/Users`);
         if (!usersResponse.ok) throw new Error("Ошибка при загрузке пользователей");
         const usersData = await usersResponse.json();
         setUsers(usersData);
@@ -123,7 +124,7 @@ export default function StatisticsPage() {
         setBooks(booksData);
 
         // Загрузка резерваций
-        const reservationsResponse = await fetch(`${baseUrl}/api/Reservation`);
+        const reservationsResponse = await fetch(`${baseUrl}/api/Reservations`);
         if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резерваций");
         const reservationsData = await reservationsResponse.json();
         setReservations(reservationsData);
@@ -134,8 +135,8 @@ export default function StatisticsPage() {
           date.setMonth(date.getMonth() - i);
           const monthKey = date.toLocaleString("ru-RU", { month: "short", year: "numeric" });
           const borrowed = reservationsData.filter((r: Reservation) => {
-            const reservationMonth = new Date(r.reservationDate).toLocaleString("ru-RU", { month: "short", year: "numeric" });
-            return reservationMonth === monthKey && r.status === "Выполнена";
+            const reservationMonth = new Date(r.ReservationDate).toLocaleString("ru-RU", { month: "short", year: "numeric" });
+            return reservationMonth === monthKey && r.Status === "Выполнена";
           }).length;
           return {
             month: date.toLocaleString("ru-RU", { month: "short" }),
@@ -156,7 +157,7 @@ export default function StatisticsPage() {
           // Здесь мы берем текущие данные о штрафах и распределяем их по месяцам
           // В идеале API должен предоставлять исторические данные
           const monthFines = usersData.reduce((sum: number, user: User) => {
-            return sum + (user.fineAmount || 0) / 6 * (1 + Math.sin(i * Math.PI / 3));
+            return sum + (user.FineAmount || 0) / 6 * (1 + Math.sin(i * Math.PI / 3));
           }, 0);
           
           return {
@@ -169,7 +170,7 @@ export default function StatisticsPage() {
         // Генерация данных о категориях книг из реальных данных
         const categoryMap = new Map<string, number>();
         booksData.forEach((book: Book) => {
-          const category = book.category || "Без категории";
+          const category = book.Category || "Без категории";
           categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
         });
         
@@ -184,11 +185,11 @@ export default function StatisticsPage() {
 
         // Топ пользователей по количеству взятых книг
         const topUsers = usersData
-          .sort((a: User, b: User) => b.borrowedBooksCount - a.borrowedBooksCount)
+          .sort((a: User, b: User) => b.BorrowedBooksCount - a.BorrowedBooksCount)
           .slice(0, 5)
           .map((user: User) => ({
-            name: user.fullName.split(' ')[0],  // Берем только имя для краткости
-            value: user.borrowedBooksCount,
+            name: user.FullName.split(' ')[0],  // Берем только имя для краткости
+            value: user.BorrowedBooksCount,
           }));
         setTopUsersData(topUsers);
 
@@ -404,8 +405,8 @@ export default function StatisticsPage() {
                       fill="#8884d8"
                       paddingAngle={5}
                       dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      labelLine={{ stroke: "#999", strokeWidth: 1 }}
+                      labelLine={true}
+                      label={(entry) => String(entry.name)}
                     >
                       {statusDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -449,8 +450,8 @@ export default function StatisticsPage() {
                       fill="#8884d8"
                       paddingAngle={5}
                       dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      labelLine={{ stroke: "#999", strokeWidth: 1 }}
+                      labelLine={true}
+                      label={(entry) => String(entry.name)}
                     >
                       {bookCategoriesData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -568,7 +569,8 @@ export default function StatisticsPage() {
                       fill="#8884d8"
                       paddingAngle={5}
                       dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      labelLine={true}
+                      label={(entry) => String(entry.name)}
                     >
                       <Cell fill="#10B981" />
                       <Cell fill="#d1d5db" />
@@ -728,12 +730,12 @@ export default function StatisticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={users
-                      .filter((user) => (user.fineAmount || 0) > 0)
-                      .sort((a, b) => (b.fineAmount || 0) - (a.fineAmount || 0))
+                      .filter((user) => (user.FineAmount || 0) > 0)
+                      .sort((a, b) => (b.FineAmount || 0) - (a.FineAmount || 0))
                       .slice(0, 5)
                       .map((user) => ({
-                        name: user.fullName.split(' ')[0],
-                        value: user.fineAmount || 0,
+                        name: user.FullName.split(' ')[0],
+                        value: user.FineAmount || 0,
                       }))}
                     layout="vertical"
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}

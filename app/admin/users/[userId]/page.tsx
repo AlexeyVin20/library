@@ -17,43 +17,43 @@ import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface UserDetail {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  dateOfBirth: string;
-  passportNumber: string;
-  passportIssuedBy: string;
-  passportIssuedDate: string;
-  address: string;
-  dateRegistered: string;
-  borrowedBooksCount: number;
-  fineAmount: number;
-  isActive: boolean;
-  lastLoginDate: string;
-  loanPeriodDays: number;
-  maxBooksAllowed: number;
-  username: string;
+  Id: string;
+  FullName: string;
+  Email: string;
+  Phone: string;
+  DateOfBirth: string;
+  PassportNumber: string;
+  PassportIssuedBy: string;
+  PassportIssuedDate: string;
+  Address: string;
+  DateRegistered: string;
+  BorrowedBooksCount: number;
+  FineAmount: number;
+  IsActive: boolean;
+  LastLoginDate: string;
+  LoanPeriodDays: number;
+  MaxBooksAllowed: number;
+  Username: string;
 }
 
 interface Book {
-  id: string;
-  title: string;
-  author: string;
-  returnDate: string;
+  Id: string;
+  Title: string;
+  Author: string;
+  ReturnDate: string;
 }
 
 interface Reservation {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  book?: { 
-    id: string;
-    title: string;
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Notes?: string;
+  Book?: { 
+    Id: string;
+    Title: string;
   };
 }
 
@@ -160,9 +160,9 @@ export default function UserDetailPage() {
 
   // Данные для графика использования библиотеки
   const chartData = {
-    borrowed: user.borrowedBooksCount,
-    available: user.maxBooksAllowed - user.borrowedBooksCount,
-    reservations: reservations.filter(r => r.status === "Обрабатывается" && r.userId === userId).length
+    borrowed: user.BorrowedBooksCount,
+    available: user.MaxBooksAllowed - user.BorrowedBooksCount,
+    reservations: reservations.filter(r => r.Status === "Обрабатывается" && r.UserId === userId).length
   };
 
   return (
@@ -214,20 +214,20 @@ export default function UserDetailPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="text-2xl font-bold flex items-center text-neutral-500 dark:text-neutral-200">
                   <User className="mr-2" />
-                  {user.fullName}
+                  {user.FullName}
                 </CardTitle>
-                <Badge variant={user.isActive ? "success" : "destructive"} className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl">
-                  {user.isActive ? "Активен" : "Заблокирован"}
+                <Badge variant={user.IsActive ? "success" : "destructive"} className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl">
+                  {user.IsActive ? "Активен" : "Заблокирован"}
                 </Badge>
               </div>
               <CardDescription className="flex items-center mt-1 text-neutral-400 dark:text-neutral-300">
                 <Mail className="h-4 w-4 mr-1" />
-                {user.email}
+                {user.Email}
               </CardDescription>
-              {user.phone && (
+              {user.Phone && (
                 <CardDescription className="flex items-center mt-1 text-neutral-400 dark:text-neutral-300">
                   <Phone className="h-4 w-4 mr-1" />
-                  {user.phone}
+                  {user.Phone}
                 </CardDescription>
               )}
             </CardHeader>
@@ -238,23 +238,23 @@ export default function UserDetailPage() {
                   <ul className="space-y-2">
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-32">Логин:</span>
-                      <span className="text-neutral-500 dark:text-neutral-200">{user.username}</span>
+                      <span className="text-neutral-500 dark:text-neutral-200">{user.Username}</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-32">Дата рождения:</span>
-                      <span className="text-neutral-500 dark:text-neutral-200">{formatDate(user.dateOfBirth)}</span>
+                      <span className="text-neutral-500 dark:text-neutral-200">{formatDate(user.DateOfBirth)}</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-32">Адрес:</span>
-                      <span className="text-neutral-500 dark:text-neutral-200">{user.address || "Не указан"}</span>
+                      <span className="text-neutral-500 dark:text-neutral-200">{user.Address || "Не указан"}</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-32">Дата регистрации:</span>
-                      <span className="text-neutral-500 dark:text-neutral-200">{formatDate(user.dateRegistered)}</span>
+                      <span className="text-neutral-500 dark:text-neutral-200">{formatDate(user.DateRegistered)}</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-32">Последний вход:</span>
-                      <span className="text-neutral-500 dark:text-neutral-200">{formatDate(user.lastLoginDate)}</span>
+                      <span className="text-neutral-500 dark:text-neutral-200">{formatDate(user.LastLoginDate)}</span>
                     </li>
                   </ul>
                 </div>
@@ -265,41 +265,41 @@ export default function UserDetailPage() {
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-40">Книг на руках:</span>
                       <span className="text-neutral-500 dark:text-neutral-200">
-                        {user.borrowedBooksCount} из {user.maxBooksAllowed}
+                        {user.BorrowedBooksCount} из {user.MaxBooksAllowed}
                       </span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-40">Срок выдачи:</span>
-                      <span className="text-neutral-500 dark:text-neutral-200">{user.loanPeriodDays || 14} дней</span>
+                      <span className="text-neutral-500 dark:text-neutral-200">{user.LoanPeriodDays || 14} дней</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-40">Штраф:</span>
-                      <span className={user.fineAmount > 0 ? "text-red-500 font-semibold" : "text-neutral-500 dark:text-neutral-200"}>
-                        {user.fineAmount.toFixed(2)} руб.
+                      <span className={user.FineAmount > 0 ? "text-red-500 font-semibold" : "text-neutral-500 dark:text-neutral-200"}>
+                        {user.FineAmount.toFixed(2)} руб.
                       </span>
                     </li>
                   </ul>
                 </div>
               </div>
               
-              {user.passportNumber && (
+              {user.PassportNumber && (
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-2 text-neutral-500 dark:text-neutral-200">Паспортные данные</h3>
                   <ul className="space-y-2">
                     <li className="flex items-start">
                       <span className="text-neutral-400 dark:text-neutral-300 min-w-32">Номер паспорта:</span>
-                      <span className="text-neutral-500 dark:text-neutral-200">{user.passportNumber}</span>
+                      <span className="text-neutral-500 dark:text-neutral-200">{user.PassportNumber}</span>
                     </li>
-                    {user.passportIssuedBy && (
+                    {user.PassportIssuedBy && (
                       <li className="flex items-start">
                         <span className="text-neutral-400 dark:text-neutral-300 min-w-32">Кем выдан:</span>
-                        <span className="text-neutral-500 dark:text-neutral-200">{user.passportIssuedBy}</span>
+                        <span className="text-neutral-500 dark:text-neutral-200">{user.PassportIssuedBy}</span>
                       </li>
                     )}
-                    {user.passportIssuedDate && (
+                    {user.PassportIssuedDate && (
                       <li className="flex items-start">
                         <span className="text-neutral-400 dark:text-neutral-300 min-w-32">Дата выдачи:</span>
-                        <span className="text-neutral-500 dark:text-neutral-200">{formatDate(user.passportIssuedDate)}</span>
+                        <span className="text-neutral-500 dark:text-neutral-200">{formatDate(user.PassportIssuedDate)}</span>
                       </li>
                     )}
                   </ul>
@@ -333,11 +333,11 @@ export default function UserDetailPage() {
               {borrowedBooks.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {borrowedBooks.map((book) => (
-                    <div key={book.id} className="bg-white/20 dark:bg-neutral-700/20 rounded-lg p-4 border border-white/30 dark:border-neutral-700/30">
-                      <h4 className="font-semibold text-neutral-500 dark:text-neutral-200">{book.title}</h4>
-                      <p className="text-neutral-400 dark:text-neutral-300">Автор: {book.author}</p>
+                    <div key={book.Id} className="bg-white/20 dark:bg-neutral-700/20 rounded-lg p-4 border border-white/30 dark:border-neutral-700/30">
+                      <h4 className="font-semibold text-neutral-500 dark:text-neutral-200">{book.Title}</h4>
+                      <p className="text-neutral-400 dark:text-neutral-300">Автор: {book.Author}</p>
                       <p className="text-sm mt-1 text-neutral-400 dark:text-neutral-300">
-                        Дата возврата: <span className="font-medium text-neutral-500 dark:text-neutral-200">{formatDate(book.returnDate)}</span>
+                        Дата возврата: <span className="font-medium text-neutral-500 dark:text-neutral-200">{formatDate(book.ReturnDate)}</span>
                       </p>
                     </div>
                   ))}
@@ -359,38 +359,38 @@ export default function UserDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {reservations.filter(r => r.userId === userId).length > 0 ? (
+              {reservations.filter(r => r.UserId === userId).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {reservations.filter(r => r.userId === userId).map((reservation) => (
+                  {reservations.filter(r => r.UserId === userId).map((reservation) => (
                     <div 
-                      key={reservation.id} 
+                      key={reservation.Id} 
                       className={`bg-white/20 dark:bg-neutral-700/20 rounded-lg p-4 border ${
-                        reservation.status === "Выполнена" ? "border-green-300/30 bg-green-50/20" : 
-                        reservation.status === "Отменена" ? "border-red-300/30 bg-red-50/20" : 
+                        reservation.Status === "Выполнена" ? "border-green-300/30 bg-green-50/20" : 
+                        reservation.Status === "Отменена" ? "border-red-300/30 bg-red-50/20" : 
                         "border-yellow-300/30 bg-yellow-50/20"
                       }`}
                     >
                       <h4 className="font-semibold text-neutral-500 dark:text-neutral-200">
-                        {reservation.book?.title || "Неизвестная книга"}
+                        {reservation.Book?.Title || "Неизвестная книга"}
                       </h4>
                       <p className="text-sm text-neutral-400 dark:text-neutral-300">
-                        Срок до: {formatDate(reservation.expirationDate)}
+                        Срок до: {formatDate(reservation.ExpirationDate)}
                       </p>
                       <div className="flex items-center mt-1">
                         <span className="text-sm mr-1 text-neutral-400 dark:text-neutral-300">Статус: </span>
                         <Badge variant={
-                          reservation.status === "Выполнена" ? "success" : 
-                          reservation.status === "Отменена" ? "destructive" : 
+                          reservation.Status === "Выполнена" ? "success" : 
+                          reservation.Status === "Отменена" ? "destructive" : 
                           "warning"
                         } className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl">
-                          {reservation.status === "Выполнена" ? "Одобрено" : 
-                           reservation.status === "Отменена" ? "Отклонено" : 
+                          {reservation.Status === "Выполнена" ? "Одобрено" : 
+                           reservation.Status === "Отменена" ? "Отклонено" : 
                            "В обработке"}
                         </Badge>
                       </div>
-                      {reservation.notes && (
+                      {reservation.Notes && (
                         <p className="text-sm italic mt-2 text-neutral-400 dark:text-neutral-300">
-                          Примечание: {reservation.notes}
+                          Примечание: {reservation.Notes}
                         </p>
                       )}
                     </div>

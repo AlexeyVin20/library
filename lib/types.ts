@@ -1,49 +1,49 @@
 export interface Book {
-  id: string;
-  title: string;
-  authors?: string;
-  isbn?: string;
-  cover?: string;
-  availableCopies?: number;
-  shelfId?: number;
-  position?: number;
-  genre?: string;
-  categorization?: string;
+  Id: string;
+  Title: string;
+  Authors?: string;
+  ISBN?: string;
+  Cover?: string;
+  AvailableCopies?: number;
+  ShelfId?: number;
+  Position?: number;
+  Genre?: string;
+  Categorization?: string;
 }
 
 export interface Journal {
-  id: string;
-  title: string;
-  publisher?: string;
-  issn?: string;
-  coverImageUrl?: string;
-  shelfId?: number;
-  position?: number;
+  Id: string;
+  Title: string;
+  Publisher?: string;
+  ISSN?: string;
+  CoverImageUrl?: string;
+  ShelfId?: number;
+  Position?: number;
 }
 
 export interface Shelf {
-  id: number;
-  category: string;
-  capacity: number;
-  shelfNumber: number;
-  posX: number;
-  posY: number;
-  lastReorganized?: Date;
+  Id: number;
+  Category: string;
+  Capacity: number;
+  ShelfNumber: number;
+  PosX: number;
+  PosY: number;
+  LastReorganized?: Date;
 }
 
 export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
+  Id: string;
+  Name: string;
+  Email: string;
+  Role: string;
 }
 
 export interface Borrowing {
-  id: string;
-  userId: string;
-  bookId: string;
-  borrowDate: Date;
-  dueDate: Date;
-  returnDate?: Date;
-  status: 'active' | 'returned' | 'overdue';
+  Id: string;
+  UserId: string;
+  BookId: string;
+  BorrowDate: Date;
+  DueDate: Date;
+  ReturnDate?: Date;
+  Status: 'active' | 'returned' | 'overdue';
 } 

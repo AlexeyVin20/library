@@ -20,6 +20,7 @@ import { BookInput } from "@/lib/admin/actions/book";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Shelf } from "@/lib/types";
 
 interface Position {
   x: number;
@@ -52,7 +53,7 @@ interface BookFormProps extends Partial<BookInput> {
   onSubmit: (data: BookInput) => Promise<void>;
   isSubmitting: boolean;
   mode: "create" | "update";
-  shelves?: Array<{ id: number; category: string; shelfNumber: number; capacity: number; posX: number; posY: number }>;
+  shelves?: Shelf[];
 }
 
 const BookForm = ({
@@ -67,7 +68,7 @@ const BookForm = ({
 
   const [showManualCoverInput, setShowManualCoverInput] = useState(false);
   const [manualCoverUrl, setManualCoverUrl] = useState("");
-  const [isbn, setIsbn] = useState<string>(initialData?.isbn || "");
+  const [isbn, setIsbn] = useState<string>(initialData?.ISBN || "");
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic-info");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -75,10 +76,10 @@ const BookForm = ({
   const [geminiLoading, setGeminiLoading] = useState(false);
   const [showShelvesModal, setShowShelvesModal] = useState(false);
   const [selectedShelf, setSelectedShelf] = useState<number | undefined>(
-    initialData?.shelfId !== undefined ? Number(initialData.shelfId) : undefined
+    initialData?.ShelfId !== undefined ? Number(initialData.ShelfId) : undefined
   );
   const [selectedPosition, setSelectedPosition] = useState<number | undefined>(
-    initialData?.position !== undefined ? Number(initialData.position) : undefined
+    initialData?.Position !== undefined ? Number(initialData.Position) : undefined
   );
   const [draggedShelf, setDraggedShelf] = useState<any | null>(null);
   const [mousePosition, setMousePosition] = useState<Position>({ x: 0, y: 0 });
@@ -92,52 +93,69 @@ const BookForm = ({
   } = useForm<z.infer<typeof bookSchema>>({
     resolver: zodResolver(bookSchema),
     defaultValues: {
-      title: initialData?.title || "",
-      authors: initialData?.authors || "",
-      isbn: initialData?.isbn || "",
-      genre: initialData?.genre || "",
-      cover: initialData?.cover || "",
-      description: initialData?.description || "",
-      publicationYear: initialData?.publicationYear || new Date().getFullYear(),
-      publisher: initialData?.publisher || "",
-      pageCount: initialData?.pageCount || 0,
-      language: initialData?.language || "",
-      categorization: initialData?.categorization || "",
-      udk: initialData?.udk || "",
-      bbk: initialData?.bbk || "",
-      summary: initialData?.summary || "",
-      availableCopies: initialData?.availableCopies || 1,
-      shelfId: initialData?.shelfId || undefined,
-      position: initialData?.position || undefined,
-      edition: initialData?.edition || "",
-      price: initialData?.price || undefined,
-      format: initialData?.format || "",
-      originalTitle: initialData?.originalTitle || "",
-      originalLanguage: initialData?.originalLanguage || "",
-      isEbook: initialData?.isEbook || false,
-      condition: initialData?.condition || "",
+      Title: initialData?.Title || "",
+      Authors: initialData?.Authors || "",
+      ISBN: initialData?.ISBN || "",
+      Genre: initialData?.Genre || "",
+      Cover: initialData?.Cover || "",
+      Description: initialData?.Description || "",
+      PublicationYear: initialData?.PublicationYear || new Date().getFullYear(),
+      Publisher: initialData?.Publisher || "",
+      PageCount: initialData?.PageCount || 0,
+      Language: initialData?.Language || "",
+      Categorization: initialData?.Categorization || "",
+      UDK: initialData?.UDK || "",
+      BBK: initialData?.BBK || "",
+      Summary: initialData?.Summary || "",
+      AvailableCopies: initialData?.AvailableCopies || 1,
+      ShelfId: initialData?.ShelfId || undefined,
+      Position: initialData?.Position || undefined,
+      Edition: initialData?.Edition || "",
+      Price: initialData?.Price || undefined,
+      Format: initialData?.Format || "",
+      OriginalTitle: initialData?.OriginalTitle || "",
+      OriginalLanguage: initialData?.OriginalLanguage || "",
+      IsEbook: initialData?.IsEbook || false,
+      Condition: initialData?.Condition || "",
     },
   });
 
-  const isEbook = watch("isEbook");
+  const IsEbook = watch("IsEbook");
   const formValues = watch();
 
   useEffect(() => {
     if (initialData) {
-      setIsbn(initialData.isbn || "");
-      if (initialData.shelfId !== undefined) {
-        setSelectedShelf(Number(initialData.shelfId));
+      setIsbn(initialData.ISBN || "");
+      if (initialData.ShelfId !== undefined) {
+        setSelectedShelf(Number(initialData.ShelfId));
       } 
-      if (initialData.position !== undefined) {
-        setSelectedPosition(Number(initialData.position));
+      if (initialData.Position !== undefined) {
+        setSelectedPosition(Number(initialData.Position));
       }
     }
-    if (initialData?.cover) setPreviewUrl(initialData.cover);
+    if (initialData?.Cover) setPreviewUrl(initialData.Cover);
   }, [initialData]);
 
   useEffect(() => {
     if (geminiImage) handleGeminiUpload();
   }, [geminiImage]);
+
+  // Функция для дополнительной валидации формы
+  const validateFormBeforeSubmit = () => {
+    const requiredFields = ["Title", "Authors"];
+    const missingFields = requiredFields.filter(field => !formValues[field as keyof typeof formValues]);
+    
+    if (missingFields.length > 0) {
+      toast({
+        title: "Ошибка валидации",
+        description: `Следующие поля обязательны: ${missingFields.join(", ")}`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    return true;
+  };
 
   const handleFetchByISBN = async () => {
     if (!isbn) {
@@ -152,22 +170,22 @@ const BookForm = ({
       const data = await res.json();
       if (data.totalItems > 0) {
         const bookData = data.items[0].volumeInfo;
-        setValue("title", bookData.title || "");
-        setValue("description", bookData.description || "");
-        setValue("cover", bookData.imageLinks?.thumbnail || "");
-        setValue("isbn", isbn);
-        setValue("publisher", bookData.publisher || "");
-        setValue("pageCount", bookData.pageCount || 0);
-        setValue("language", bookData.language || "");
+        setValue("Title", bookData.title || "");
+        setValue("Description", bookData.description || "");
+        setValue("Cover", bookData.imageLinks?.thumbnail || "");
+        setValue("ISBN", isbn);
+        setValue("Publisher", bookData.publisher || "");
+        setValue("PageCount", bookData.pageCount || 0);
+        setValue("Language", bookData.language || "");
         setValue(
-          "publicationYear",
+          "PublicationYear",
           bookData.publishedDate ? parseInt(bookData.publishedDate.substring(0, 4)) : new Date().getFullYear()
         );
-        if (bookData.authors && bookData.authors.length > 0) setValue("authors", bookData.authors.join(", "));
+        if (bookData.authors && bookData.authors.length > 0) setValue("Authors", bookData.authors.join(", "));
         if (bookData.imageLinks?.thumbnail) setPreviewUrl(bookData.imageLinks.thumbnail);
         toast({ title: "Данные получены", description: "Информация о книге успешно заполнена" });
       } else {
-        setValue("isbn", isbn);
+        setValue("ISBN", isbn);
         toast({
           title: "Книга не найдена",
           description: "Проверьте правильность ISBN.",
@@ -175,7 +193,7 @@ const BookForm = ({
         });
       }
     } catch (error) {
-      setValue("isbn", isbn);
+      setValue("ISBN", isbn);
       toast({
         title: "Ошибка",
         description: "Ошибка при поиске по ISBN.",
@@ -193,7 +211,7 @@ const BookForm = ({
       reader.onload = (event) => {
         if (event.target && typeof event.target.result === "string") {
           setPreviewUrl(event.target.result);
-          setValue("cover", event.target.result);
+          setValue("Cover", event.target.result);
         }
       };
       reader.readAsDataURL(file);
@@ -202,7 +220,7 @@ const BookForm = ({
 
   const handleRemoveCover = () => {
     setPreviewUrl(null);
-    setValue("cover", "");
+    setValue("Cover", "");
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -270,7 +288,7 @@ const BookForm = ({
             content: [
               {
                 type: "text",
-                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число). Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото.",
+                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: Id(Guid), Title(строка 255), Authors(строка 500), ISBN(строка), Genre(строка 100), Categorization(строка 100), UDK(строка), BBK(строка 20), Cover всегда оставляй null, Description(строка), PublicationYear(число), Publisher(строка 100), PageCount(число), Language(строка 50), AvailableCopies(число), DateAdded(дата), DateModified(дата), Edition(строка 50), Price(decimal), format(строка 100), OriginalTitle(строка 255), OriginalLanguage(строка 50), IsEbook(boolean), Condition(строка 100), ShelfId(число). Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(Summary). Не путай резюме(Summary) и описание(Description), которое написано в фото.",
               },
               {
                 type: "image_url",
@@ -301,48 +319,48 @@ const BookForm = ({
         if (jsonString.startsWith("```json")) jsonString = jsonString.slice(7).trim();
         if (jsonString.endsWith("```")) jsonString = jsonString.slice(0, -3).trim();
         const parsedData = JSON.parse(jsonString);
-        let coverUrl = null;
+        let Cover = null;
 
         if (parsedData.isbn) {
           try {
-            const coverRes = await fetch(`https://bookcover.longitood.com/bookcover/${parsedData.isbn}`);
+            const coverRes = await fetch(`https://bookcover.longitood.com/bookcover/${parsedData.ISBN}`);
             if (coverRes.ok) {
               const coverData = await coverRes.json();
-              if (coverData.url) coverUrl = coverData.url;
+              if (coverData.url) Cover = coverData.url;
             }
           } catch (error) {
             console.error("Ошибка при поиске обложки по ISBN:", error);
           }
         }
 
-        if (!coverUrl && parsedData.title && parsedData.authors) {
+        if (!Cover && parsedData.Title && parsedData.Authors) {
           try {
             const coverRes = await fetch(
               `https://bookcover.longitood.com/bookcover?book_title=${encodeURIComponent(
-                parsedData.title
-              )}&author_name=${encodeURIComponent(parsedData.authors)}`
+                parsedData.Title
+              )}&author_name=${encodeURIComponent(parsedData.Authors)}`
             );
             if (coverRes.ok) {
               const coverData = await coverRes.json();
-              if (coverData.url) coverUrl = coverData.url;
+              if (coverData.url) Cover = coverData.url;
             }
           } catch (error) {
             console.error("Ошибка при поиске обложки по названию и автору:", error);
           }
         }
 
-        if (!coverUrl && (parsedData.isbn || (parsedData.title && parsedData.authors))) {
+        if (!Cover && (parsedData.ISBN || (parsedData.Title && parsedData.Authors))) {
           try {
-            const query = parsedData.isbn
-              ? `isbn:${parsedData.isbn}`
-              : `intitle:${parsedData.title} inauthor:${parsedData.authors}`;
+            const query = parsedData.ISBN
+              ? `ISBN:${parsedData.ISBN}`
+              : `intitle:${parsedData.Title} inauthor:${parsedData.Authors}`;
             const googleBooksRes = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`
             );
             if (googleBooksRes.ok) {
               const booksData = await googleBooksRes.json();
               if (booksData.items && booksData.items.length > 0 && booksData.items[0].volumeInfo?.imageLinks) {
-                coverUrl =
+                Cover =
                   booksData.items[0].volumeInfo.imageLinks.large ||
                   booksData.items[0].volumeInfo.imageLinks.medium ||
                   booksData.items[0].volumeInfo.imageLinks.thumbnail;
@@ -353,8 +371,8 @@ const BookForm = ({
           }
         }
 
-        if (!coverUrl) {
-          const query = encodeURIComponent(formValues.title + " книга обложка");
+        if (!Cover) {
+          const query = encodeURIComponent(formValues.Title + " книга обложка");
           const searchUrl = `https://cse.google.com/cse?cx=b421413d1a0984f58#gsc.tab=0&gsc.q=${query}`;
           window.open(searchUrl, "_blank");
           setShowManualCoverInput(true);
@@ -364,36 +382,36 @@ const BookForm = ({
             variant: "destructive",
           });
         } else {
-          setValue("cover", coverUrl);
-          setPreviewUrl(coverUrl);
+          setValue("Cover", Cover);
+          setPreviewUrl(Cover);
           toast({
             title: "Данные получены",
             description: "Обложка книги успешно получена.",
           });
         }
 
-        if (parsedData.title) setValue("title", parsedData.title);
-        if (parsedData.authors) setValue("authors", parsedData.authors);
-        if (parsedData.genre) setValue("genre", parsedData.genre);
-        if (parsedData.categorization) setValue("categorization", parsedData.categorization);
-        if (parsedData.udk) setValue("udk", parsedData.udk);
-        if (parsedData.bbk) setValue("bbk", parsedData.bbk);
-        if (parsedData.isbn) setValue("isbn", parsedData.isbn);
-        if (parsedData.description) setValue("description", parsedData.description);
-        if (parsedData.summary) setValue("summary", parsedData.summary);
-        if (parsedData.publicationYear) setValue("publicationYear", parsedData.publicationYear);
-        if (parsedData.publisher) setValue("publisher", parsedData.publisher);
-        if (parsedData.pageCount) setValue("pageCount", parsedData.pageCount);
-        if (parsedData.language) setValue("language", parsedData.language);
-        if (parsedData.availableCopies) setValue("availableCopies", parsedData.availableCopies);
-        if (parsedData.edition) setValue("edition", parsedData.edition);
-        if (parsedData.price) setValue("price", parsedData.price);
-        if (parsedData.format) setValue("format", parsedData.format);
-        if (parsedData.originalTitle) setValue("originalTitle", parsedData.originalTitle);
-        if (parsedData.originalLanguage) setValue("originalLanguage", parsedData.originalLanguage);
-        if (parsedData.isEbook !== undefined) setValue("isEbook", parsedData.isEbook);
-        if (parsedData.condition) setValue("condition", parsedData.condition);
-        if (parsedData.shelfId) setValue("shelfId", parsedData.shelfId);
+        if (parsedData.Title) setValue("Title", parsedData.Title);
+        if (parsedData.Authors) setValue("Authors", parsedData.Authors);
+        if (parsedData.Genre) setValue("Genre", parsedData.Genre);
+        if (parsedData.Categorization) setValue("Categorization", parsedData.Categorization);
+        if (parsedData.UDK) setValue("UDK", parsedData.UDK);
+        if (parsedData.BBK) setValue("BBK", parsedData.BBK);
+        if (parsedData.ISBN) setValue("ISBN", parsedData.ISBN);
+        if (parsedData.Description) setValue("Description", parsedData.Description);
+        if (parsedData.Summary) setValue("Summary", parsedData.Summary);
+        if (parsedData.PublicationYear) setValue("PublicationYear", parsedData.PublicationYear);
+        if (parsedData.Publisher) setValue("Publisher", parsedData.Publisher);
+        if (parsedData.PageCount) setValue("PageCount", parsedData.PageCount);
+        if (parsedData.Language) setValue("Language", parsedData.Language);
+        if (parsedData.AvailableCopies) setValue("AvailableCopies", parsedData.AvailableCopies);
+        if (parsedData.Edition) setValue("Edition", parsedData.Edition);
+        if (parsedData.Price) setValue("Price", parsedData.Price);
+        if (parsedData.Format) setValue("Format", parsedData.Format);
+        if (parsedData.OriginalTitle) setValue("OriginalTitle", parsedData.OriginalTitle);
+        if (parsedData.OriginalLanguage) setValue("OriginalLanguage", parsedData.OriginalLanguage);
+        if (parsedData.IsEbook !== undefined) setValue("IsEbook", parsedData.IsEbook);
+        if (parsedData.Condition) setValue("Condition", parsedData.Condition);
+        if (parsedData.ShelfId) setValue("ShelfId", parsedData.ShelfId);
       } else {
         toast({ title: "Ошибка", description: "Ответ от Gemini API не содержит данных.", variant: "destructive" });
       }
@@ -413,8 +431,8 @@ const BookForm = ({
     const rect = container.getBoundingClientRect();
     
     setMousePosition({
-      x: e.clientX - rect.left - shelf.posX,
-      y: e.clientY - rect.top - shelf.posY,
+      x: e.clientX - rect.left - shelf.PosX,
+      y: e.clientY - rect.top - shelf.PosY,
     });
     
     setDraggedShelf(shelf);
@@ -435,7 +453,7 @@ const BookForm = ({
     const newX = Math.max(0, Math.min(rect.width - 250, x));
     const newY = Math.max(0, Math.min(rect.height - 150, y));
     
-    setDraggedShelf({...draggedShelf, posX: newX, posY: newY});
+    setDraggedShelf({...draggedShelf, PosX: newX, PosY: newY});
   };
 
   const handleDragEnd = () => {
@@ -445,13 +463,27 @@ const BookForm = ({
   const handleEmptySlotClick = (shelfId: number, position: number) => {
     setSelectedShelf(shelfId);
     setSelectedPosition(position);
-    setValue("shelfId", shelfId);
-    setValue("position", position);
+    setValue("ShelfId", shelfId);
+    setValue("Position", position);
     setShowShelvesModal(false);
   };
 
   const onFormSubmit = async (values: z.infer<typeof bookSchema>) => {
-    await onSubmit(values);
+    try {
+      if (!validateFormBeforeSubmit()) {
+        return;
+      }
+      
+      console.log("Отправка формы с данными:", values);
+      await onSubmit(values);
+    } catch (error) {
+      console.error("Ошибка при отправке формы:", error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при сохранении книги",
+        variant: "destructive",
+      });
+    }
   };
 
   const ShelvesModal = () => {
@@ -471,20 +503,20 @@ const BookForm = ({
                 {shelves && shelves.length > 0 ? (
                   shelves.map((shelf) => (
                     <div
-                      key={shelf.id}
+                      key={shelf.Id}
                       className={`p-3 rounded-md border ${
-                        selectedShelf === shelf.id
+                        selectedShelf === shelf.Id
                           ? "border-primary bg-primary/10"
                           : "border-border"
                       } cursor-pointer hover:bg-accent transition-colors`}
-                      onClick={() => setSelectedShelf(shelf.id)}
+                      onClick={() => setSelectedShelf(shelf.Id)}
                     >
-                      <div className="font-medium">{shelf.category}</div>
+                      <div className="font-medium">{shelf.Category}</div>
                       <div className="text-sm text-muted-foreground">
-                        Мест: {shelf.capacity}
+                        Мест: {shelf.Capacity}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Категория: {shelf.category || "Общая"}
+                        Категория: {shelf.Category || "Общая"}
                       </div>
                     </div>
                   ))
@@ -498,20 +530,20 @@ const BookForm = ({
             
             {selectedShelf && (
               <div className="grid gap-3">
-                <Label>Выберите позицию на полке {shelves.find(s => s.id === selectedShelf)?.category || 'N/A'}</Label>
+                <Label>Выберите позицию на полке {shelves.find(s => s.Id === selectedShelf)?.Category || 'N/A'}</Label>
                 <div className="flex flex-wrap gap-2 bg-accent/50 p-3 rounded-md max-h-[200px] overflow-y-auto">
-                  {Array.from({ length: shelves.find(s => s.id === selectedShelf)?.capacity || 0 }).map((_, i) => {
+                  {Array.from({ length: shelves.find(s => s.Id === selectedShelf)?.Capacity || 0 }).map((_, i) => {
                     // Проверяем занятость позиции (если в модели есть такой метод)
                     const isOccupied = false; // По умолчанию считаем позицию свободной
                     
                     // Проверяем, является ли это текущей редактируемой книгой
                     const isCurrentBook = 
-                      initialData?.shelfId === selectedShelf && 
-                      initialData?.position === i;
+                      initialData?.ShelfId === selectedShelf && 
+                      initialData?.Position === i;
                       
                     return (
                       <div
-                        key={i}
+                        key={`shelf-position-${selectedShelf}-${i}`}
                         className={`w-10 h-12 flex items-center justify-center rounded-md cursor-pointer transition-all ${
                           selectedPosition === i
                             ? "bg-primary text-primary-foreground"
@@ -543,8 +575,8 @@ const BookForm = ({
             <Button
               onClick={() => {
                 if (selectedShelf !== undefined && selectedPosition !== undefined) {
-                  setValue("shelfId", selectedShelf);
-                  setValue("position", selectedPosition);
+                  setValue("ShelfId", selectedShelf);
+                  setValue("Position", selectedPosition);
                   setShowShelvesModal(false);
                 }
               }}
@@ -632,10 +664,10 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите название книги"
-                        {...register("title")}
+                        {...register("Title")}
                         className={themeClasses.input}
                       />
-                      {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
+                      {errors.Title && <p className="text-red-500 text-sm mt-1">{errors.Title.message}</p>}
                     </div>
 
                     <div className="md:col-span-2">
@@ -644,10 +676,10 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите имена авторов через запятую"
-                        {...register("authors")}
+                        {...register("Authors")}
                         className={themeClasses.input}
                       />
-                      {errors.authors && <p className="text-red-500 text-sm mt-1">{errors.authors.message}</p>}
+                      {errors.Authors && <p className="text-red-500 text-sm mt-1">{errors.Authors.message}</p>}
                     </div>
 
                     <div className="grid gap-3">
@@ -657,19 +689,19 @@ const BookForm = ({
                           id="isbn"
                           placeholder="000-0000000000"
                           className={cn(
-                            errors.isbn && "focus-visible:ring-red-500"
+                            errors.ISBN && "focus-visible:ring-red-500"
                           )}
                           value={isbn}
-                          {...register("isbn", {
+                          {...register("ISBN", {
                             onChange: (e) => {
                               setIsbn(e.target.value);
                             },
                             value: isbn
                           })}
                         />
-                        {errors.isbn && (
+                        {errors.ISBN && (
                           <p className="text-xs text-red-500 mt-1">
-                            {errors.isbn.message}
+                            {errors.ISBN.message}
                           </p>
                         )}
                       </div>
@@ -681,10 +713,10 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите жанр книги"
-                        {...register("genre")}
+                        {...register("Genre")}
                         className={themeClasses.input}
                       />
-                      {errors.genre && <p className="text-red-500 text-sm mt-1">{errors.genre.message}</p>}
+                      {errors.Genre && <p className="text-red-500 text-sm mt-1">{errors.Genre.message}</p>}
                     </div>
 
                     <div>
@@ -696,11 +728,11 @@ const BookForm = ({
                         placeholder="Введите год публикации"
                         min={1000}
                         max={new Date().getFullYear()}
-                        {...register("publicationYear", { valueAsNumber: true })}
+                        {...register("PublicationYear", { valueAsNumber: true })}
                         className={themeClasses.input}
                       />
-                      {errors.publicationYear && (
-                        <p className="text-red-500 text-sm mt-1">{errors.publicationYear.message}</p>
+                      {errors.PublicationYear && (
+                        <p className="text-red-500 text-sm mt-1">{errors.PublicationYear.message}</p>
                       )}
                     </div>
 
@@ -710,18 +742,18 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите название издательства"
-                        {...register("publisher")}
+                        {...register("Publisher")}
                         className={themeClasses.input}
                       />
-                      {errors.publisher && <p className="text-red-500 text-sm mt-1">{errors.publisher.message}</p>}
+                      {errors.Publisher && <p className="text-red-500 text-sm mt-1">{errors.Publisher.message}</p>}
                     </div>
 
                     <div className="md:col-span-2">
                       <div className="flex items-center space-x-2 mb-4">
                         <Checkbox
-                          id="isEbook"
-                          checked={isEbook}
-                          onCheckedChange={(checked) => setValue("isEbook", checked === true)}
+                          id="IsEbook"
+                          checked={IsEbook}
+                          onCheckedChange={(checked) => setValue("IsEbook", checked === true)}
                         />
                         <label className="text-base font-semibold text-neutral-500 dark:text-white">
                           Электронная книга
@@ -729,7 +761,7 @@ const BookForm = ({
                       </div>
                     </div>
 
-                    {!isEbook && (
+                    {!IsEbook && (
                       <>
                         <div>
                           <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
@@ -739,11 +771,11 @@ const BookForm = ({
                             type="number"
                             placeholder="Введите количество доступных экземпляров"
                             min={0}
-                            {...register("availableCopies", { valueAsNumber: true })}
+                            {...register("AvailableCopies", { valueAsNumber: true })}
                             className={themeClasses.input}
                           />
-                          {errors.availableCopies && (
-                            <p className="text-red-500 text-sm mt-1">{errors.availableCopies.message}</p>
+                          {errors.AvailableCopies && (
+                            <p className="text-red-500 text-sm mt-1">{errors.AvailableCopies.message}</p>
                           )}
                         </div>
 
@@ -752,8 +784,8 @@ const BookForm = ({
                             Состояние книги
                           </label>
                           <Select
-                            onValueChange={(value) => setValue("condition", value)}
-                            defaultValue={initialData?.condition || ""}
+                            onValueChange={(value) => setValue("Condition", value)}
+                            defaultValue={initialData?.Condition || ""}
                           >
                             <SelectTrigger className={themeClasses.select}>
                               <SelectValue placeholder="Выберите состояние" />
@@ -764,7 +796,7 @@ const BookForm = ({
                               <SelectItem value="Не определено">Не определено</SelectItem>
                             </SelectContent>
                           </Select>
-                          {errors.condition && <p className="text-red-500 text-sm mt-1">{errors.condition.message}</p>}
+                          {errors.Condition && <p className="text-red-500 text-sm mt-1">{errors.Condition.message}</p>}
                         </div>
 
                         <div className="md:col-span-2">
@@ -781,7 +813,7 @@ const BookForm = ({
                                 >
                                   <BookCopy className="h-4 w-4 mr-2" />
                                   {selectedShelf && selectedPosition !== undefined 
-                                    ? `Полка: ${shelves.find(s => s.id === selectedShelf)?.category || 'N/A'} #${shelves.find(s => s.id === selectedShelf)?.shelfNumber || 'N/A'}, Позиция: ${selectedPosition + 1}` 
+                                    ? `Полка: ${shelves.find(s => s.Id === selectedShelf)?.Category || 'N/A'} #${shelves.find(s => s.Id === selectedShelf)?.ShelfNumber || 'N/A'}, Позиция: ${selectedPosition + 1}` 
                                     : "Выбрать расположение"}
                                 </Button>
                               </div>
@@ -791,8 +823,8 @@ const BookForm = ({
                                   onClick={() => {
                                     setSelectedShelf(undefined);
                                     setSelectedPosition(undefined);
-                                    setValue("shelfId", undefined);
-                                    setValue("position", undefined);
+                                    setValue("ShelfId", undefined);
+                                    setValue("Position", undefined);
                                   }}
                                   variant="outline"
                                   className="px-3"
@@ -801,11 +833,8 @@ const BookForm = ({
                                 </Button>
                               )}
                             </div>
-                            {(errors.shelfId) && (
-                              <p className="text-red-500 text-sm mt-1">Выберите расположение на полке</p>
-                            )}
-                            <input type="hidden" {...register("shelfId")} />
-                            <input type="hidden" {...register("position")} />
+                            <input type="hidden" {...register("ShelfId")} />
+                            <input type="hidden" {...register("Position")} />
                           </div>
                         </div>
                       </>
@@ -847,12 +876,12 @@ const BookForm = ({
                               type="button"
                               onClick={async () => {
                                 setShowManualCoverInput(false);
-                                if (formValues.isbn || (formValues.title && formValues.authors)) {
+                                if (formValues.ISBN || (formValues.Title && formValues.Authors)) {
                                   let coverUrl = null;
-                                  if (formValues.isbn) {
+                                  if (formValues.ISBN) {
                                     try {
                                       const coverRes = await fetch(
-                                        `https://bookcover.longitood.com/bookcover/${formValues.isbn}`
+                                        `https://bookcover.longitood.com/bookcover/${formValues.ISBN}`
                                       );
                                       if (coverRes.ok) {
                                         const coverData = await coverRes.json();
@@ -862,12 +891,12 @@ const BookForm = ({
                                       console.error("Ошибка при поиске по ISBN:", error);
                                     }
                                   }
-                                  if (!coverUrl && formValues.title && formValues.authors) {
+                                  if (!coverUrl && formValues.Title && formValues.Authors) {
                                     try {
                                       const coverRes = await fetch(
                                         `https://bookcover.longitood.com/bookcover?book_title=${encodeURIComponent(
-                                          formValues.title
-                                        )}&author_name=${encodeURIComponent(formValues.authors)}`
+                                          formValues.Title
+                                        )}&author_name=${encodeURIComponent(formValues.Authors)}`
                                       );
                                       if (coverRes.ok) {
                                         const coverData = await coverRes.json();
@@ -878,11 +907,11 @@ const BookForm = ({
                                     }
                                   }
                                   if (coverUrl) {
-                                    setValue("cover", coverUrl);
+                                    setValue("Cover", coverUrl);
                                     setPreviewUrl(coverUrl);
                                     toast({ title: "Успех", description: "Обложка книги успешно обновлена" });
                                   } else {
-                                    const query = encodeURIComponent(formValues.title + " книга обложка");
+                                    const query = encodeURIComponent(formValues.Title + " книга обложка");
                                     const searchUrl = `https://cse.google.com/cse?cx=b421413d1a0984f58#gsc.tab=0&gsc.q=${query}`;
                                     window.open(searchUrl, "_blank");
                                     setShowManualCoverInput(true);
@@ -924,7 +953,7 @@ const BookForm = ({
                                 value={manualCoverUrl}
                                 onChange={(e) => {
                                   setManualCoverUrl(e.target.value);
-                                  setValue("cover", e.target.value);
+                                  setValue("Cover", e.target.value);
                                   setPreviewUrl(e.target.value);
                                 }}
                                 className={`${themeClasses.input} text-xs h-8`}
@@ -946,11 +975,11 @@ const BookForm = ({
                       </label>
                       <Textarea
                         placeholder="Введите описание книги"
-                        {...register("description")}
+                        {...register("Description")}
                         rows={7}
                         className={themeClasses.textarea}
                       />
-                      {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
+                      {errors.Description && <p className="text-red-500 text-sm mt-1">{errors.Description.message}</p>}
                     </div>
 
                     <div>
@@ -961,10 +990,10 @@ const BookForm = ({
                         type="number"
                         placeholder="Введите количество страниц"
                         min={1}
-                        {...register("pageCount", { valueAsNumber: true })}
+                        {...register("PageCount", { valueAsNumber: true })}
                         className={themeClasses.input}
                       />
-                      {errors.pageCount && <p className="text-red-500 text-sm mt-1">{errors.pageCount.message}</p>}
+                      {errors.PageCount && <p className="text-red-500 text-sm mt-1">{errors.PageCount.message}</p>}
                     </div>
 
                     <div>
@@ -973,10 +1002,10 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите язык книги"
-                        {...register("language")}
+                        {...register("Language")}
                         className={themeClasses.input}
                       />
-                      {errors.language && <p className="text-red-500 text-sm mt-1">{errors.language.message}</p>}
+                      {errors.Language && <p className="text-red-500 text-sm mt-1">{errors.Language.message}</p>}
                     </div>
 
                     <div>
@@ -984,8 +1013,8 @@ const BookForm = ({
                         Формат книги
                       </label>
                       <Select
-                        onValueChange={(value) => setValue("format", value)}
-                        defaultValue={initialData?.format || ""}
+                        onValueChange={(value) => setValue("Format", value)}
+                        defaultValue={initialData?.Format || ""}
                       >
                         <SelectTrigger className={themeClasses.select}>
                           <SelectValue placeholder="Выберите формат" />
@@ -997,7 +1026,7 @@ const BookForm = ({
                           <SelectItem value="Аудиокнига">Аудиокнига</SelectItem>
                         </SelectContent>
                       </Select>
-                      {errors.format && <p className="text-red-500 text-sm mt-1">{errors.format.message}</p>}
+                      {errors.Format && <p className="text-red-500 text-sm mt-1">{errors.Format.message}</p>}
                     </div>
 
                     <div>
@@ -1009,10 +1038,10 @@ const BookForm = ({
                         placeholder="Введите цену книги"
                         min={0}
                         step="0.01"
-                        {...register("price", { valueAsNumber: true })}
+                        {...register("Price", { valueAsNumber: true })}
                         className={themeClasses.input}
                       />
-                      {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price.message}</p>}
+                      {errors.Price && <p className="text-red-500 text-sm mt-1">{errors.Price.message}</p>}
                     </div>
 
                     <div>
@@ -1021,11 +1050,11 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите категоризацию"
-                        {...register("categorization")}
+                        {...register("Categorization")}
                         className={themeClasses.input}
                       />
-                      {errors.categorization && (
-                        <p className="text-red-500 text-sm mt-1">{errors.categorization.message}</p>
+                      {errors.Categorization && (
+                        <p className="text-red-500 text-sm mt-1">{errors.Categorization.message}</p>
                       )}
                     </div>
 
@@ -1035,10 +1064,10 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите УДК"
-                        {...register("udk")}
+                        {...register("UDK")}
                         className={themeClasses.input}
                       />
-                      {errors.udk && <p className="text-red-500 text-sm mt-1">{errors.udk.message}</p>}
+                      {errors.UDK && <p className="text-red-500 text-sm mt-1">{errors.UDK.message}</p>}
                     </div>
 
                     <div>
@@ -1047,10 +1076,10 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите ББК"
-                        {...register("bbk")}
+                        {...register("BBK")}
                         className={themeClasses.input}
                       />
-                      {errors.bbk && <p className="text-red-500 text-sm mt-1">{errors.bbk.message}</p>}
+                      {errors.BBK && <p className="text-red-500 text-sm mt-1">{errors.BBK.message}</p>}
                     </div>
                   </div>
                 </TabsContent>
@@ -1064,11 +1093,11 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите оригинальное название книги"
-                        {...register("originalTitle")}
+                        {...register("OriginalTitle")}
                         className={themeClasses.input}
                       />
-                      {errors.originalTitle && (
-                        <p className="text-red-500 text-sm mt-1">{errors.originalTitle.message}</p>
+                      {errors.OriginalTitle && (
+                        <p className="text-red-500 text-sm mt-1">{errors.OriginalTitle.message}</p>
                       )}
                     </div>
 
@@ -1078,11 +1107,11 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите оригинальный язык книги"
-                        {...register("originalLanguage")}
+                        {...register("OriginalLanguage")}
                         className={themeClasses.input}
                       />
-                      {errors.originalLanguage && (
-                        <p className="text-red-500 text-sm mt-1">{errors.originalLanguage.message}</p>
+                      {errors.OriginalLanguage && (
+                        <p className="text-red-500 text-sm mt-1">{errors.OriginalLanguage.message}</p>
                       )}
                     </div>
 
@@ -1092,10 +1121,10 @@ const BookForm = ({
                       </label>
                       <Input
                         placeholder="Введите информацию об издании"
-                        {...register("edition")}
+                        {...register("Edition")}
                         className={themeClasses.input}
                       />
-                      {errors.edition && <p className="text-red-500 text-sm mt-1">{errors.edition.message}</p>}
+                      {errors.Edition && <p className="text-red-500 text-sm mt-1">{errors.Edition.message}</p>}
                     </div>
 
                     <div>
@@ -1104,11 +1133,11 @@ const BookForm = ({
                       </label>
                       <Textarea
                         placeholder="Введите резюме книги"
-                        {...register("summary")}
+                        {...register("Summary")}
                         rows={5}
                         className={themeClasses.textarea}
                       />
-                      {errors.summary && <p className="text-red-500 text-sm mt-1">{errors.summary.message}</p>}
+                      {errors.Summary && <p className="text-red-500 text-sm mt-1">{errors.Summary.message}</p>}
                     </div>
                   </div>
                 </TabsContent>
@@ -1123,9 +1152,64 @@ const BookForm = ({
                   Отмена
                 </Button>
                 <Button
-                  type="submit"
+                  type="button"
                   disabled={isSubmitting}
                   className={`${themeClasses.button} py-3 md:w-2/3`}
+                  onClick={async () => {
+                    // Логируем ошибки при нажатии кнопки для отладки
+                    if (Object.keys(errors).length > 0) {
+                      console.error("Ошибки валидации формы:", errors);
+                      toast({
+                        title: "Ошибка валидации",
+                        description: "Исправьте ошибки в форме перед отправкой",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
+                    if (!validateFormBeforeSubmit()) {
+                      return;
+                    }
+                    
+                    try {
+                      const formData = {
+                        Title: formValues.Title,
+                        Authors: formValues.Authors,
+                        ISBN: formValues.ISBN,
+                        Genre: formValues.Genre,
+                        Cover: formValues.Cover,
+                        Description: formValues.Description,
+                        PublicationYear: formValues.PublicationYear,
+                        Publisher: formValues.Publisher,
+                        PageCount: formValues.PageCount,
+                        Language: formValues.Language,
+                        Categorization: formValues.Categorization,
+                        UDK: formValues.UDK,
+                        BBK: formValues.BBK,
+                        Summary: formValues.Summary,
+                        AvailableCopies: formValues.AvailableCopies,
+                        ShelfId: formValues.ShelfId,
+                        Position: formValues.Position,
+                        Edition: formValues.Edition,
+                        Price: formValues.Price,
+                        Format: formValues.Format,
+                        OriginalTitle: formValues.OriginalTitle,
+                        OriginalLanguage: formValues.OriginalLanguage,
+                        IsEbook: formValues.IsEbook,
+                        Condition: formValues.Condition,
+                      };
+                      
+                      console.log("Отправка формы с данными (прямая отправка):", formData);
+                      await onSubmit(formData);
+                    } catch (error) {
+                      console.error("Ошибка при отправке формы (прямая отправка):", error);
+                      toast({
+                        title: "Ошибка",
+                        description: "Произошла ошибка при сохранении книги",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
                 >
                   {isSubmitting ? (
                     <>

@@ -20,12 +20,12 @@ import "@/styles/admin.css";
  * Interface for book item
  */
 interface BookItem {
-  id: string;
-  title: string;
-  authors?: string;
-  genre?: string;
-  cover?: string;
-  availableCopies?: number;
+  Id: string;
+  Title: string;
+  Authors?: string;
+  Genre?: string;
+  Cover?: string;
+  AvailableCopies?: number;
 }
 
 /**
@@ -118,22 +118,22 @@ const CardsView = ({ books, onDelete, themeClasses }: ViewProps) => {
   return (
     <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6">
       {books.map((book) => (
-        <li key={book.id} className={`${themeClasses.bookCard} flex overflow-hidden`}>
+        <li key={book.Id} className={`${themeClasses.bookCard} flex overflow-hidden`}>
           <div className="w-1/3 p-4">
-            <BookImage src={book.cover} alt={book.title} bookId={book.id} />
+            <BookImage src={book.Cover} alt={book.Title} bookId={book.Id} />
           </div>
           <div className="flex-1 p-4 flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-bold text-neutral-700 dark:text-white">{book.title}</h3>
-              <p className="text-sm text-neutral-600 dark:text-neutral-300">{book.authors}</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">{book.genre || ""}</p>
+              <h3 className="text-lg font-bold text-neutral-700 dark:text-white">{book.Title}</h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">{book.Authors}</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">{book.Genre || ""}</p>
             </div>
             <div className="flex justify-end gap-2 mt-2">
-              <Link href={`/admin/books/${book.id}/update`}>
+              <Link href={`/admin/books/${book.Id}/update`}>
                 <button className={themeClasses.actionButton.neutral}>Редактировать</button>
               </Link>
               <button
-                onClick={() => onDelete(book.id)}
+                onClick={() => onDelete(book.Id)}
                 className={themeClasses.actionButton.reject}
               >
                 Удалить
@@ -153,13 +153,13 @@ const ThreeDBookView = ({ books, onDelete, themeClasses }: ViewProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-6 p-6">
       {books.map((book) => (
-        <div key={book.id} className="group text-neutral-700 dark:text-white">
+        <div key={book.Id} className="group text-neutral-700 dark:text-white">
           <div className="relative w-full h-96 overflow-visible" style={{ perspective: "1000px" }}>
             <div className="absolute inset-0 transform-gpu transition-all duration-500 group-hover:rotate-y-0 rotate-y-[15deg] preserve-3d group-hover:scale-105">
-              <Link href={`/admin/books/${book.id}`}>
+              <Link href={`/admin/books/${book.Id}`}>
                 <BookCover
                   coverColor="rgba(47, 47, 47, 0.5)"
-                  coverImage={book.cover || ""}
+                  coverImage={book.Cover || ""}
                   variant="medium"
                   className="bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] w-full h-full"
                 />
@@ -168,19 +168,19 @@ const ThreeDBookView = ({ books, onDelete, themeClasses }: ViewProps) => {
           </div>
           <div className={`${themeClasses.card} mt-2 text-center p-3`}>
             <p className="font-semibold line-clamp-1">
-            <span className="font-normal text-neutral-700 dark:text-white"> {book.title}{" "} </span>
-              <span className="font-normal text-neutral-600 dark:text-neutral-300">— {book.authors}</span>
+            <span className="font-normal text-neutral-700 dark:text-white"> {book.Title}{" "} </span>
+              <span className="font-normal text-neutral-600 dark:text-neutral-300">— {book.Authors}</span>
             </p>
-            {book.genre && (
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">{book.genre}</p>
+            {book.Genre && (
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{book.Genre}</p>
             )}
           </div>
           <div className="mt-2 flex justify-center gap-2">
-            <Link href={`/admin/books/${book.id}/update`}>
+            <Link href={`/admin/books/${book.Id}/update`}>
               <button className={themeClasses.actionButton.neutral}>Редактировать</button>
             </Link>
             <button
-              onClick={() => onDelete(book.id)}
+              onClick={() => onDelete(book.Id)}
               className={themeClasses.actionButton.reject}
             >
               Удалить
@@ -210,13 +210,13 @@ const ListView = ({ books, onDelete, themeClasses }: ViewProps) => {
         </thead>
         <tbody className="divide-y divide-gray-200/50 dark:divide-neutral-700/50">
           {books.map((book, index) => (
-            <tr key={book.id} className={index % 2 === 0 ? themeClasses.tableRow.even : themeClasses.tableRow.odd}>
+            <tr key={book.Id} className={index % 2 === 0 ? themeClasses.tableRow.even : themeClasses.tableRow.odd}>
               <td className="px-4 py-3">
                 <div className="w-10 h-14 bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 rounded overflow-hidden">
-                  {book.cover ? (
+                  {book.Cover ? (
                     <img 
-                      src={book.cover}
-                      alt={book.title || "Обложка книги"}
+                      src={book.Cover}
+                      alt={book.Title || "Обложка книги"}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -227,19 +227,19 @@ const ListView = ({ books, onDelete, themeClasses }: ViewProps) => {
                 </div>
               </td>
               <td className="px-4 py-3">
-                <Link href={`/admin/books/${book.id}`}>
-                  <p className="text-neutral-700 dark:text-white font-medium hover:text-blue-600 transition-colors">{book.title}</p>
+                <Link href={`/admin/books/${book.Id}`}>
+                  <p className="text-neutral-700 dark:text-white font-medium hover:text-blue-600 transition-colors">{book.Title}</p>
                 </Link>
               </td>
-              <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">{book.authors || "—"}</td>
-              <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">{book.genre || "—"}</td>
+              <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">{book.Authors || "—"}</td>
+              <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">{book.Genre || "—"}</td>
               <td className="px-4 py-3 text-sm">
                 <div className="flex gap-2">
-                  <Link href={`/admin/books/${book.id}/update`}>
+                  <Link href={`/admin/books/${book.Id}/update`}>
                     <button className={themeClasses.actionButton.neutral}>Редактировать</button>
                   </Link>
                   <button
-                    onClick={() => onDelete(book.id)}
+                    onClick={() => onDelete(book.Id)}
                     className={themeClasses.actionButton.reject}
                   >
                     Удалить
@@ -321,25 +321,25 @@ export default function BooksPage() {
   }, []);
 
   const filteredBooks = books.filter((book) =>
-    book.title.toLowerCase().includes(searchQuery.toLowerCase())
+    book.Title.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const sortedBooks = filteredBooks.sort((a, b) =>
     sortOrder === "asc"
-      ? a.title.localeCompare(b.title)
-      : b.title.localeCompare(a.title)
+      ? a.Title.localeCompare(b.Title)
+      : b.Title.localeCompare(a.Title)
   );
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (Id: string) => {
     if (!confirm("Вы уверены, что хотите удалить эту книгу?")) return;
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      const res = await fetch(`${baseUrl}/api/Books/${id}`, { method: "DELETE" });
+      const res = await fetch(`${baseUrl}/api/books/${Id}`, { method: "DELETE" });
       if (res.ok) {
         toast({
           title: "Книга удалена",
           description: "Книга успешно удалена",
         });
-        setBooks((prev) => prev.filter((book) => book.id !== id));
+        setBooks((prev) => prev.filter((book) => book.Id !== Id));
       } else {
         toast({
           title: "Ошибка",

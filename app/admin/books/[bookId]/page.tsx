@@ -6,35 +6,35 @@ import BookDetails from "@/components/admin/BookDetails";
 
 // Theme classes aligned with DashboardPage's "cosmic" theme
 interface Book {
-  id: string;
-  title: string;
-  authors: string;
-  isbn: string;
-  genre?: string | null;
-  categorization?: string | null;
-  cover?: string | null;
-  description?: string | null;
-  publicationYear?: number | null;
-  publisher?: string | null;
-  pageCount?: number | null;
-  language?: string | null;
-  availableCopies: number;
-  shelfId?: number;
-  edition?: string | null;
-  price?: number | null;
-  format?: string | null;
-  originalTitle?: string | null;
-  originalLanguage?: string | null;
-  isEbook?: boolean;
-  condition?: string | null;
-  rating?: number;
-  readCount?: number;
-  series?: string | null;
-  seriesOrder?: number;
-  dateRead?: string | null;
-  purchaseLink?: string | null;
-  dateAdded?: string;
-  dateModified?: string;
+  Id: string;
+  Title: string;
+  Authors: string;
+  ISBN: string;
+  Genre?: string | null;
+  Categorization?: string | null;
+  Cover?: string | null;
+  Description?: string | null;
+  PublicationYear?: number | null;
+  Publisher?: string | null;
+  PageCount?: number | null;
+  Language?: string | null;
+  AvailableCopies: number;
+  ShelfId?: number;
+  Edition?: string | null;
+  Price?: number | null;
+  Format?: string | null;
+  OriginalTitle?: string | null;
+  OriginalLanguage?: string | null;
+  IsEbook?: boolean;
+  Condition?: string | null;
+  Rating?: number;
+  ReadCount?: number;
+  Series?: string | null;
+  SeriesOrder?: number;
+  DateRead?: string | null;
+  PurchaseLink?: string | null;
+  DateAdded?: string;
+  DateModified?: string;
 }
 
 export default function BookDetailPage({

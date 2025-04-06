@@ -17,27 +17,27 @@ import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 // Интерфейс для модели журнала
 interface Journal {
-  id: number;
-  title: string;
-  issn: string;
-  registrationNumber?: string | null;
-  format: "Print" | "Electronic" | "Mixed";
-  periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
-  pagesPerIssue: number;
-  description?: string | null;
-  publisher?: string | null;
-  foundationDate: string;
-  circulation: number;
+  Id: number;
+  Title: string;
+  ISSN: string;
+  RegistrationNumber?: string | null;
+  Format: "Print" | "Electronic" | "Mixed";
+  Periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
+  PagesPerIssue: number;
+  Description?: string | null;
+  Publisher?: string | null;
+  FoundationDate: string;
+  Circulation: number;
   isOpenAccess: boolean;
-  category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
-  targetAudience?: string | null;
+  Category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
+  TargetAudience?: string | null;
   isPeerReviewed: boolean;
   isIndexedInRINTS: boolean;
   isIndexedInScopus: boolean;
   isIndexedInWebOfScience: boolean;
-  publicationDate: string;
-  pageCount: number;
-  coverImageUrl?: string | null;
+  PublicationDate: string;
+  PageCount: number;
+  Cover?: string | null;
 }
 
 /**
@@ -99,25 +99,25 @@ const CardsView = ({ journals, onDelete, themeClasses }: { journals: Journal[]; 
   return (
     <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
       {journals.map((journal: Journal) => (
-        <li key={journal.id} className={`${themeClasses.card} flex overflow-hidden`}>
+        <li key={journal.Id} className={`${themeClasses.card} flex overflow-hidden`}>
           <div className="w-1/3 p-4">
-            <JournalImage src={journal.coverImageUrl} alt={journal.title} journalId={journal.id} />
+            <JournalImage src={journal.Cover} alt={journal.Title} journalId={journal.Id} />
           </div>
           <div className="flex-1 p-4 flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-bold text-neutral-500 dark:text-neutral-100">{journal.title}</h3>
-              <p className="text-sm text-neutral-400 dark:text-neutral-300">ISSN: {journal.issn}</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">{journal.publisher || ""}</p>
+              <h3 className="text-lg font-bold text-neutral-500 dark:text-neutral-100">{journal.Title}</h3>
+              <p className="text-sm text-neutral-400 dark:text-neutral-300">ISSN: {journal.ISSN}</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">{journal.Publisher || ""}</p>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                {journal.category && `${journal.category}`}
+                {journal.Category && `${journal.Category}`}
               </p>
             </div>
             <div className="flex justify-end gap-2 mt-2">
-              <Link href={`/admin/journals/${journal.id}/update`}>
+              <Link href={`/admin/journals/${journal.Id}/update`}>
                 <button className={themeClasses.button}>Редактировать</button>
               </Link>
               <button
-                onClick={() => onDelete(journal.id)}
+                onClick={() => onDelete(journal.Id)}
                 className="bg-red-500/90 hover:bg-red-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2"
               >
                 Удалить
@@ -137,15 +137,15 @@ const ThreeDJournalView = ({ journals, onDelete, themeClasses }: { journals: Jou
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-6">
       {journals.map((journal) => (
-        <div key={journal.id} className="group text-neutral-900 dark:text-neutral-100">
+        <div key={journal.Id} className="group text-neutral-900 dark:text-neutral-100">
           <div className="relative w-full h-96 overflow-visible" style={{ perspective: "1000px" }}>
             <div className="absolute inset-0 transform-gpu transition-all duration-500 group-hover:rotate-y-0 rotate-y-[15deg] preserve-3d group-hover:scale-105">
-              <Link href={`/admin/journals/${journal.id}`}>
+              <Link href={`/admin/journals/${journal.Id}`}>
                 <div className={`${themeClasses.card} w-full h-full overflow-hidden`}>
-                  {journal.coverImageUrl ? (
+                  {journal.Cover ? (
                     <Image
-                      src={journal.coverImageUrl}
-                      alt={journal.title}
+                      src={journal.Cover}
+                      alt={journal.Title}
                       fill
                       className="object-cover"
                       unoptimized
@@ -161,19 +161,19 @@ const ThreeDJournalView = ({ journals, onDelete, themeClasses }: { journals: Jou
           </div>
           <div className={`${themeClasses.card} mt-2 text-center p-3`}>
             <p className="font-semibold line-clamp-1">
-              <span className="font-normal text-neutral-500 dark:text-neutral-300">{journal.title}</span>
+              <span className="font-normal text-neutral-500 dark:text-neutral-300">{journal.Title}</span>
             </p>
-            <p className="text-sm text-neutral-400 dark:text-neutral-300">ISSN: {journal.issn}</p>
-            {journal.publisher && (
-              <p className="text-sm text-neutral-400 dark:text-neutral-400">{journal.publisher}</p>
+            <p className="text-sm text-neutral-400 dark:text-neutral-300">ISSN: {journal.ISSN}</p>
+            {journal.Publisher && (
+              <p className="text-sm text-neutral-400 dark:text-neutral-400">{journal.Publisher}</p>
             )}
           </div>
           <div className="mt-2 flex justify-center gap-2">
-            <Link href={`/admin/journals/${journal.id}/update`}>
+            <Link href={`/admin/journals/${journal.Id}/update`}>
               <button className={themeClasses.button}>Редактировать</button>
             </Link>
             <button
-              onClick={() => onDelete(journal.id)}
+              onClick={() => onDelete(journal.Id)}
               className="bg-red-500/90 hover:bg-red-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2"
             >
               Удалить
@@ -247,12 +247,12 @@ export default function JournalsPage() {
   }, []);
 
   const filteredJournals = journals.filter((journal) =>
-    journal.title.toLowerCase().includes(searchQuery.toLowerCase())
+    journal.Title.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const sortedJournals = filteredJournals.sort((a, b) =>
     sortOrder === "asc"
-      ? a.title.localeCompare(b.title)
-      : b.title.localeCompare(a.title)
+      ? a.Title.localeCompare(b.Title)
+      : b.Title.localeCompare(a.Title)
   );
 
   const handleDelete = async (id: number) => {
@@ -265,7 +265,7 @@ export default function JournalsPage() {
           title: "Журнал удален",
           description: "Журнал успешно удален",
         });
-        setJournals((prev) => prev.filter((journal) => journal.id !== id));
+        setJournals((prev) => prev.filter((journal) => journal.Id !== id));
       } else {
         toast({
           title: "Ошибка",

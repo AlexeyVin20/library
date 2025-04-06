@@ -5,19 +5,19 @@ import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import Link from "next/link";
 
 interface BookRequest {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  user?: {
-    fullName: string;
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Notes?: string;
+  User?: {
+    FullName: string;
   };
-  book?: {
-    title: string;
-    authors?: string;
+  Book?: {
+    Title: string;
+    Authors?: string;
   };
 }
 
@@ -34,10 +34,10 @@ export default function BookRequestsPage() {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${baseUrl}/api/Reservation`);
+      const response = await fetch(`${baseUrl}/api/Reservations`);
       if (!response.ok) throw new Error("Ошибка при загрузке запросов");
       const data = await response.json();
-      setRequests(data.filter((r: BookRequest) => r.status === "Обрабатывается"));
+      setRequests(data.filter((r: BookRequest) => r.Status === "Обрабатывается"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке запросов");
     } finally {
@@ -47,14 +47,14 @@ export default function BookRequestsPage() {
 
   const handleApproveRequest = async (id: string) => {
     try {
-      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+      const response = await fetch(`${baseUrl}/api/Reservations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Выполнена" }),
       });
 
       if (!response.ok) throw new Error("Ошибка при обновлении запроса");
-      setRequests(requests.filter(r => r.id !== id));
+      setRequests(requests.filter(r => r.Id !== id));
     } catch (err) {
       console.error("Ошибка при одобрении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при одобрении запроса");
@@ -63,14 +63,14 @@ export default function BookRequestsPage() {
 
   const handleRejectRequest = async (id: string) => {
     try {
-      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+      const response = await fetch(`${baseUrl}/api/Reservations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Отменена" }),
       });
 
       if (!response.ok) throw new Error("Ошибка при обновлении запроса");
-      setRequests(requests.filter(r => r.id !== id));
+      setRequests(requests.filter(r => r.Id !== id));
     } catch (err) {
       console.error("Ошибка при отклонении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при отклонении запроса");
@@ -122,45 +122,45 @@ export default function BookRequestsPage() {
           {requests.length > 0 ? (
             requests.map((request) => (
               <div
-                key={request.id}
+                key={request.Id}
                 className="bg-white/30 dark:bg-neutral-800/30 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300"
               >
                 <div className="flex justify-between items-start">
                   <div>
                     <h2 className="text-xl font-semibold text-neutral-700 dark:text-neutral-200">
-                      {request.book?.title || "Неизвестная книга"}
+                      {request.Book?.Title || "Неизвестная книга"}
                     </h2>
                     <p className="text-neutral-600 dark:text-neutral-300 mt-1">
-                      {request.book?.authors || "Автор не указан"}
+                      {request.Book?.Authors || "Автор не указан"}
                     </p>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
-                      Запросил: {request.user?.fullName || "Неизвестный пользователь"}
+                      Запросил: {request.User?.FullName || "Неизвестный пользователь"}
                     </p>
                     <div className="mt-4 space-y-2">
                       <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                        Дата запроса: {formatDate(request.reservationDate)}
+                        Дата запроса: {formatDate(request.ReservationDate)}
                       </p>
                       <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                        Дата возврата: {formatDate(request.expirationDate)}
+                        Дата возврата: {formatDate(request.ExpirationDate)}
                       </p>
                     </div>
-                    {request.notes && (
+                    {request.Notes && (
                       <div className="mt-4 p-3 bg-white/20 dark:bg-neutral-700/20 rounded-lg">
                         <p className="text-sm text-neutral-600 dark:text-neutral-300">
-                          Примечания: {request.notes}
+                          Примечания: {request.Notes}
                         </p>
                       </div>
                     )}
                   </div>
                   <div className="flex gap-3">
                     <button
-                      onClick={() => handleApproveRequest(request.id)}
+                      onClick={() => handleApproveRequest(request.Id)}
                       className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
                     >
                       Одобрить
                     </button>
                     <button
-                      onClick={() => handleRejectRequest(request.id)}
+                      onClick={() => handleRejectRequest(request.Id)}
                       className="bg-gradient-to-r from-red-600/90 to-red-700/70 dark:from-red-700/80 dark:to-red-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
                     >
                       Отклонить

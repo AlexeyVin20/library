@@ -12,26 +12,26 @@ import { FinesChart } from "@/components/admin/FinesChart";
 import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 
 interface User {
-  id: string;
-  fullName: string;
-  email: string;
-  username: string;
-  borrowedBooksCount: number;
-  maxBooksAllowed: number;
-  fineAmount: number;
-  isActive: boolean;
-  phone: string;
-  role: string;
+  Id: string;
+  FullName: string;
+  Email: string;
+  Username: string;
+  BorrowedBooksCount: number;
+  MaxBooksAllowed: number;
+  FineAmount: number;
+  IsActive: boolean;
+  Phone: string;
+  Role: string;
 }
 
 interface Reservation {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  book?: { title: string };
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Book?: { Title: string };
 }
 
 export default function AllUsersPage() {
@@ -40,7 +40,7 @@ export default function AllUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<keyof User>("fullName");
+  const [sortField, setSortField] = useState<keyof User>("FullName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
@@ -76,30 +76,30 @@ export default function AllUsersPage() {
   // Подготовка данных для отображения
   const usersWithNextReturn = users.map((user) => {
     const userReservations = reservations.filter(
-      (r) => r.userId === user.id && r.status === "Выполнена"
+      (r) => r.UserId === user.Id && r.Status === "Выполнена"
     );
     
     const nextReservation = userReservations.length > 0
       ? userReservations.sort(
           (a, b) => 
-            new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime()
+            new Date(a.ExpirationDate).getTime() - new Date(b.ExpirationDate).getTime()
         )[0]
       : null;
     
     return {
       ...user,
-      nextReturnDate: nextReservation?.expirationDate 
-        ? new Date(nextReservation.expirationDate).toLocaleDateString("ru-RU")
+      nextReturnDate: nextReservation?.ExpirationDate 
+        ? new Date(nextReservation.ExpirationDate).toLocaleDateString("ru-RU")
         : "Нет",
-      nextReturnBook: nextReservation?.book?.title || "Нет",
+      nextReturnBook: nextReservation?.Book?.Title || "Нет",
     };
   });
 
   // Фильтрация пользователей по поисковому запросу
   const filteredUsers = usersWithNextReturn.filter(
     (user) =>
-      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      user.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.Email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Сортировка пользователей
@@ -110,24 +110,24 @@ export default function AllUsersPage() {
   });
 
   // Статистика для графиков
-  const activeUsersCount = users.filter(u => u.isActive).length;
+  const activeUsersCount = users.filter(u => u.IsActive).length;
   const inactiveUsersCount = users.length - activeUsersCount;
   
-  const totalBorrowed = users.reduce((sum, user) => sum + user.borrowedBooksCount, 0);
-  const totalFines = users.reduce((sum, user) => sum + (user.fineAmount || 0), 0);
+  const totalBorrowed = users.reduce((sum, user) => sum + user.BorrowedBooksCount, 0);
+  const totalFines = users.reduce((sum, user) => sum + (user.FineAmount || 0), 0);
   
   // Данные для графика штрафов
-  const usersWithFines = users.filter(u => u.fineAmount > 0);
+  const usersWithFines = users.filter(u => u.FineAmount > 0);
   const finesData = usersWithFines.map(u => ({
-    name: u.fullName,
-    value: u.fineAmount
+    name: u.FullName,
+    value: u.FineAmount
   }));
 
   // Данные для графика использования библиотеки
   const borrowingChartData = {
     borrowed: totalBorrowed,
-    available: users.reduce((sum, user) => sum + (user.maxBooksAllowed - user.borrowedBooksCount), 0),
-    reservations: reservations.filter(r => r.status === "Обрабатывается").length
+    available: users.reduce((sum, user) => sum + (user.MaxBooksAllowed - user.BorrowedBooksCount), 0),
+    reservations: reservations.filter(r => r.Status === "Обрабатывается").length
   };
 
   const handleDeleteUser = async (id: string) => {
@@ -140,7 +140,7 @@ export default function AllUsersPage() {
       });
 
       if (!response.ok) throw new Error("Ошибка при удалении пользователя");
-      setUsers(users.filter(user => user.id !== id));
+      setUsers(users.filter(user => user.Id !== id));
     } catch (err) {
       console.error("Ошибка при удалении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при удалении пользователя");
@@ -234,20 +234,20 @@ export default function AllUsersPage() {
         <div className="grid gap-6">
           {sortedUsers.map((user) => (
             <div
-              key={user.id}
+              key={user.Id}
               className="bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300"
             >
               <div className="flex justify-between items-start">
                 <div className="space-y-4">
                   <div>
                     <h2 className="text-xl font-semibold text-neutral-500 dark:text-neutral-200">
-                      {user.fullName}
+                      {user.FullName}
                     </h2>
                     <p className="text-neutral-600 dark:text-neutral-300 mt-1">
-                      {user.email}
+                      {user.Email}
                     </p>
                     <p className="text-neutral-600 dark:text-neutral-300">
-                      {user.phone}
+                      {user.Phone}
                     </p>
                   </div>
 
@@ -255,18 +255,18 @@ export default function AllUsersPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400">Роль</p>
-                        <p className="text-neutral-700 dark:text-neutral-200">{user.role}</p>
+                        <p className="text-neutral-700 dark:text-neutral-200">{user.Role}</p>
                       </div>
                       <div>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400">Взято книг</p>
                         <p className="text-neutral-700 dark:text-neutral-200">
-                          {user.borrowedBooksCount} / {user.maxBooksAllowed}
+                          {user.BorrowedBooksCount} / {user.MaxBooksAllowed}
                         </p>
                       </div>
-                      {user.fineAmount && user.fineAmount > 0 && (
+                      {user.FineAmount && user.FineAmount > 0 && (
                         <div className="col-span-2">
                           <p className="text-sm text-red-500 dark:text-red-400">Штраф</p>
-                          <p className="text-red-600 dark:text-red-300">{user.fineAmount} ₽</p>
+                          <p className="text-red-600 dark:text-red-300">{user.FineAmount} ₽</p>
                         </div>
                       )}
                     </div>
@@ -275,13 +275,13 @@ export default function AllUsersPage() {
 
                 <div className="flex flex-col gap-3">
                   <Link
-                    href={`/admin/users/${user.id}`}
+                    href={`/admin/users/${user.Id}`}
                     className="bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 text-center"
                   >
                     Подробнее
                   </Link>
                   <button
-                    onClick={() => handleDeleteUser(user.id)}
+                    onClick={() => handleDeleteUser(user.Id)}
                     className="bg-gradient-to-r from-red-600/90 to-red-700/70 dark:from-red-700/80 dark:to-red-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
                   >
                     Удалить

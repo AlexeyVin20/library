@@ -6,45 +6,45 @@ import Link from "next/link";
 import { PlusCircle, BookOpen, Users, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 
 interface Request {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  requestType?: string;
-  user?: {
-    fullName: string;
-    email?: string;
-    phone?: string;
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Notes?: string;
+  RequestType?: string;
+  User?: {
+    FullName: string;
+    Email?: string;
+    Phone?: string;
   };
-  book?: {
-    title: string;
-    authors?: string;
+  Book?: {
+    Title: string;
+    Authors?: string;
   };
 }
 
 interface User {
-  id: string;
-  fullName: string;
-  email?: string;
-  phone?: string;
+  Id: string;
+  FullName: string;
+  Email?: string;
+  Phone?: string;
 }
 
 interface Book {
-  id: string;
-  title: string;
-  authors?: string;
-  availableCopies: number;
+  Id: string;
+  Title: string;
+  Authors?: string;
+  AvailableCopies: number;
 }
 
 interface Journal {
-  id: string;
-  title: string;
-  editors?: string;
-  issueNumber?: string;
-  availableCopies: number;
+  Id: string;
+  Title: string;
+  Editors?: string;
+  IssueNumber?: string;
+  AvailableCopies: number;
 }
 
 export default function RequestsPage() {
@@ -75,7 +75,7 @@ export default function RequestsPage() {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${baseUrl}/api/Reservation`);
+      const response = await fetch(`${baseUrl}/api/Reservations`);
       if (!response.ok) throw new Error("Ошибка при загрузке запросов");
       const data = await response.json();
       setRequests(data);
@@ -88,7 +88,7 @@ export default function RequestsPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${baseUrl}/api/User`);
+      const response = await fetch(`${baseUrl}/api/Users`);
       if (!response.ok) throw new Error("Ошибка при загрузке пользователей");
       const data = await response.json();
       setUsers(data);
@@ -102,7 +102,7 @@ export default function RequestsPage() {
       const response = await fetch(`${baseUrl}/api/Books`);
       if (!response.ok) throw new Error("Ошибка при загрузке книг");
       const data = await response.json();
-      setBooks(data.filter((book: Book) => book.availableCopies > 0));
+      setBooks(data.filter((book: Book) => book.AvailableCopies > 0));
     } catch (err) {
       console.error("Ошибка при загрузке книг:", err);
     }
@@ -113,7 +113,7 @@ export default function RequestsPage() {
       const response = await fetch(`${baseUrl}/api/Journals`);
       if (!response.ok) throw new Error("Ошибка при загрузке журналов");
       const data = await response.json();
-      setJournals(data.filter((journal: Journal) => journal.availableCopies > 0));
+      setJournals(data.filter((journal: Journal) => journal.AvailableCopies > 0));
     } catch (err) {
       console.error("Ошибка при загрузке журналов:", err);
     }
@@ -121,7 +121,7 @@ export default function RequestsPage() {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+      const response = await fetch(`${baseUrl}/api/Reservations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -129,7 +129,7 @@ export default function RequestsPage() {
 
       if (!response.ok) throw new Error("Ошибка при обновлении статуса");
       setRequests(requests.map(r => 
-        r.id === id ? { ...r, status: newStatus } : r
+        r.Id === id ? { ...r, Status: newStatus } : r
       ));
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
@@ -166,7 +166,7 @@ export default function RequestsPage() {
 
   const filteredRequests = filter === "all" 
     ? requests 
-    : requests.filter(r => r.status === filter);
+    : requests.filter(r => r.Status === filter);
 
   const handleShowCreateForm = () => {
     setShowCreateForm(true);
@@ -212,7 +212,7 @@ export default function RequestsPage() {
         status: "Обрабатывается",
       };
 
-      const response = await fetch(`${baseUrl}/api/Reservation`, {
+      const response = await fetch(`${baseUrl}/api/Reservations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(apiData),
@@ -310,8 +310,8 @@ export default function RequestsPage() {
                     >
                       <option value="">Выберите пользователя</option>
                       {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.fullName}
+                        <option key={user.Id} value={user.Id}>
+                          {user.FullName}
                         </option>
                       ))}
                     </select>
@@ -332,13 +332,13 @@ export default function RequestsPage() {
                       <option value="">{isJournalTab ? "Выберите журнал" : "Выберите книгу"}</option>
                       {isJournalTab 
                         ? journals.map((journal) => (
-                            <option key={journal.id} value={journal.id}>
-                              {journal.title} - {journal.editors || "Редактор не указан"} (Выпуск: {journal.issueNumber}) (Доступно: {journal.availableCopies})
+                            <option key={journal.Id} value={journal.Id}>
+                              {journal.Title} - {journal.Editors || "Редактор не указан"} (Выпуск: {journal.IssueNumber}) (Доступно: {journal.AvailableCopies})
                             </option>
                           ))
                         : books.map((book) => (
-                            <option key={book.id} value={book.id}>
-                              {book.title} - {book.authors || "Автор не указан"} (Доступно: {book.availableCopies})
+                            <option key={book.Id} value={book.Id}>
+                              {book.Title} - {book.Authors || "Автор не указан"} (Доступно: {book.AvailableCopies})
                             </option>
                           ))
                       }
@@ -465,25 +465,25 @@ export default function RequestsPage() {
               {filteredRequests.length > 0 ? (
                 filteredRequests.map((request) => (
                   <div
-                    key={request.id}
-                    className={`bg-gradient-to-br ${getCardGradient(request.status)} backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300`}
+                    key={request.Id}
+                    className={`bg-gradient-to-br ${getCardGradient(request.Status)} backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="space-y-4">
                         <div className="flex items-start gap-6">
                           <div>
                             <h3 className="font-medium text-neutral-500 dark:text-neutral-200">
-                              {request.user?.fullName || "Неизвестный пользователь"}
+                              {request.User?.FullName || "Неизвестный пользователь"}
                             </h3>
                             <div className="mt-1 space-y-1">
-                              {request.user?.email && (
+                              {request.User?.Email && (
                                 <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                                  Email: {request.user.email}
+                                  Email: {request.User?.Email}
                                 </p>
                               )}
-                              {request.user?.phone && (
+                              {request.User?.Phone && (
                                 <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                                  Телефон: {request.user.phone}
+                                  Телефон: {request.User?.Phone}
                                 </p>
                               )}
                             </div>
@@ -491,46 +491,46 @@ export default function RequestsPage() {
 
                           <div className="bg-white/20 dark:bg-neutral-700/20 rounded-lg p-4 flex-1">
                             <h2 className="text-xl font-semibold text-neutral-500 dark:text-neutral-200">
-                              {request.book?.title || "Неизвестная публикация"}
+                              {request.Book?.Title || "Неизвестная публикация"}
                             </h2>
                             <p className="text-neutral-300 dark:text-neutral-400 mt-1">
-                              {request.book?.authors || "Автор не указан"}
+                              {request.Book?.Authors || "Автор не указан"}
                             </p>
                           </div>
                         </div>
 
                         <div className="space-y-2">
                           <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                            Статус: <span className={request.status === "Выполнена" ? "text-green-500" : request.status === "Отменена" ? "text-red-500" : "text-yellow-500"}>{request.status}</span>
+                            Статус: <span className={request.Status === "Выполнена" ? "text-green-500" : request.Status === "Отменена" ? "text-red-500" : "text-yellow-500"}>{request.Status}</span>
                           </p>
                           <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                            Дата запроса: {formatDate(request.reservationDate)}
+                            Дата запроса: {formatDate(request.ReservationDate)}
                           </p>
                           <p className="text-sm text-neutral-300 dark:text-neutral-500">
-                            Дата возврата: {formatDate(request.expirationDate)}
+                            Дата возврата: {formatDate(request.ExpirationDate)}
                           </p>
                         </div>
 
-                        {request.notes && (
+                        {request.Notes && (
                           <div className="p-3 bg-white/20 dark:bg-neutral-700/20 rounded-lg">
                             <p className="text-sm text-neutral-300 dark:text-neutral-400">
-                              Примечания: {request.notes}
+                              Примечания: {request.Notes}
                             </p>
                           </div>
                         )}
                       </div>
 
-                      {request.status === "Обрабатывается" && (
+                      {request.Status === "Обрабатывается" && (
                         <div className="flex flex-col gap-3">
                           <button
-                            onClick={() => handleApproveRequest(request.id)}
+                            onClick={() => handleApproveRequest(request.Id)}
                             className="flex items-center gap-2 bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
                           >
                             <CheckCircle size={18} />
                             Одобрить
                           </button>
                           <button
-                            onClick={() => handleRejectRequest(request.id)}
+                            onClick={() => handleRejectRequest(request.Id)}
                             className="flex items-center gap-2 bg-gradient-to-r from-red-600/90 to-red-700/70 dark:from-red-700/80 dark:to-red-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
                           >
                             <XCircle size={18} />

@@ -34,15 +34,15 @@ import { motion } from "framer-motion";
 
 // Интерфейсы для данных
 interface Book {
-  id: string;
-  title: string;
-  authors: string;
+  Id: string;
+  Title: string;
+  Authors: string;
 }
 
 interface Journal {
-  id: number;
-  title: string;
-  category: string;
+  Id: number;
+  Title: string;
+  Category: string;
 }
 
 // Типизация для категорий журналов
@@ -91,7 +91,7 @@ export default function CatalogMenu() {
 
   // Группировка журналов по категориям для улучшенной навигации
   const categorizedJournals = journals.reduce((acc, journal) => {
-    const category = journal.category || 'Другое';
+    const category = journal.Category || 'Другое';
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -187,12 +187,12 @@ export default function CatalogMenu() {
                     className="max-h-[60vh] overflow-auto w-72 p-3 rounded-xl backdrop-blur-md bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700 shadow-xl"
                   >
                     {books.slice(0, 8).map((book) => (
-                      <DropdownMenuItem key={book.id} asChild>
-                        <Link href={`/admin/books/${book.id}`} className="flex items-center gap-3 cursor-pointer hover:bg-primary/10 rounded-lg px-3 py-2.5 transition-colors">
+                      <DropdownMenuItem key={book.Id} asChild>
+                        <Link href={`/admin/books/${book.Id}`} className="flex items-center gap-3 cursor-pointer hover:bg-primary/10 rounded-lg px-3 py-2.5 transition-colors">
                           <Book className="flex-shrink-0 h-5 w-5 text-primary/80" />
                           <div className="overflow-hidden">
-                            <p className="truncate font-medium text-base">{book.title}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{book.authors}</p>
+                            <p className="truncate font-medium text-base">{book.Title}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{book.Authors}</p>
                           </div>
                         </Link>
                       </DropdownMenuItem>
@@ -250,10 +250,10 @@ export default function CatalogMenu() {
                       className="max-h-[60vh] overflow-auto w-72 p-3 rounded-xl backdrop-blur-md bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700 shadow-xl"
                     >
                       {journals.slice(0, 8).map((journal) => (
-                        <DropdownMenuItem key={journal.id} asChild>
-                          <Link href={`/admin/journals/${journal.id}`} className="flex items-center gap-3 cursor-pointer hover:bg-primary/10 rounded-lg px-3 py-2.5 transition-colors">
+                        <DropdownMenuItem key={journal.Id} asChild>
+                          <Link href={`/admin/journals/${journal.Id}`} className="flex items-center gap-3 cursor-pointer hover:bg-primary/10 rounded-lg px-3 py-2.5 transition-colors">
                             <BookOpen className="flex-shrink-0 h-5 w-5 text-primary/80" />
-                            <p className="truncate font-medium text-base">{journal.title}</p>
+                            <p className="truncate font-medium text-base">{journal.Title}</p>
                           </Link>
                         </DropdownMenuItem>
                       ))}

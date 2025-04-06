@@ -7,21 +7,21 @@ import Link from "next/link";
 import { use } from "react";
 
 interface Reservation {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  user?: {
-    fullName: string;
-    email?: string;
-    phone?: string;
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Notes?: string;
+  User?: {
+    FullName: string;
+    Email?: string;
+    Phone?: string;
   };
-  book?: {
-    title: string;
-    authors?: string;
+  Book?: {
+    Title: string;
+    Authors?: string;
   };
 }
 
@@ -40,7 +40,7 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
   const fetchReservation = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${baseUrl}/api/Reservation/${resolvedParams.reservationId}`);
+      const response = await fetch(`${baseUrl}/api/Reservations/${resolvedParams.reservationId}`);
       if (!response.ok) throw new Error("Ошибка при загрузке резервации");
       const data = await response.json();
       setReservation(data);
@@ -55,14 +55,14 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
     if (!reservation) return;
 
     try {
-      const response = await fetch(`${baseUrl}/api/Reservation/${reservation.id}`, {
+      const response = await fetch(`${baseUrl}/api/Reservations/${reservation.Id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ Status: newStatus }),
       });
 
       if (!response.ok) throw new Error("Ошибка при обновлении статуса");
-      setReservation({ ...reservation, status: newStatus });
+      setReservation({ ...reservation, Status: newStatus });
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
       alert(err instanceof Error ? err.message : "Ошибка при обновлении статуса");
@@ -135,10 +135,10 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
             </h2>
             <div className="space-y-2">
               <p className="text-neutral-500 dark:text-neutral-200">
-                <span className="font-medium">Название:</span> {reservation.book?.title || "Неизвестная книга"}
+                <span className="font-medium">Название:</span> {reservation.Book?.Title || "Неизвестная книга"}
               </p>
               <p className="text-neutral-600 dark:text-neutral-300">
-                <span className="font-medium">Автор:</span> {reservation.book?.authors || "Автор не указан"}
+                <span className="font-medium">Автор:</span> {reservation.Book?.Authors || "Автор не указан"}
               </p>
             </div>
           </div>
@@ -150,16 +150,16 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
             </h2>
             <div className="space-y-2">
               <p className="text-neutral-500 dark:text-neutral-200">
-                <span className="font-medium">ФИО:</span> {reservation.user?.fullName || "Неизвестный пользователь"}
+                <span className="font-medium">ФИО:</span> {reservation.User?.FullName || "Неизвестный пользователь"}
               </p>
-              {reservation.user?.email && (
+              {reservation.User?.Email && (
                 <p className="text-neutral-600 dark:text-neutral-300">
-                  <span className="font-medium">Email:</span> {reservation.user.email}
+                  <span className="font-medium">Email:</span> {reservation.User?.Email}
                 </p>
               )}
-              {reservation.user?.phone && (
+              {reservation.User?.Phone && (
                 <p className="text-neutral-600 dark:text-neutral-300">
-                  <span className="font-medium">Телефон:</span> {reservation.user.phone}
+                  <span className="font-medium">Телефон:</span> {reservation.User?.Phone}
                 </p>
               )}
             </div>
@@ -174,11 +174,11 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Дата запроса</p>
-                  <p className="text-neutral-500 dark:text-neutral-200">{formatDate(reservation.reservationDate)}</p>
+                  <p className="text-neutral-500 dark:text-neutral-200">{formatDate(reservation.ReservationDate)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Дата возврата</p>
-                  <p className="text-neutral-500 dark:text-neutral-200">{formatDate(reservation.expirationDate)}</p>
+                  <p className="text-neutral-500 dark:text-neutral-200">{formatDate(reservation.ExpirationDate)}</p>
                 </div>
               </div>
               <div>
@@ -208,13 +208,13 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
           </div>
 
           {/* Примечания */}
-          {reservation.notes && (
+          {reservation.Notes && (
             <div className="bg-white/30 dark:bg-neutral-800/30 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)]">
               <h2 className="text-xl font-semibold text-neutral-500 dark:text-neutral-200 mb-4">
                 Примечания
               </h2>
               <p className="text-neutral-600 dark:text-neutral-300">
-                {reservation.notes}
+                {reservation.Notes}
               </p>
             </div>
           )}

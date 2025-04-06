@@ -6,32 +6,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Book {
-  id: string;
-  title: string;
-  authors: string;
-  isbn: string;
-  genre?: string | null;
-  categorization?: string | null;
-  udk?: string | null;
-  bbk?: string | null;
-  summary?: string | null;
-  cover?: string | null;
-  description?: string | null;
-  publicationYear?: number | null;
-  publisher?: string | null;
-  pageCount?: number | null;
-  language?: string | null;
-  availableCopies: number;
-  shelfId?: number;
-  edition?: string | null;
-  price?: number | null;
-  format?: string | null;
-  originalTitle?: string | null;
-  originalLanguage?: string | null;
-  isEbook?: boolean;
-  condition?: string | null;
-  dateAdded?: string;
-  dateModified?: string;
+  Id: string;
+  Title: string;
+  Authors: string;
+  ISBN: string;
+  Genre?: string | null;
+  Categorization?: string | null;
+  UDK?: string | null;
+  BBK?: string | null;
+  Summary?: string | null;
+  Cover?: string | null;
+  Description?: string | null;
+  PublicationYear?: number | null;
+  Publisher?: string | null;
+  PageCount?: number | null;
+  Language?: string | null;
+  AvailableCopies: number;
+  ShelfId?: number;
+  Edition?: string | null;
+  Price?: number | null;
+  Format?: string | null;
+  OriginalTitle?: string | null;
+  OriginalLanguage?: string | null;
+  IsEbook?: boolean;
+  Condition?: string | null;
+  DateAdded?: string;
+  DateModified?: string;
 }
 
 interface BookDetailsProps {
@@ -65,16 +65,16 @@ export default function BookDetails({ book }: BookDetailsProps) {
         <Card className={themeClasses.card}>
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-neutral-200 dark:text-neutral-100">
-              {book.title}
+              {book.Title}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6 pb-8">
             <div className="flex flex-col md:flex-row gap-8">
               {/* Cover Image */}
               <div className="flex-shrink-0">
-                {book.cover ? (
+                {book.Cover ? (
                   <div className="relative w-[250px] h-[400px] rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-all duration-300">
-                    <Image src={book.cover} alt={book.title} fill className="object-cover rounded-xl" priority />
+                    <Image src={book.Cover} alt={book.Title} fill className="object-cover rounded-xl" priority />
                   </div>
                 ) : (
                   <div className={`${themeClasses.card} w-[250px] h-[400px] flex items-center justify-center text-neutral-200 dark:text-neutral-400`}>
@@ -86,18 +86,18 @@ export default function BookDetails({ book }: BookDetailsProps) {
               {/* Basic Info */}
               <div className="flex-grow space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InfoOval label="Название" value={book.title} />
-                  <InfoOval label="Авторы" value={book.authors} />
-                  <InfoOval label="ISBN" value={book.isbn} />
-                  <InfoOval label="Жанр" value={book.genre || "Не указан"} />
-                  <InfoOval label="Издательство" value={book.publisher || "Не указано"} />
-                  <InfoOval label="Год публикации" value={book.publicationYear?.toString() || "Не указан"} />
-                  <InfoOval label="Количество страниц" value={book.pageCount?.toString() || "Не указано"} />
-                  <InfoOval label="Язык" value={book.language || "Не указан"} />
-                  {!book.isEbook && (
-                    <InfoOval label="Доступно копий" value={book.availableCopies.toString()} />
+                  <InfoOval label="Название" value={book.Title} />
+                  <InfoOval label="Авторы" value={book.Authors} />
+                  <InfoOval label="ISBN" value={book.ISBN} />
+                  <InfoOval label="Жанр" value={book.Genre || "Не указан"} />
+                  <InfoOval label="Издательство" value={book.Publisher || "Не указано"} />
+                  <InfoOval label="Год публикации" value={book.PublicationYear?.toString() || "Не указан"} />
+                  <InfoOval label="Количество страниц" value={book.PageCount?.toString() || "Не указано"} />
+                  <InfoOval label="Язык" value={book.Language || "Не указан"} />
+                  {!book.IsEbook && (
+                    <InfoOval label="Доступно копий" value={book.AvailableCopies.toString()} />
                   )}
-                  <InfoOval label="Электронная книга" value={book.isEbook ? "Да" : "Нет"} />
+                  <InfoOval label="Электронная книга" value={book.IsEbook ? "Да" : "Нет"} />
                 </div>
               </div>
             </div>
@@ -122,31 +122,31 @@ export default function BookDetails({ book }: BookDetailsProps) {
                 </TabsList>
 
                 <TabsContent value="details" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoOval label="Категоризация" value={book.categorization || "Не указана"} />
-                  <InfoOval label="Издательство" value={book.publisher || "Не указано"} />
-                  {!book.isEbook && (
+                <InfoOval label="Категоризация" value={book.Categorization || "Не указана"} />
+                  <InfoOval label="Издательство" value={book.Publisher || "Не указано"} />
+                  {!book.IsEbook && (
                     <>
-                      <InfoOval label="Состояние" value={book.condition || "Не указано"} />
+                      <InfoOval label="Состояние" value={book.Condition || "Не указано"} />
                     </>
                   )}
-                  <InfoOval label="Формат" value={book.format || "Не указан"} />
-                  <InfoOval label="Цена" value={book.price != null ? book.price.toString() : "Не указана"} />
-                  <InfoOval label="УДК" value={book.udk || "Не указан"} />
-                  <InfoOval label="ББК" value={book.bbk || "Не указан"} />
+                  <InfoOval label="Формат" value={book.Format || "Не указан"} />
+                  <InfoOval label="Цена" value={book.Price != null ? book.Price.toString() : "Не указана"} />
+                  <InfoOval label="УДК" value={book.UDK || "Не указан"} />
+                  <InfoOval label="ББК" value={book.BBK || "Не указан"} />
                   <div className={`col-span-full ${themeClasses.infoOval} overflow-auto max-h-60`}>
                     <span className="font-semibold text-neutral-200 dark:text-primary">Описание книги:</span>{" "}
-                    <span className="text-neutral-400 dark:text-neutral-200">{book.description || "Отсутствует"}</span>
+                    <span className="text-neutral-400 dark:text-neutral-200">{book.Description || "Отсутствует"}</span>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="additional" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <InfoOval label="Электронная книга" value={book.isEbook ? "Да" : "Нет"} />
-                  <InfoOval label="Оригинальное название" value={book.originalTitle || "Не указано"} />
-                  <InfoOval label="Оригинальный язык" value={book.originalLanguage || "Не указан"} />
-                  <InfoOval label="Издание" value={book.edition || "Не указано"} />
+                  <InfoOval label="Электронная книга" value={book.IsEbook ? "Да" : "Нет"} />
+                  <InfoOval label="Оригинальное название" value={book.OriginalTitle || "Не указано"} />
+                  <InfoOval label="Оригинальный язык" value={book.OriginalLanguage || "Не указан"} />
+                  <InfoOval label="Издание" value={book.Edition || "Не указано"} />
                   <div className={`col-span-full ${themeClasses.infoOval} overflow-auto max-h-60`}>
                     <span className="font-semibold text-neutral-200 dark:text-primary">Резюме книги:</span>{" "}
-                    <span className="text-neutral-400 dark:text-neutral-200">{book.summary || "Отсутствует"}</span>
+                    <span className="text-neutral-400 dark:text-neutral-200">{book.Summary || "Отсутствует"}</span>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -155,7 +155,7 @@ export default function BookDetails({ book }: BookDetailsProps) {
             {/* Buttons */}
             <div className="flex gap-4 justify-end mt-8">
               <Link
-                href={`/admin/books/${book.id}/update`}
+                href={`/admin/books/${book.Id}/update`}
                 className={themeClasses.button}
               >
                 Редактировать

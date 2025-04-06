@@ -35,26 +35,26 @@ const getThemeClasses = () => {
 
 // Zod-схема для журнала
 const journalSchema = z.object({
-  title: z.string().min(1, "Название обязательно").max(200, "Максимальная длина - 200 символов"),
-  issn: z.string().max(20, "Максимальная длина - 20 символов").optional().nullable(),
-  registrationNumber: z.string().max(50, "Максимальная длина - 50 символов").optional().nullable(),
-  format: z.enum(["Print", "Electronic", "Mixed"]),
-  periodicity: z.enum(["Weekly", "BiWeekly", "Monthly", "Quarterly", "BiAnnually", "Annually"]),
-  pagesPerIssue: z.number().int().nonnegative(),
-  description: z.string().max(500, "Максимальная длина - 500 символов").optional().nullable(),
-  publisher: z.string().max(100, "Максимальная длина - 100 символов").optional().nullable(),
-  foundationDate: z.date(),
-  circulation: z.number().int().nonnegative(),
-  isOpenAccess: z.boolean(),
-  category: z.enum(["Scientific", "Popular", "Entertainment", "Professional", "Educational", "Literary", "News"]),
-  targetAudience: z.string().max(100, "Максимальная длина - 100 символов").optional().nullable(),
-  isPeerReviewed: z.boolean(),
-  isIndexedInRINTS: z.boolean(),
-  isIndexedInScopus: z.boolean(),
-  isIndexedInWebOfScience: z.boolean(),
-  publicationDate: z.date(),
-  pageCount: z.number().int().nonnegative(),
-  coverImageUrl: z.string().optional().nullable(),
+  Title: z.string().min(1, "Название обязательно").max(200, "Максимальная длина - 200 символов"),
+  ISSN: z.string().max(20, "Максимальная длина - 20 символов").optional().nullable(),
+  RegistrationNumber: z.string().max(50, "Максимальная длина - 50 символов").optional().nullable(),
+  Format: z.enum(["Print", "Electronic", "Mixed"]),
+  Periodicity: z.enum(["Weekly", "BiWeekly", "Monthly", "Quarterly", "BiAnnually", "Annually"]),
+  PagesPerIssue: z.number().int().nonnegative(),
+  Description: z.string().max(500, "Максимальная длина - 500 символов").optional().nullable(),
+  Publisher: z.string().max(100, "Максимальная длина - 100 символов").optional().nullable(),
+  FoundationDate: z.date(),
+  Circulation: z.number().int().nonnegative(),
+  IsOpenAccess: z.boolean(),
+  Category: z.enum(["Scientific", "Popular", "Entertainment", "Professional", "Educational", "Literary", "News"]),
+  TargetAudience: z.string().max(100, "Максимальная длина - 100 символов").optional().nullable(),
+  IsPeerReviewed: z.boolean(),
+  IsIndexedInRINTS: z.boolean(),
+  IsIndexedInScopus: z.boolean(),
+  IsIndexedInWebOfScience: z.boolean(),
+  PublicationDate: z.date(),
+  PageCount: z.number().int().nonnegative(),
+  Cover: z.string().optional().nullable(),
 });
 
 export type JournalInput = z.infer<typeof journalSchema>;
@@ -95,34 +95,34 @@ const JournalForm = ({
   } = useForm<JournalInput>({
     resolver: zodResolver(journalSchema),
     defaultValues: {
-      title: initialData?.title || "",
-      issn: initialData?.issn || "",
-      registrationNumber: initialData?.registrationNumber || "",
-      format: initialData?.format || "Print",
-      periodicity: initialData?.periodicity || "Monthly",
-      pagesPerIssue: initialData?.pagesPerIssue || 0,
-      description: initialData?.description || "",
-      publisher: initialData?.publisher || "",
-      foundationDate: initialData?.foundationDate || new Date(),
-      circulation: initialData?.circulation || 0,
-      isOpenAccess: initialData?.isOpenAccess || false,
-      category: initialData?.category || "Scientific",
-      targetAudience: initialData?.targetAudience || "",
-      isPeerReviewed: initialData?.isPeerReviewed || false,
-      isIndexedInRINTS: initialData?.isIndexedInRINTS || false,
-      isIndexedInScopus: initialData?.isIndexedInScopus || false,
-      isIndexedInWebOfScience: initialData?.isIndexedInWebOfScience || false,
-      publicationDate: initialData?.publicationDate || new Date(),
-      pageCount: initialData?.pageCount || 0,
-      coverImageUrl: initialData?.coverImageUrl || "",
+      Title: initialData?.Title || "",
+      ISSN: initialData?.ISSN || "",
+      RegistrationNumber: initialData?.RegistrationNumber || "",
+      Format: initialData?.Format || "Print",
+      Periodicity: initialData?.Periodicity || "Monthly",
+      PagesPerIssue: initialData?.PagesPerIssue || 0,
+      Description: initialData?.Description || "",
+      Publisher: initialData?.Publisher || "",
+      FoundationDate: initialData?.FoundationDate || new Date(),
+      Circulation: initialData?.Circulation || 0,
+      IsOpenAccess: initialData?.IsOpenAccess || false,
+      Category: initialData?.Category || "Scientific",
+      TargetAudience: initialData?.TargetAudience || "",
+      IsPeerReviewed: initialData?.IsPeerReviewed || false,
+      IsIndexedInRINTS: initialData?.IsIndexedInRINTS || false,
+      IsIndexedInScopus: initialData?.IsIndexedInScopus || false,
+      IsIndexedInWebOfScience: initialData?.IsIndexedInWebOfScience || false,
+      PublicationDate: initialData?.PublicationDate || new Date(),
+      PageCount: initialData?.PageCount || 0,
+      Cover: initialData?.Cover || "",
     },
   });
 
   const formValues = watch();
-  const isOpenAccess = watch("isOpenAccess");
+  const IsOpenAccess = watch("IsOpenAccess");
 
   useEffect(() => {
-    if (initialData?.coverImageUrl) setPreviewUrl(initialData.coverImageUrl);
+    if (initialData?.Cover) setPreviewUrl(initialData.Cover);
   }, [initialData]);
 
   useEffect(() => {
@@ -141,16 +141,16 @@ const JournalForm = ({
       const data = await res.json();
       if (data.status === "ok" && data.message) {
         const journalData = data.message;
-        setValue("title", journalData.title || "");
-        setValue("issn", issn);
-        setValue("publisher", journalData.publisher || "");
-        if (journalData.subjects) setValue("category", mapSubjectToCategory(journalData.subjects[0]));
-        setValue("format", "Print");
-        setValue("periodicity", "Monthly");
+        setValue("Title", journalData.title || "");
+        setValue("ISSN", issn);
+        setValue("Publisher", journalData.publisher || "");
+        if (journalData.subjects) setValue("Category", mapSubjectToCategory(journalData.subjects[0]));
+        setValue("Format", "Print");
+        setValue("Periodicity", "Monthly");
         toast({ title: "Данные получены", description: "Информация о журнале успешно заполнена" });
         handleFindCover();
       } else {
-        setValue("issn", issn);
+        setValue("ISSN", issn);
         toast({
           title: "Журнал не найден",
           description: "Проверьте правильность ISSN.",
@@ -158,7 +158,7 @@ const JournalForm = ({
         });
       }
     } catch (error) {
-      setValue("issn", issn);
+      setValue("ISSN", issn);
       toast({ title: "Ошибка", description: "Ошибка при поиске по ISSN.", variant: "destructive" });
     } finally {
       setIsSearchLoading(false);
@@ -184,7 +184,7 @@ const JournalForm = ({
       reader.onload = (event) => {
         if (event.target && typeof event.target.result === "string") {
           setPreviewUrl(event.target.result);
-          setValue("coverImageUrl", event.target.result);
+          setValue("Cover", event.target.result);
         }
       };
       reader.readAsDataURL(file);
@@ -193,7 +193,7 @@ const JournalForm = ({
 
   const handleRemoveCover = () => {
     setPreviewUrl(null);
-    setValue("coverImageUrl", "");
+    setValue("Cover", "");
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -246,7 +246,7 @@ const JournalForm = ({
           {
             parts: [
               {
-                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у журналов. Модель журнала содержит следующие поля: id(int), title(строка 200), issn(строка 20), registrationNumber(строка 50), format(Print/Electronic/Mixed), periodicity(Weekly/BiWeekly/Monthly/Quarterly/BiAnnually/Annually), pagesPerIssue(число), description(строка 500), publisher(строка 100), foundationDate(дата), circulation(число), isOpenAccess(boolean), category(Scientific/Popular/Entertainment/Professional/Educational/Literary/News), targetAudience(строка 100), isPeerReviewed(boolean), isIndexedInRINTS(boolean), isIndexedInScopus(boolean), isIndexedInWebOfScience(boolean), publicationDate(дата), pageCount(число), coverImageUrl - всегда оставляй null. Если информации нет, оставляй null",
+                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у журналов. Модель журнала содержит следующие поля: id(int), title(строка 200), issn(строка 20), registrationNumber(строка 50), format(Print/Electronic/Mixed), periodicity(Weekly/BiWeekly/Monthly/Quarterly/BiAnnually/Annually), pagesPerIssue(число), description(строка 500), publisher(строка 100), foundationDate(дата), circulation(число), isOpenAccess(boolean), category(Scientific/Popular/Entertainment/Professional/Educational/Literary/News), targetAudience(строка 100), isPeerReviewed(boolean), isIndexedInRINTS(boolean), isIndexedInScopus(boolean), isIndexedInWebOfScience(boolean), publicationDate(дата), pageCount(число), Cover - всегда оставляй null. Если информации нет, оставляй null",
               },
               { inlineData: { mimeType: "image/jpeg", data: geminiImage } },
             ],
@@ -303,30 +303,30 @@ const JournalForm = ({
             variant: "destructive",
           });
         } else {
-          setValue("coverImageUrl", coverUrl);
+          setValue("Cover", coverUrl);
           setPreviewUrl(coverUrl);
           toast({ title: "Данные получены", description: "Обложка журнала успешно получена." });
         }
 
-        if (parsedData.title) setValue("title", parsedData.title);
-        if (parsedData.issn) setValue("issn", parsedData.issn);
-        if (parsedData.registrationNumber) setValue("registrationNumber", parsedData.registrationNumber);
-        if (parsedData.format) setValue("format", parsedData.format);
-        if (parsedData.periodicity) setValue("periodicity", parsedData.periodicity);
-        if (parsedData.pagesPerIssue) setValue("pagesPerIssue", parsedData.pagesPerIssue);
-        if (parsedData.description) setValue("description", parsedData.description);
-        if (parsedData.publisher) setValue("publisher", parsedData.publisher);
-        if (parsedData.foundationDate) setValue("foundationDate", new Date(parsedData.foundationDate));
-        if (parsedData.circulation) setValue("circulation", parsedData.circulation);
-        if (parsedData.isOpenAccess !== undefined) setValue("isOpenAccess", parsedData.isOpenAccess);
-        if (parsedData.category) setValue("category", parsedData.category);
-        if (parsedData.targetAudience) setValue("targetAudience", parsedData.targetAudience);
-        if (parsedData.isPeerReviewed !== undefined) setValue("isPeerReviewed", parsedData.isPeerReviewed);
-        if (parsedData.isIndexedInRINTS !== undefined) setValue("isIndexedInRINTS", parsedData.isIndexedInRINTS);
-        if (parsedData.isIndexedInScopus !== undefined) setValue("isIndexedInScopus", parsedData.isIndexedInScopus);
-        if (parsedData.isIndexedInWebOfScience !== undefined) setValue("isIndexedInWebOfScience", parsedData.isIndexedInWebOfScience);
-        if (parsedData.publicationDate) setValue("publicationDate", new Date(parsedData.publicationDate));
-        if (parsedData.pageCount) setValue("pageCount", parsedData.pageCount);
+        if (parsedData.Title) setValue("Title", parsedData.Title);
+        if (parsedData.ISSN) setValue("ISSN", parsedData.ISSN);
+        if (parsedData.RegistrationNumber) setValue("RegistrationNumber", parsedData.RegistrationNumber);
+        if (parsedData.Format) setValue("Format", parsedData.Format);
+        if (parsedData.Periodicity) setValue("Periodicity", parsedData.Periodicity);
+        if (parsedData.PagesPerIssue) setValue("PagesPerIssue", parsedData.PagesPerIssue);
+        if (parsedData.Description) setValue("Description", parsedData.Description);
+        if (parsedData.Publisher) setValue("Publisher", parsedData.Publisher);
+        if (parsedData.FoundationDate) setValue("FoundationDate", new Date(parsedData.FoundationDate));
+        if (parsedData.Circulation) setValue("Circulation", parsedData.Circulation);
+        if (parsedData.IsOpenAccess !== undefined) setValue("IsOpenAccess", parsedData.IsOpenAccess);
+        if (parsedData.Category) setValue("Category", parsedData.Category);
+        if (parsedData.TargetAudience) setValue("TargetAudience", parsedData.TargetAudience);
+        if (parsedData.IsPeerReviewed !== undefined) setValue("IsPeerReviewed", parsedData.IsPeerReviewed);
+        if (parsedData.IsIndexedInRINTS !== undefined) setValue("IsIndexedInRINTS", parsedData.IsIndexedInRINTS);
+        if (parsedData.IsIndexedInScopus !== undefined) setValue("IsIndexedInScopus", parsedData.IsIndexedInScopus);
+        if (parsedData.IsIndexedInWebOfScience !== undefined) setValue("IsIndexedInWebOfScience", parsedData.IsIndexedInWebOfScience);
+        if (parsedData.PublicationDate) setValue("PublicationDate", new Date(parsedData.PublicationDate));
+        if (parsedData.PageCount) setValue("PageCount", parsedData.PageCount);
       } else {
         toast({ title: "Ошибка", description: "Ответ от Gemini API не содержит данных.", variant: "destructive" });
       }
@@ -341,11 +341,11 @@ const JournalForm = ({
 
   const handleFindCover = async () => {
     setShowManualCoverInput(false);
-    if (formValues.issn || (formValues.title && formValues.publisher)) {
+    if (formValues.ISSN || (formValues.Title && formValues.Publisher)) {
       let coverUrl = null;
-      if (formValues.issn) {
+      if (formValues.ISSN) {
         try {
-          const coverRes = await fetch(`https://api.altmetric.com/v1/doi/${formValues.issn}`);
+          const coverRes = await fetch(`https://api.altmetric.com/v1/doi/${formValues.ISSN}`);
           if (coverRes.ok) {
             const coverData = await coverRes.json();
             if (coverData.images?.small) coverUrl = coverData.images.small;
@@ -354,9 +354,9 @@ const JournalForm = ({
           console.error("Ошибка при поиске по ISSN:", error);
         }
       }
-      if (!coverUrl && formValues.title && formValues.publisher) {
+      if (!coverUrl && formValues.Title && formValues.Publisher) {
         try {
-          const query = encodeURIComponent(`${formValues.title} ${formValues.publisher} journal cover`);
+          const query = encodeURIComponent(`${formValues.Title} ${formValues.Publisher} journal cover`);
           const googleImages = await fetch(
             `https://www.googleapis.com/customsearch/v1?key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}&cx=YOUR_CUSTOM_SEARCH_ENGINE_ID&q=${query}&searchType=image&num=1`
           );
@@ -369,11 +369,11 @@ const JournalForm = ({
         }
       }
       if (coverUrl) {
-        setValue("coverImageUrl", coverUrl);
+        setValue("Cover", coverUrl);
         setPreviewUrl(coverUrl);
         toast({ title: "Успех", description: "Обложка журнала успешно обновлена" });
       } else {
-        const query = encodeURIComponent(formValues.title + " журнал обложка");
+        const query = encodeURIComponent(formValues.Title + " журнал обложка");
         window.open(`https://cse.google.com/cse?cx=b421413d1a0984f58#gsc.tab=0&gsc.q=${query}`, "_blank");
         setShowManualCoverInput(true);
         toast({
@@ -449,48 +449,48 @@ const JournalForm = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Название журнала *</label>
-                      <Input placeholder="Введите название журнала" {...register("title")} className={themeClasses.input} />
-                      {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
+                      <Input placeholder="Введите название журнала" {...register("Title")} className={themeClasses.input} />
+                      {errors.Title && <p className="text-red-500 text-sm mt-1">{errors.Title.message}</p>}
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">ISSN *</label>
                       <div className="flex gap-2">
                         <Input
                           placeholder="Введите ISSN журнала"
-                          {...register("issn")}
+                          {...register("ISSN")}
                           className={themeClasses.input}
                           onChange={(e) => setIssn(e.target.value)}
-                          value={watch("issn") || ""}
+                          value={watch("ISSN") || ""}
                         />
                         <Button type="button" onClick={handleFetchByISSN} className={themeClasses.button} disabled={isSearchLoading}>
                           {isSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         </Button>
                       </div>
-                      {errors.issn && <p className="text-red-500 text-sm mt-1">{errors.issn.message}</p>}
+                      {errors.ISSN && <p className="text-red-500 text-sm mt-1">{errors.ISSN.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Регистрационный номер</label>
-                      <Input placeholder="Введите регистрационный номер" {...register("registrationNumber")} className={themeClasses.input} />
-                      {errors.registrationNumber && <p className="text-red-500 text-sm mt-1">{errors.registrationNumber.message}</p>}
+                      <Input placeholder="Введите регистрационный номер" {...register("RegistrationNumber")} className={themeClasses.input} />
+                      {errors.RegistrationNumber && <p className="text-red-500 text-sm mt-1">{errors.RegistrationNumber.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Издательство</label>
-                      <Input placeholder="Введите название издательства" {...register("publisher")} className={themeClasses.input} />
-                      {errors.publisher && <p className="text-red-500 text-sm mt-1">{errors.publisher.message}</p>}
+                      <Input placeholder="Введите название издательства" {...register("Publisher")} className={themeClasses.input} />
+                      {errors.Publisher && <p className="text-red-500 text-sm mt-1">{errors.Publisher.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Дата основания</label>
-                      <Input type="date" {...register("foundationDate", { setValueAs: (v) => (v ? new Date(v) : null) })} className={themeClasses.input} />
-                      {errors.foundationDate && <p className="text-red-500 text-sm mt-1">{errors.foundationDate.message}</p>}
+                      <Input type="date" {...register("FoundationDate", { setValueAs: (v) => (v ? new Date(v) : null) })} className={themeClasses.input} />
+                      {errors.FoundationDate && <p className="text-red-500 text-sm mt-1">{errors.FoundationDate.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Дата публикации</label>
-                      <Input type="date" {...register("publicationDate", { setValueAs: (v) => (v ? new Date(v) : null) })} className={themeClasses.input} />
-                      {errors.publicationDate && <p className="text-red-500 text-sm mt-1">{errors.publicationDate.message}</p>}
+                      <Input type="date" {...register("PublicationDate", { setValueAs: (v) => (v ? new Date(v) : null) })} className={themeClasses.input} />
+                      {errors.PublicationDate && <p className="text-red-500 text-sm mt-1">{errors.PublicationDate.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Категория</label>
-                      <Select onValueChange={(value) => setValue("category", value as any)} defaultValue={initialData?.category || "Scientific"}>
+                      <Select onValueChange={(value) => setValue("Category", value as any)} defaultValue={initialData?.Category || "Scientific"}>
                         <SelectTrigger className={themeClasses.select}><SelectValue placeholder="Выберите категорию" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Scientific">Научный</SelectItem>
@@ -502,11 +502,11 @@ const JournalForm = ({
                           <SelectItem value="News">Новостной</SelectItem>
                         </SelectContent>
                       </Select>
-                      {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category.message}</p>}
+                      {errors.Category && <p className="text-red-500 text-sm mt-1">{errors.Category.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Формат</label>
-                      <Select onValueChange={(value) => setValue("format", value as any)} defaultValue={initialData?.format || "Print"}>
+                      <Select onValueChange={(value) => setValue("Format", value as any)} defaultValue={initialData?.Format || "Print"}>
                         <SelectTrigger className={themeClasses.select}><SelectValue placeholder="Выберите формат" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Print">Печатный</SelectItem>
@@ -514,11 +514,11 @@ const JournalForm = ({
                           <SelectItem value="Mixed">Смешанный</SelectItem>
                         </SelectContent>
                       </Select>
-                      {errors.format && <p className="text-red-500 text-sm mt-1">{errors.format.message}</p>}
+                      {errors.Format && <p className="text-red-500 text-sm mt-1">{errors.Format.message}</p>}
                     </div>
                     <div className="md:col-span-2">
                       <div className="flex items-center space-x-2 mb-4">
-                        <Checkbox id="isOpenAccess" checked={isOpenAccess} onCheckedChange={(checked) => setValue("isOpenAccess", checked === true)} />
+                        <Checkbox id="IsOpenAccess" checked={watch("IsOpenAccess")} onCheckedChange={(checked) => setValue("IsOpenAccess", checked === true)} />
                         <label className="text-base font-semibold text-neutral-500 dark:text-white">Открытый доступ</label>
                       </div>
                     </div>
@@ -561,7 +561,7 @@ const JournalForm = ({
                                 value={manualCoverUrl}
                                 onChange={(e) => {
                                   setManualCoverUrl(e.target.value);
-                                  setValue("coverImageUrl", e.target.value);
+                                  setValue("Cover", e.target.value);
                                   setPreviewUrl(e.target.value);
                                 }}
                                 className={`${themeClasses.input} text-xs h-8`}
@@ -579,27 +579,27 @@ const JournalForm = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Описание журнала</label>
-                      <Textarea placeholder="Введите описание журнала" {...register("description")} rows={7} className={themeClasses.textarea} />
-                      {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
+                      <Textarea placeholder="Введите описание журнала" {...register("Description")} rows={7} className={themeClasses.textarea} />
+                      {errors.Description && <p className="text-red-500 text-sm mt-1">{errors.Description.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Страниц в выпуске</label>
-                      <Input type="number" placeholder="Введите количество страниц" min={0} {...register("pagesPerIssue", { valueAsNumber: true })} className={themeClasses.input} />
-                      {errors.pagesPerIssue && <p className="text-red-500 text-sm mt-1">{errors.pagesPerIssue.message}</p>}
+                      <Input type="number" placeholder="Введите количество страниц" min={0} {...register("PagesPerIssue", { valueAsNumber: true })} className={themeClasses.input} />
+                      {errors.PagesPerIssue && <p className="text-red-500 text-sm mt-1">{errors.PagesPerIssue.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Количество страниц</label>
-                      <Input type="number" placeholder="Введите общее количество страниц" min={0} {...register("pageCount", { valueAsNumber: true })} className={themeClasses.input} />
-                      {errors.pageCount && <p className="text-red-500 text-sm mt-1">{errors.pageCount.message}</p>}
+                      <Input type="number" placeholder="Введите общее количество страниц" min={0} {...register("PageCount", { valueAsNumber: true })} className={themeClasses.input} />
+                      {errors.PageCount && <p className="text-red-500 text-sm mt-1">{errors.PageCount.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Тираж</label>
-                      <Input type="number" placeholder="Введите тираж журнала" min={0} {...register("circulation", { valueAsNumber: true })} className={themeClasses.input} />
-                      {errors.circulation && <p className="text-red-500 text-sm mt-1">{errors.circulation.message}</p>}
+                      <Input type="number" placeholder="Введите тираж журнала" min={0} {...register("Circulation", { valueAsNumber: true })} className={themeClasses.input} />
+                      {errors.Circulation && <p className="text-red-500 text-sm mt-1">{errors.Circulation.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Периодичность</label>
-                      <Select onValueChange={(value) => setValue("periodicity", value as any)} defaultValue={initialData?.periodicity || "Monthly"}>
+                      <Select onValueChange={(value) => setValue("Periodicity", value as any)} defaultValue={initialData?.Periodicity || "Monthly"}>
                         <SelectTrigger className={themeClasses.select}><SelectValue placeholder="Выберите периодичность" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Weekly">Еженедельно</SelectItem>
@@ -610,12 +610,12 @@ const JournalForm = ({
                           <SelectItem value="Annually">Ежегодно</SelectItem>
                         </SelectContent>
                       </Select>
-                      {errors.periodicity && <p className="text-red-500 text-sm mt-1">{errors.periodicity.message}</p>}
+                      {errors.Periodicity && <p className="text-red-500 text-sm mt-1">{errors.Periodicity.message}</p>}
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Целевая аудитория</label>
-                      <Input placeholder="Введите целевую аудиторию" {...register("targetAudience")} className={themeClasses.input} />
-                      {errors.targetAudience && <p className="text-red-500 text-sm mt-1">{errors.targetAudience.message}</p>}
+                      <Input placeholder="Введите целевую аудиторию" {...register("TargetAudience")} className={themeClasses.input} />
+                      {errors.TargetAudience && <p className="text-red-500 text-sm mt-1">{errors.TargetAudience.message}</p>}
                     </div>
                   </div>
                 </TabsContent>
@@ -624,19 +624,19 @@ const JournalForm = ({
                 <TabsContent value="rare-fields" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="isPeerReviewed" checked={watch("isPeerReviewed")} onCheckedChange={(checked) => setValue("isPeerReviewed", checked === true)} />
+                      <Checkbox id="IsPeerReviewed" checked={watch("IsPeerReviewed")} onCheckedChange={(checked) => setValue("IsPeerReviewed", checked === true)} />
                       <label className="text-base font-semibold text-neutral-500 dark:text-white">Рецензируемый</label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="isIndexedInRINTS" checked={watch("isIndexedInRINTS")} onCheckedChange={(checked) => setValue("isIndexedInRINTS", checked === true)} />
+                      <Checkbox id="IsIndexedInRINTS" checked={watch("IsIndexedInRINTS")} onCheckedChange={(checked) => setValue("IsIndexedInRINTS", checked === true)} />
                       <label className="text-base font-semibold text-neutral-500 dark:text-white">Индексируется в РИНЦ</label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="isIndexedInScopus" checked={watch("isIndexedInScopus")} onCheckedChange={(checked) => setValue("isIndexedInScopus", checked === true)} />
+                      <Checkbox id="IsIndexedInScopus" checked={watch("IsIndexedInScopus")} onCheckedChange={(checked) => setValue("IsIndexedInScopus", checked === true)} />
                       <label className="text-base font-semibold text-neutral-500 dark:text-white">Индексируется в Scopus</label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="isIndexedInWebOfScience" checked={watch("isIndexedInWebOfScience")} onCheckedChange={(checked) => setValue("isIndexedInWebOfScience", checked === true)} />
+                      <Checkbox id="IsIndexedInWebOfScience" checked={watch("IsIndexedInWebOfScience")} onCheckedChange={(checked) => setValue("IsIndexedInWebOfScience", checked === true)} />
                       <label className="text-base font-semibold text-neutral-500 dark:text-white">Индексируется в Web of Science</label>
                     </div>
                   </div>

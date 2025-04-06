@@ -13,38 +13,38 @@ const BorrowedBooksChart = dynamic(() => import("@/components/admin/BorrowedBook
 
 // Определение типов
 interface User {
-  id: string;
-  fullName: string;
-  borrowedBooksCount: number;
-  maxBooksAllowed: number;
-  fineAmount?: number;
+  Id: string;
+  FullName: string;
+  BorrowedBooksCount: number;
+  MaxBooksAllowed: number;
+  FineAmount?: number;
 }
 
 interface Book {
-  id: string;
-  title: string;
-  availableCopies: number;
-  cover?: string;
-  authors?: string;
+  Id: string;
+  Title: string;
+  AvailableCopies: number;
+  Cover?: string;
+  Authors?: string;
 }
 
 interface Journal {
-  id: string;
-  title: string;
-  isOpenAccess: boolean;
-  isPeerReviewed: boolean;
+  Id: string;
+  Title: string;
+  IsOpenAccess: boolean;
+  IsPeerReviewed: boolean;
 }
 
 interface Reservation {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  user?: User;
-  book?: Book;
+  Id: string;
+  UserId: string;
+  BookId: string;
+  ReservationDate: string;
+  ExpirationDate: string;
+  Status: string;
+  Notes?: string;
+  User?: User;
+  Book?: Book;
 }
 
 interface MonthlyBorrowedData {
@@ -97,18 +97,18 @@ export default function DashboardPage() {
   const themeClasses = getThemeClasses();
 
   // Вычисляемые свойства
-  const activeUsersCount = users.filter((u) => u.borrowedBooksCount > 0).length;
+  const activeUsersCount = users.filter((u) => u.BorrowedBooksCount > 0).length;
   const totalUsersCount = users.length;
-  const pendingReservations = reservations.filter((r) => r.status === "Обрабатывается").length;
-  const totalBorrowedBooks = users.reduce((total, user) => total + user.borrowedBooksCount, 0);
-  const totalAvailableBooks = books.reduce((sum, book) => sum + book.availableCopies, 0);
+  const pendingReservations = reservations.filter((r) => r.Status === "Обрабатывается").length;
+  const totalBorrowedBooks = users.reduce((total, user) => total + user.BorrowedBooksCount, 0);
+  const totalAvailableBooks = books.reduce((sum, book) => sum + book.AvailableCopies, 0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const usersResponse = await fetch(`${baseUrl}/api/User`);
+        const usersResponse = await fetch(`${baseUrl}/api/Users`);
         if (!usersResponse.ok) throw new Error("Ошибка при загрузке пользователей");
         const usersData = await usersResponse.json();
         setUsers(usersData);
@@ -123,21 +123,21 @@ export default function DashboardPage() {
         const journalsData = await journalsResponse.json();
         setJournals(journalsData);
 
-        const reservationsResponse = await fetch(`${baseUrl}/api/Reservation`);
+        const reservationsResponse = await fetch(`${baseUrl}/api/Reservations`);
         if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резерваций");
         const reservationsData = await reservationsResponse.json();
         setReservations(reservationsData);
 
-        const pendingRequests = reservationsData.filter((r: Reservation) => r.status === "Обрабатывается");
+        const pendingRequests = reservationsData.filter((r: Reservation) => r.Status === "Обрабатывается");
         setBookRequests(pendingRequests);
 
         const userRequestsData = reservationsData
-          .filter((r: Reservation) => r.status === "Обрабатывается")
-          .sort((a: Reservation, b: Reservation) => new Date(a.reservationDate).getTime() - new Date(b.reservationDate).getTime());
+          .filter((r: Reservation) => r.Status === "Обрабатывается")
+          .sort((a: Reservation, b: Reservation) => new Date(a.ReservationDate).getTime() - new Date(b.ReservationDate).getTime());
         setUserRequests(userRequestsData);
 
         const sortedActivities = [...reservationsData]
-          .sort((a: Reservation, b: Reservation) => new Date(b.reservationDate).getTime() - new Date(a.reservationDate).getTime())
+          .sort((a: Reservation, b: Reservation) => new Date(b.ReservationDate).getTime() - new Date(a.ReservationDate).getTime())
           .slice(0, 10);
         setRecentActivities(sortedActivities);
 
@@ -146,8 +146,8 @@ export default function DashboardPage() {
           date.setMonth(date.getMonth() - i);
           const monthKey = date.toLocaleString("ru-RU", { month: "short", year: "numeric" });
           const borrowed = reservationsData.filter((r: Reservation) => {
-            const reservationMonth = new Date(r.reservationDate).toLocaleString("ru-RU", { month: "short", year: "numeric" });
-            return reservationMonth === monthKey && r.status === "Выполнена";
+            const reservationMonth = new Date(r.ReservationDate).toLocaleString("ru-RU", { month: "short", year: "numeric" });
+            return reservationMonth === monthKey && r.Status === "Выполнена";
           }).length;
           return {
             month: date.toLocaleString("ru-RU", { month: "short" }),
@@ -183,17 +183,17 @@ export default function DashboardPage() {
 
   const handleApproveRequest = async (id: string) => {
     try {
-      const reservation = reservations.find((r) => r.id === id);
+      const reservation = reservations.find((r) => r.Id === id);
       if (!reservation) throw new Error("Резервация не найдена");
 
       const updatedReservation = {
         ...reservation,
-        reservationDate: new Date(reservation.reservationDate).toISOString(),
-        expirationDate: new Date(reservation.expirationDate).toISOString(),
-        status: "Выполнена",
+        ReservationDate: new Date(reservation.ReservationDate).toISOString(),
+        ExpirationDate: new Date(reservation.ExpirationDate).toISOString(),
+        Status: "Выполнена",
       };
 
-      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+      const response = await fetch(`${baseUrl}/api/Reservations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedReservation),
@@ -201,10 +201,10 @@ export default function DashboardPage() {
 
       if (!response.ok) throw new Error("Ошибка при обновлении резервации");
 
-      setBookRequests(bookRequests.filter((r) => r.id !== id));
-      setUserRequests(userRequests.filter((r) => r.id !== id));
-      setReservations(reservations.map((r) => (r.id === id ? { ...r, status: "Выполнена" } : r)));
-      setRecentActivities(recentActivities.map((r) => (r.id === id ? { ...r, status: "Выполнена" } : r)));
+      setBookRequests(bookRequests.filter((r) => r.Id !== id));
+      setUserRequests(userRequests.filter((r) => r.Id !== id));
+      setReservations(reservations.map((r) => (r.Id === id ? { ...r, Status: "Выполнена" } : r)));
+      setRecentActivities(recentActivities.map((r) => (r.Id === id ? { ...r, Status: "Выполнена" } : r)));
     } catch (err) {
       console.error("Ошибка при одобрении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при одобрении запроса");
@@ -213,17 +213,17 @@ export default function DashboardPage() {
 
   const handleRejectRequest = async (id: string) => {
     try {
-      const reservation = reservations.find((r) => r.id === id);
+      const reservation = reservations.find((r) => r.Id === id);
       if (!reservation) throw new Error("Резервация не найдена");
 
       const updatedReservation = {
         ...reservation,
-        reservationDate: new Date(reservation.reservationDate).toISOString(),
-        expirationDate: new Date(reservation.expirationDate).toISOString(),
-        status: "Отменена",
+        ReservationDate: new Date(reservation.ReservationDate).toISOString(),
+        ExpirationDate: new Date(reservation.ExpirationDate).toISOString(),
+        Status: "Отменена",
       };
 
-      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+      const response = await fetch(`${baseUrl}/api/Reservations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedReservation),
@@ -231,10 +231,10 @@ export default function DashboardPage() {
 
       if (!response.ok) throw new Error("Ошибка при обновлении резервации");
 
-      setBookRequests(bookRequests.filter((r) => r.id !== id));
-      setUserRequests(userRequests.filter((r) => r.id !== id));
-      setReservations(reservations.map((r) => (r.id === id ? { ...r, status: "Отменена" } : r)));
-      setRecentActivities(recentActivities.map((r) => (r.id === id ? { ...r, status: "Отменена" } : r)));
+      setBookRequests(bookRequests.filter((r) => r.Id !== id));
+      setUserRequests(userRequests.filter((r) => r.Id !== id));
+      setReservations(reservations.map((r) => (r.Id === id ? { ...r, Status: "Отменена" } : r)));
+      setRecentActivities(recentActivities.map((r) => (r.Id === id ? { ...r, Status: "Отменена" } : r)));
     } catch (err) {
       console.error("Ошибка при отклонении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при отклонении запроса");
@@ -242,15 +242,15 @@ export default function DashboardPage() {
   };
 
   const reservationEvents = reservations.map((reservation) => ({
-    id: reservation.id,
-    userId: reservation.userId,
-    bookId: reservation.bookId,
-    reservationDate: new Date(reservation.reservationDate).toISOString().split("T")[0],
-    expirationDate: new Date(reservation.expirationDate).toISOString().split("T")[0],
-    status: reservation.status,
-    notes: reservation.notes,
-    userName: reservation.user?.fullName || "Неизвестный пользователь",
-    bookTitle: reservation.book?.title || "Неизвестная книга",
+    Id: reservation.Id,
+    UserId: reservation.UserId,
+    BookId: reservation.BookId,
+    ReservationDate: new Date(reservation.ReservationDate).toISOString().split("T")[0],
+    ExpirationDate: new Date(reservation.ExpirationDate).toISOString().split("T")[0],
+    Status: reservation.Status,
+    Notes: reservation.Notes,
+    UserName: reservation.User?.FullName || "Неизвестный пользователь",
+    BookTitle: reservation.Book?.Title || "Неизвестная книга",
   }));
 
   if (loading) return <div className="flex justify-center items-center h-screen text-neutral-200 dark:text-neutral-100">Загрузка...</div>;
@@ -283,7 +283,7 @@ export default function DashboardPage() {
           <div className={`${themeClasses.statsCard} border-l-4 border-red-600 min-h-[200px]`}>
             <h3 className={themeClasses.sectionTitle}>Штрафы</h3>
             <p className="text-3xl font-bold text-red-800 mt-4">
-              {users.reduce((sum, user) => sum + (user.fineAmount || 0), 0).toFixed(2)} ₽
+              {users.reduce((sum, user) => sum + (user.FineAmount || 0), 0).toFixed(2)} ₽
             </p>
             <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">общая сумма</p>
             <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2 flex items-center">
@@ -325,11 +325,11 @@ export default function DashboardPage() {
             <div className="space-y-3 flex-1">
               {recentBooks.length > 0 ? (
                 recentBooks.map((book) => (
-                  <div key={book.id} className={themeClasses.bookCard}>
+                  <div key={book.Id} className={themeClasses.bookCard}>
                     <div className="flex items-center w-full">
                       <div className="w-12 h-16 flex-shrink-0 bg-gray-200/50 dark:bg-neutral-700/50 rounded mr-4 overflow-hidden">
-                        {book.cover ? (
-                          <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                        {book.Cover ? (
+                          <img src={book.Cover} alt={book.Title} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <BookOpen className="w-6 h-6 text-neutral-400" />
@@ -337,17 +337,17 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Link href={`/admin/books/${book.id}`}>
+                        <Link href={`/admin/books/${book.Id}`}>
                           <h3 className="text-neutral-400 dark:text-neutral-100 font-medium truncate hover:text-blue-600 transition-colors">
-                            {book.title}
+                            {book.Title}
                           </h3>
                         </Link>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                          {book.authors || "Автор не указан"}
+                          {book.Authors || "Автор не указан"}
                         </p>
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 flex items-center">
                           <span className="inline-block px-2 py-0.5 bg-blue-100/50 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 rounded-full mr-1">
-                            {book.availableCopies}
+                            {book.AvailableCopies}
                           </span>
                           экз.
                         </p>
@@ -374,21 +374,21 @@ export default function DashboardPage() {
             <div className="flex-1 max-h-[400px] overflow-y-auto">
               {userRequests.length > 0 ? (
                 userRequests.slice(0, 3).map((reservation) => (
-                  <div key={reservation.id} className={`${themeClasses.requestCard} border-l-4 border-yellow-500`}>
+                  <div key={reservation.Id} className={`${themeClasses.requestCard} border-l-4 border-yellow-500`}>
                     <p className="text-lg font-medium text-neutral-500 dark:text-neutral-100">
-                      {reservation.user?.fullName || "Неизвестный пользователь"}
+                      {reservation.User?.FullName || "Неизвестный пользователь"}
                     </p>
-                    <p className="text-sm text-neutral-400 dark:text-neutral-400 mt-2">{reservation.book?.title || "Неизвестная книга"}</p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(reservation.reservationDate)}</p>
+                    <p className="text-sm text-neutral-400 dark:text-neutral-400 mt-2">{reservation.Book?.Title || "Неизвестная книга"}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(reservation.ReservationDate)}</p>
                     <div className="mt-4 flex gap-3">
                       <button
-                        onClick={() => handleApproveRequest(reservation.id)}
+                        onClick={() => handleApproveRequest(reservation.Id)}
                         className={themeClasses.actionButton.approve}
                       >
                         Одобрить
                       </button>
                       <button
-                        onClick={() => handleRejectRequest(reservation.id)}
+                        onClick={() => handleRejectRequest(reservation.Id)}
                         className={themeClasses.actionButton.reject}
                       >
                         Отклонить
@@ -412,21 +412,21 @@ export default function DashboardPage() {
             <div className="flex-1 max-h-[400px] overflow-y-auto">
               {bookRequests.length > 0 ? (
                 bookRequests.slice(0, 3).map((request) => (
-                  <div key={request.id} className={`${themeClasses.requestCard} border-l-4 border-blue-500`}>
-                    <p className="text-lg font-medium text-neutral-500 dark:text-neutral-100">{request.book?.title || "Неизвестная книга"}</p>
+                  <div key={request.Id} className={`${themeClasses.requestCard} border-l-4 border-blue-500`}>
+                    <p className="text-lg font-medium text-neutral-500 dark:text-neutral-100">{request.Book?.Title || "Неизвестная книга"}</p>
                     <p className="text-sm text-neutral-400 dark:text-neutral-400 mt-2">
-                      Пользователь: {request.user?.fullName || "Неизвестный пользователь"}
+                      Пользователь: {request.User?.FullName || "Неизвестный пользователь"}
                     </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(request.reservationDate)}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(request.ReservationDate)}</p>
                     <div className="mt-4 flex gap-3">
                       <button
-                        onClick={() => handleApproveRequest(request.id)}
+                        onClick={() => handleApproveRequest(request.Id)}
                         className={themeClasses.actionButton.approve}
                       >
                         Одобрить
                       </button>
                       <button
-                        onClick={() => handleRejectRequest(request.id)}
+                        onClick={() => handleRejectRequest(request.Id)}
                         className={themeClasses.actionButton.reject}
                       >
                         Отклонить
@@ -456,23 +456,23 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {recentActivities.map((reservation, index) => (
-                  <tr key={reservation.id} className={index % 2 === 0 ? themeClasses.tableRow.even : themeClasses.tableRow.odd}>
+                  <tr key={reservation.Id} className={index % 2 === 0 ? themeClasses.tableRow.even : themeClasses.tableRow.odd}>
                     <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">Резервация</td>
-                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{reservation.book?.title || "Неизвестная книга"}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{formatDate(reservation.reservationDate)}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{reservation.Book?.Title || "Неизвестная книга"}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{formatDate(reservation.ReservationDate)}</td>
                     <td className="px-6 py-4">
                       <span
                         className={
-                          reservation.status === "Выполнена"
+                          reservation.Status === "Выполнена"
                             ? themeClasses.statusBadge.completed
-                            : reservation.status === "Обрабатывается"
+                            : reservation.Status === "Обрабатывается"
                             ? themeClasses.statusBadge.processing
                             : themeClasses.statusBadge.canceled
                         }
                       >
-                        {reservation.status === "Выполнена"
+                        {reservation.Status === "Выполнена"
                           ? "Выполнена"
-                          : reservation.status === "Обрабатывается"
+                          : reservation.Status === "Обрабатывается"
                           ? "В обработке"
                           : "Отменена"}
                       </span>

@@ -6,26 +6,26 @@ import JournalForm from "@/components/admin/forms/JournalForm";
 
 // Интерфейс Journal
 interface JournalInput {
-  title: string;
-  issn: string;
-  registrationNumber?: string | null;
-  format: "Print" | "Electronic" | "Mixed";
-  periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
-  pagesPerIssue: number;
-  description?: string | null;
-  publisher?: string | null;
-  foundationDate: Date;
-  circulation: number;
-  isOpenAccess: boolean;
-  category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
-  targetAudience?: string | null;
-  isPeerReviewed: boolean;
-  isIndexedInRINTS: boolean;
-  isIndexedInScopus: boolean;
-  isIndexedInWebOfScience: boolean;
-  publicationDate: Date;
-  pageCount: number;
-  coverImageUrl?: string | null;
+  Title: string;
+  ISSN?: string | null;
+  RegistrationNumber?: string | null;
+  Format: "Print" | "Electronic" | "Mixed";
+  Periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
+  PagesPerIssue: number;
+  Description?: string | null;
+  Publisher?: string | null;
+  FoundationDate: Date;
+  Circulation: number;
+  IsOpenAccess: boolean;
+  Category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
+  TargetAudience?: string | null;
+  IsPeerReviewed: boolean;
+  IsIndexedInRINTS: boolean;
+  IsIndexedInScopus: boolean;
+  IsIndexedInWebOfScience: boolean;
+  PublicationDate: Date;
+  PageCount: number;
+  Cover?: string | null;
 }
 
 export default function JournalCreatePage() {
@@ -55,7 +55,7 @@ export default function JournalCreatePage() {
       const newJournal = await res.json();
       
       // Перенаправляем на страницу деталей журнала после успешного создания
-      router.push(`/admin/journals/${newJournal.id}`);
+      router.push(`/admin/journals/${newJournal.Id}`);
       router.refresh(); // Обновляем кэш Next.js
     } catch (error) {
       console.error("Error creating journal:", error);
