@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/navigation-menu";
 import { CreditCard, Box, BookOpen } from "lucide-react";
 import "@/styles/admin.css";
-import api from "@/lib/api";
 
 // Интерфейс для модели журнала
 interface Journal {
@@ -23,11 +22,9 @@ interface Journal {
   registrationNumber?: string | null;
   format: "Print" | "Electronic" | "Mixed";
   periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
-  pagesPerIssue: number;
   description?: string | null;
   publisher?: string | null;
   foundationDate: string;
-  circulation: number;
   isOpenAccess: boolean;
   category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
   targetAudience?: string | null;
@@ -35,9 +32,35 @@ interface Journal {
   isIndexedInRINTS: boolean;
   isIndexedInScopus: boolean;
   isIndexedInWebOfScience: boolean;
-  publicationDate: string;
-  pageCount: number;
   coverImageUrl?: string | null;
+  website?: string | null;
+  editorInChief?: string | null;
+  editorialBoard?: string[] | null;
+  issues?: IssueShort[] | null;
+}
+
+// Интерфейс для API-модели журнала
+interface ApiJournal {
+  id: number;
+  title: string;
+  issn?: string;
+  publisher?: string;
+  startYear?: number;
+  endYear?: number;
+  description?: string;
+  coverImage?: string;
+  website?: string;
+  issues?: IssueShort[];
+}
+
+// Интерфейс для краткой информации о выпуске
+interface IssueShort {
+  id: number;
+  volumeNumber: number;
+  issueNumber: number;
+  publicationDate: string;
+  cover?: string | null;
+  specialTheme?: string | null;
 }
 
 /**
@@ -92,6 +115,31 @@ const JournalImage = ({ src, alt, journalId }: { src: string | null | undefined;
   );
 };
 
+const formatDate = (dateString: string) => {
+  try {
+    // Проверяем, что dateString не пустая и не null
+    if (!dateString) {
+      return "Дата не указана";
+    }
+    
+    const date = new Date(dateString);
+    
+    // Проверяем валидность даты (NaN возвращается, если дата невалидна)
+    if (isNaN(date.getTime())) {
+      return "Некорректная дата";
+    }
+    
+    return new Intl.DateTimeFormat('ru-RU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+  } catch (error) {
+    console.error("Ошибка форматирования даты:", error);
+    return "Ошибка в дате";
+  }
+};
+
 /**
  * CardsView with DashboardPage-style cards
  */
@@ -111,6 +159,11 @@ const CardsView = ({ journals, onDelete, themeClasses }: { journals: Journal[]; 
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 {journal.category && `${journal.category}`}
               </p>
+              {journal.issues && journal.issues.length > 0 && (
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+                  Выпусков: {journal.issues.length}
+                </p>
+              )}
             </div>
             <div className="flex justify-end gap-2 mt-2">
               <Link href={`/admin/journals/${journal.id}/update`}>
@@ -216,6 +269,33 @@ const ViewModeMenu = ({ viewMode, setViewMode, themeClasses }: { viewMode: strin
   );
 };
 
+// Функция для преобразования данных API к нашему интерфейсу
+const adaptApiJournalToJournal = (apiJournal: ApiJournal): Journal => {
+  return {
+    id: apiJournal.id,
+    title: apiJournal.title,
+    issn: apiJournal.issn || '',
+    registrationNumber: null,
+    format: "Print" as const,
+    periodicity: "Monthly" as const,
+    description: apiJournal.description || null,
+    publisher: apiJournal.publisher || null,
+    foundationDate: apiJournal.startYear?.toString() || new Date().toISOString(),
+    isOpenAccess: false,
+    category: "Scientific" as const,
+    targetAudience: null,
+    isPeerReviewed: false,
+    isIndexedInRINTS: false,
+    isIndexedInScopus: false,
+    isIndexedInWebOfScience: false,
+    coverImageUrl: apiJournal.coverImage || null,
+    website: apiJournal.website || null,
+    editorInChief: null,
+    editorialBoard: null,
+    issues: apiJournal.issues || null
+  };
+};
+
 /**
  * Main JournalsPage component
  */
@@ -229,8 +309,17 @@ export default function JournalsPage() {
   useEffect(() => {
     const fetchJournals = async () => {
       try {
-        const data = await api.journals.getAll();
-        setJournals(data);
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+        const response = await fetch(`${baseUrl}/api/journals`);
+        
+        if (!response.ok) {
+          throw new Error('Ошибка при получении журналов');
+        }
+        
+        const data = await response.json();
+        // Преобразуем данные из API к нашему интерфейсу
+        const adaptedJournals = data.map(adaptApiJournalToJournal);
+        setJournals(adaptedJournals);
       } catch (error) {
         console.error("Ошибка получения журналов", error);
         toast({
@@ -255,7 +344,15 @@ export default function JournalsPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await api.journals.delete(id);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+      const response = await fetch(`${baseUrl}/api/journals/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Ошибка при удалении журнала');
+      }
+      
       setJournals(journals.filter((journal) => journal.id !== id));
       toast({
         title: "Успешно",

@@ -1,16 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft, BookOpen, Users, BookMarked, CalendarClock, AlertTriangle, CircleDollarSign } from "lucide-react";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { ChevronLeft, BookOpen, Users, BookMarked, CalendarClock, AlertTriangle, CircleDollarSign, BarChart3, PieChartIcon, TrendingUp, Info, ArrowRight, ChevronRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AreaChart,
@@ -26,8 +19,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
-  Label
-} from 'recharts';
+} from "recharts";
 
 // Типы данных для статистики
 interface User {
@@ -80,6 +72,199 @@ interface TopUserData {
   value: number;
 }
 
+// Компонент для анимированного счетчика
+const CountUp = ({ end, duration = 2, decimals = 0 }: { end: number; duration?: number; decimals?: number }) => {
+  const [count, setCount] = useState(0);
+  const countRef = useRef(0);
+  const startTime = useRef(0);
+  
+  useEffect(() => {
+    startTime.current = Date.now();
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const progress = Math.min((now - startTime.current) / (duration * 1000), 1);
+      countRef.current = progress * end;
+      setCount(countRef.current);
+      
+      if (progress === 1) {
+        clearInterval(interval);
+      }
+    }, 16);
+    
+    return () => clearInterval(interval);
+  }, [end, duration]);
+  
+  return <>{count.toFixed(decimals)}</>;
+};
+
+// Компонент для анимированного появления
+const FadeInView = ({ children, delay = 0, duration = 0.5 }: { children: React.ReactNode; delay?: number; duration?: number }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// Компонент для карточки статистики
+const StatCard = ({ 
+  title, 
+  value, 
+  subtitle, 
+  additionalInfo, 
+  icon, 
+  color, 
+  delay = 0,
+  href,
+}: { 
+  title: string; 
+  value: number; 
+  subtitle: string; 
+  additionalInfo?: React.ReactNode; 
+  icon: React.ReactNode; 
+  color: string;
+  delay?: number;
+  href?: string;
+}) => {
+  return (
+    <FadeInView delay={delay}>
+      <motion.div 
+        className={`backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-white/20 dark:border-gray-700/30 relative overflow-hidden`}
+        whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)" }}
+      >
+        <div className={`absolute top-0 left-0 w-1.5 h-full ${color}`}></div>
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            {icon}
+            {title}
+          </h3>
+          <div className={`w-10 h-10 rounded-full ${color} bg-opacity-20 dark:bg-opacity-30 flex items-center justify-center shadow-inner`}>
+            {icon}
+          </div>
+        </div>
+        <div>
+          <p className={`text-4xl font-bold mb-2 text-white`}>
+            <CountUp end={value} decimals={title === "Штрафы" ? 2 : 0} />
+            {title === "Штрафы" && " ₽"}
+          </p>
+          <p className="text-sm text-white">{subtitle}</p>
+          {additionalInfo && (
+            <div className="mt-3 text-sm text-white">
+              {additionalInfo}
+            </div>
+          )}
+        </div>
+        {href && (
+          <Link href={href} className="mt-4">
+            <span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center">
+              Подробнее
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </span>
+          </Link>
+        )}
+      </motion.div>
+    </FadeInView>
+  );
+};
+
+// Компонент для карточки с графиком
+const ChartCard = ({ 
+  title, 
+  description,
+  children, 
+  delay = 0,
+  icon,
+  infoTooltip,
+}: { 
+  title: string;
+  description?: string;
+  children: React.ReactNode; 
+  delay?: number;
+  icon?: React.ReactNode;
+  infoTooltip?: string;
+}) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  
+  return (
+    <FadeInView delay={delay}>
+      <motion.div 
+        className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30"
+      >
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              {icon || <BarChart3 className="w-5 h-5 text-emerald-500" />}
+              {title}
+            </h3>
+            {description && (
+              <p className="text-sm text-white mt-1">{description}</p>
+            )}
+          </div>
+          
+          {infoTooltip && (
+            <div className="relative">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="text-white hover:text-emerald-500 transition-colors"
+                onClick={() => setShowTooltip(!showTooltip)}
+              >
+                <Info className="w-5 h-5" />
+              </motion.button>
+              
+              <AnimatePresence>
+                {showTooltip && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 top-full mt-2 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 w-64 z-20"
+                  >
+                    <p className="text-sm text-white">
+                      {infoTooltip}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+          {children}
+        </div>
+      </motion.div>
+    </FadeInView>
+  );
+};
+
+// Компонент для вкладок
+const AnimatedTabsTrigger = ({ value, icon, label, isActive }: { value: string; icon: React.ReactNode; label: string; isActive: boolean }) => {
+  return (
+    <TabsTrigger value={value} className="relative data-[state=active]:bg-transparent">
+      <div className="flex items-center gap-2 py-2 px-1">
+        <span className={isActive ? "text-emerald-500" : "text-gray-500 dark:text-gray-400"}>
+          {icon}
+        </span>
+        <span>{label}</span>
+      </div>
+      {isActive && (
+        <motion.div
+          layoutId="activeTab"
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        />
+      )}
+    </TabsTrigger>
+  );
+};
+
 export default function StatisticsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
@@ -91,6 +276,18 @@ export default function StatisticsPage() {
   const [bookCategoriesData, setBookCategoriesData] = useState<CategoryData[]>([]);
   const [topUsersData, setTopUsersData] = useState<TopUserData[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<CategoryData[]>([]);
+  const [activeTab, setActiveTab] = useState("overview");
+  
+  // Ref для отслеживания скролла
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+  
+  const opacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.1], [1, 0.95]);
+  const y = useTransform(scrollYProgress, [0, 0.1], [0, -20]);
   
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
@@ -211,34 +408,76 @@ export default function StatisticsPage() {
     fetchData();
   }, [baseUrl, completedReservations, pendingReservations, canceledReservations]);
 
-  if (loading) return <div className="flex justify-center items-center h-screen text-neutral-200 dark:text-neutral-100">Загрузка...</div>;
-  if (error) return <div className="text-red-500 p-4 border border-red-300 rounded">{error}</div>;
+  // Компонент загрузки
+  const LoadingSpinner = () => {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full"
+        />
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-4 text-emerald-600 dark:text-emerald-400 font-medium"
+        >
+          Загрузка данных...
+        </motion.p>
+      </div>
+    );
+  };
 
-  const COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
+  if (loading) return <LoadingSpinner />;
+  
+  if (error) return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col items-center justify-center h-screen p-6"
+    >
+      <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-xl text-red-600 dark:text-red-400 p-6 rounded-xl border border-white/20 dark:border-gray-700/30 max-w-md w-full text-center shadow-lg">
+        <AlertTriangle className="w-12 h-12 mx-auto mb-4" />
+        <h2 className="text-xl font-bold mb-2">Произошла ошибка</h2>
+        <p>{error}</p>
+        <motion.button 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => window.location.reload()}
+          className="mt-4 bg-emerald-500/90 hover:bg-emerald-600/90 text-white px-4 py-2 rounded-lg font-medium shadow-md backdrop-blur-md"
+        >
+          Попробовать снова
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+
+  const COLORS = ["#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6"];
 
   // Функция для форматирования подсказок в графиках
-  const formatTooltipValue = (value: any, name?: string, props?: any) => {
+  const formatTooltipValue = (value: any, name?: string) => {
     if (typeof value === 'number') {
       return [`${value} книг`, name || ""];
     }
     return [value, name || ""];
   };
 
-  const formatTooltipValueMoney = (value: any, name?: string, props?: any) => {
+  const formatTooltipValueMoney = (value: any, name?: string) => {
     if (typeof value === 'number') {
       return [`${value.toFixed(2)} ₽`, name || ""];
     }
     return [value, name || ""];
   };
 
-  const formatTooltipValueUsers = (value: any, name?: string, props?: any) => {
+  const formatTooltipValueUsers = (value: any, name?: string) => {
     if (typeof value === 'number') {
       return [`${value} пользователей`, name || ""];
     }
     return [value, name || ""];
   };
 
-  const formatTooltipValueReservations = (value: any, name?: string, props?: any) => {
+  const formatTooltipValueReservations = (value: any, name?: string) => {
     if (typeof value === 'number') {
       return [`${value} резерваций`, name || ""];
     }
@@ -246,513 +485,776 @@ export default function StatisticsPage() {
   };
 
   return (
-    <div className="container p-4">
-      <div className="mb-6 flex items-center">
-        <div className="flex items-center gap-2">
-          <Link 
-            href="/admin" 
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
+    <div className="min-h-screen relative" ref={containerRef}>
+      {/* Floating shapes */}
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+      
+      <div className="container mx-auto p-6 relative z-10">
+        {/* Заголовок с анимацией при скролле */}
+        <motion.div 
+          className="mb-8 sticky top-0 z-10 pt-4 pb-6 bg-transparent"
+          style={{ opacity, scale, y }}
+        >
+          <div className="flex items-center gap-4">
+            <motion.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Link 
+                href="/admin" 
+                className="flex items-center gap-2 text-white hover:text-emerald-300 transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+                <span className="font-medium">Назад</span>
+              </Link>
+            </motion.div>
+            
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-3xl font-bold text-white"
+            >
+              Статистика библиотеки
+            </motion.h1>
+          </div>
+          
+          <motion.p 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-white mt-2 max-w-2xl"
           >
-            <ChevronLeft className="h-4 w-4" />
-            <span>Назад в панель управления</span>
-          </Link>
-          <h1 className="text-2xl font-bold ml-4">Статистика библиотеки</h1>
-        </div>
-      </div>
+            Подробная аналитика по книгам, пользователям, резервациям и штрафам в библиотеке
+          </motion.p>
+        </motion.div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
-            <span>Обзор</span>
-          </TabsTrigger>
-          <TabsTrigger value="books" className="flex items-center gap-2">
-            <BookMarked className="h-4 w-4" />
-            <span>Книги</span>
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            <span>Пользователи</span>
-          </TabsTrigger>
-          <TabsTrigger value="reservations" className="flex items-center gap-2">
-            <CalendarClock className="h-4 w-4" />
-            <span>Резервации</span>
-          </TabsTrigger>
-          <TabsTrigger value="fines" className="flex items-center gap-2">
-            <CircleDollarSign className="h-4 w-4" />
-            <span>Штрафы</span>
-          </TabsTrigger>
-        </TabsList>
+        <Tabs 
+          defaultValue="overview" 
+          className="space-y-8"
+          onValueChange={setActiveTab}
+        >
+          <TabsList className="bg-green/30 dark:bg-green-800/30 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md">
+            <AnimatedTabsTrigger 
+              value="overview" 
+              icon={<TrendingUp className="w-5 h-5 text-emerald-500" />} 
+              label="Обзор" 
+              isActive={activeTab === "overview"} 
+            />
+            <AnimatedTabsTrigger 
+              value="books" 
+              icon={<BookMarked className="w-5 h-5 text-emerald-500" />}
+              label="Книги" 
+              isActive={activeTab === "books"} 
+            />
+            <AnimatedTabsTrigger 
+              value="users" 
+              icon={<Users className="w-5 h-5 text-emerald-500 " />} 
+              label="Пользователи" 
+              isActive={activeTab === "users"} 
+            />
+            <AnimatedTabsTrigger 
+              value="reservations" 
+              icon={<CalendarClock className="w-5 h-5 text-emerald-500" />} 
+              label="Резервации" 
+              isActive={activeTab === "reservations"} 
+            />
+            <AnimatedTabsTrigger 
+              value="fines" 
+              icon={<CircleDollarSign className="w-5 h-5 text-emerald-500" />} 
+              label="Штрафы" 
+              isActive={activeTab === "fines"} 
+            />
+          </TabsList>
 
-        {/* Обзор библиотеки */}
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-lg font-medium">Книги</CardTitle>
-                <BookOpen className="h-5 w-5 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{totalAvailableBooks + totalBorrowedBooks}</div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {totalAvailableBooks} доступно
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-lg font-medium">Пользователи</CardTitle>
-                <Users className="h-5 w-5 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{totalUsersCount}</div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {activeUsersCount} активных
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-lg font-medium">Резервации</CardTitle>
-                <CalendarClock className="h-5 w-5 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{reservations.length}</div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {pendingReservations} в ожидании
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-lg font-medium">Штрафы</CardTitle>
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{totalFines.toFixed(2)} ₽</div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  За просроченные книги
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Обзор библиотеки */}
+          <TabsContent value="overview" className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-green/20">
+              <StatCard
+                title="Книги"
+                value={totalAvailableBooks + totalBorrowedBooks}
+                subtitle="всего в библиотеке"
+                additionalInfo={
+                  <p className="text-emerald-600 dark:text-emerald-400">
+                    {totalAvailableBooks} доступно сейчас
+                  </p>
+                }
+                icon={<BookOpen className="w-5 h-5 text-emerald-500" />}
+                color="bg-emerald-500"
+                delay={0.1}
+                href="/admin/books"
+              />
+              <StatCard
+                title="Пользователи"
+                value={totalUsersCount}
+                subtitle="зарегистрировано"
+                additionalInfo={
+                  <p className="text-emerald-400 dark:text-emerald-300">
+                    {activeUsersCount} активных ({Math.round((activeUsersCount / totalUsersCount) * 100)}%)
+                  </p>
+                }
+                icon={<Users className="w-5 h-5 text-emerald-400" />}
+                color="bg-emerald-400"
+                delay={0.2}
+                href="/admin/users"
+              />
+              <StatCard
+                title="Резервации"
+                value={reservations.length}
+                subtitle="всего заявок"
+                additionalInfo={
+                  <div className="flex items-center">
+                    <span className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full bg-emerald-400">
+                      {pendingReservations}
+                    </span>
+                    <span className="ml-2">в обработке</span>
+                  </div>
+                }
+                icon={<CalendarClock className="w-5 h-5 text-emerald-400" />}
+                color="bg-emerald-400"
+                delay={0.3}
+                href="/admin/reservations"
+              />
+              <StatCard
+                title="Штрафы"
+                value={totalFines}
+                subtitle="общая сумма"
+                additionalInfo={
+                  <p className="text-gray-500 dark:text-gray-400">
+                    За просроченные книги
+                  </p>
+                }
+                icon={<AlertTriangle className="w-5 h-5 text-gray-500" />}
+                color="bg-gray-500"
+                delay={0.4}
+                href="/admin/users/fines"
+              />
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Взятые книги по месяцам</CardTitle>
-                <CardDescription>
-                  Количество взятых книг за последние 6 месяцев
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={monthlyBorrowedData}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorBorrowed" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#4F46E5" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <RechartsTooltip 
-                      formatter={formatTooltipValue}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="borrowed" 
-                      name="Взято книг"
-                      stroke="#4F46E5" 
-                      fillOpacity={1} 
-                      fill="url(#colorBorrowed)" 
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Распределение статусов резерваций</CardTitle>
-                <CardDescription>
-                  Статусы всех заявок в системе
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={70}
-                      outerRadius={90}
-                      fill="#8884d8"
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      labelLine={{ stroke: "#999", strokeWidth: 1 }}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
+              <ChartCard 
+                title="Взятые книги по месяцам" 
+                description="Количество взятых книг за последние 6 месяцев"
+                delay={0.5}
+                icon={<TrendingUp className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="График показывает динамику выдачи книг за последние полгода. Позволяет отслеживать сезонные тренды и активность пользователей."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={monthlyBorrowedData}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip
-                      formatter={formatTooltipValueReservations}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Legend layout="horizontal" align="center" verticalAlign="bottom" />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+                      <defs>
+                        <linearGradient id="colorBorrowed" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <RechartsTooltip 
+                        formatter={formatTooltipValue}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="borrowed" 
+                        name="Взято книг"
+                        stroke="#10B981" 
+                        fillOpacity={1} 
+                        fill="url(#colorBorrowed)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
 
-        {/* Статистика по книгам */}
-        <TabsContent value="books" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Категории книг</CardTitle>
-                <CardDescription>
-                  Распределение книг по категориям
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={bookCategoriesData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={70}
-                      outerRadius={90}
-                      fill="#8884d8"
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      labelLine={{ stroke: "#999", strokeWidth: 1 }}
-                    >
-                      {bookCategoriesData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip
-                      formatter={formatTooltipValue}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Legend layout="horizontal" align="center" verticalAlign="bottom" />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              <ChartCard 
+                title="Распределение статусов резерваций" 
+                description="Статусы всех заявок в системе"
+                delay={0.6}
+                icon={<PieChartIcon className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="Диаграмма показывает соотношение статусов всех резерваций в системе: выполненные, в обработке и отмененные."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={90}
+                        fill="#8884d8"
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        labelLine={{ stroke: "#999", strokeWidth: 1 }}
+                      >
+                        {statusDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={formatTooltipValueReservations}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Legend layout="horizontal" align="center" verticalAlign="bottom" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
+            </div>
+          </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Статистика доступности</CardTitle>
-                <CardDescription>
-                  Соотношение взятых и доступных книг
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[
-                      { name: "Доступно", value: totalAvailableBooks },
-                      { name: "Взято", value: totalBorrowedBooks },
-                    ]}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <RechartsTooltip
-                      formatter={formatTooltipValue}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Bar dataKey="value" fill="#4F46E5" radius={[4, 4, 0, 0]}>
-                      {[
+          {/* Статистика по книгам */}
+          <TabsContent value="books" className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
+              <ChartCard 
+                title="Категории книг" 
+                description="Распределение книг по категориям"
+                delay={0.3}
+                icon={<BookMarked className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="Диаграмма показывает распределение книг по категориям в библиотеке. Помогает анализировать разнообразие коллекции."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={bookCategoriesData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={90}
+                        fill="#8884d8"
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        labelLine={{ stroke: "#999", strokeWidth: 1 }}
+                      >
+                        {bookCategoriesData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={formatTooltipValue}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Legend layout="horizontal" align="center" verticalAlign="bottom" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
+
+              <ChartCard 
+                title="Статистика доступности" 
+                description="Соотношение взятых и доступных книг"
+                delay={0.4}
+                icon={<BookOpen className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="График показывает соотношение доступных и взятых книг в библиотеке. Помогает оценить загруженность фонда."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
                         { name: "Доступно", value: totalAvailableBooks },
                         { name: "Взято", value: totalBorrowedBooks },
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Статистика по пользователям */}
-        <TabsContent value="users" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Топ пользователей</CardTitle>
-                <CardDescription>
-                  Пользователи с наибольшим количеством взятых книг
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={topUsersData}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" />
-                    <RechartsTooltip
-                      formatter={formatTooltipValue}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Bar dataKey="value" fill="#10B981" barSize={20} radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Активность пользователей</CardTitle>
-                <CardDescription>
-                  Соотношение активных и неактивных пользователей
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: "Активные", value: activeUsersCount },
-                        { name: "Неактивные", value: totalUsersCount - activeUsersCount },
                       ]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={70}
-                      outerRadius={90}
-                      fill="#8884d8"
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
-                      <Cell fill="#10B981" />
-                      <Cell fill="#d1d5db" />
-                    </Pie>
-                    <RechartsTooltip
-                      formatter={formatTooltipValueUsers}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Legend layout="horizontal" align="center" verticalAlign="bottom" />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <RechartsTooltip
+                        formatter={formatTooltipValue}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {[
+                          { name: "Доступно", value: totalAvailableBooks },
+                          { name: "Взято", value: totalBorrowedBooks },
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
+            </div>
+            
+            <FadeInView delay={0.5}>
+              <motion.div 
+                className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                    Рекомендации по управлению книгами
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
+                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                    <h4 className="font-medium text-white mb-2">Популярные категории</h4>
+                    <p className="text-sm text-white">
+                      Наиболее популярные категории книг: {bookCategoriesData.sort((a, b) => b.value - a.value).slice(0, 2).map(cat => cat.name).join(', ')}.
+                      Рекомендуется пополнить коллекцию книгами этих категорий.
+                    </p>
+                    <Link href="/admin/books/create" className="mt-4 inline-block">
+                      <motion.span 
+                        className="text-white hover:text-emerald-300 text-sm font-medium flex items-center"
+                        whileHover={{ x: 3 }}
+                      >
+                        Добавить книгу
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                    <h4 className="font-medium text-white mb-2">Доступность книг</h4>
+                    <p className="text-sm text-white">
+                      {totalBorrowedBooks > totalAvailableBooks ? 
+                        "Большинство книг сейчас на руках у читателей. Рекомендуется пополнить библиотеку новыми экземплярами." :
+                        "Большинство книг доступно для выдачи. Хороший показатель доступности фонда."}
+                    </p>
+                    <Link href="/admin/books" className="mt-4 inline-block">
+                      <motion.span 
+                        className="text-white hover:text-emerald-300 text-sm font-medium flex items-center"
+                        whileHover={{ x: 3 }}
+                      >
+                        Управление книгами
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            </FadeInView>
+          </TabsContent>
 
-        {/* Статистика по резервациям */}
-        <TabsContent value="reservations" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Динамика резерваций</CardTitle>
-                <CardDescription>
-                  Количество резерваций за последние 6 месяцев
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={monthlyBorrowedData}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <RechartsTooltip
-                      formatter={formatTooltipValueReservations}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="borrowed"
-                      name="Резервации"
-                      stroke="#F59E0B"
-                      fillOpacity={1}
-                      fill="url(#colorReservations)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          {/* Статистика по пользователям */}
+          <TabsContent value="users" className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
+              <ChartCard 
+                title="Топ пользователей" 
+                description="Пользователи с наибольшим количеством взятых книг"
+                delay={0.3}
+                icon={<Users className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="График показывает пользователей, взявших наибольшее количество книг. Помогает выявить самых активных читателей."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={topUsersData}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" />
+                      <RechartsTooltip
+                        formatter={formatTooltipValue}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Bar dataKey="value" fill="#10B981" barSize={20} radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Статусы резерваций</CardTitle>
-                <CardDescription>
-                  Распределение резерваций по статусам
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={statusDistribution}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <RechartsTooltip
-                      formatter={formatTooltipValueReservations}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+              <ChartCard 
+                title="Активность пользователей" 
+                description="Соотношение активных и неактивных пользователей"
+                delay={0.4}
+                icon={<Users className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="Диаграмма показывает соотношение активных (имеющих книги на руках) и неактивных пользователей библиотеки."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Активные", value: activeUsersCount },
+                          { name: "Неактивные", value: totalUsersCount - activeUsersCount },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={90}
+                        fill="#8884d8"
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        <Cell fill="#10B981" />
+                        <Cell fill="#d1d5db" />
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={formatTooltipValueUsers}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Legend layout="horizontal" align="center" verticalAlign="bottom" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
+            </div>
+            
+            <FadeInView delay={0.5}>
+              <motion.div 
+                className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                    Анализ активности пользователей
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
+                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                    <h4 className="font-medium text-white mb-2">Активные пользователи</h4>
+                    <p className="text-sm text-white">
+                      {activeUsersCount > totalUsersCount / 2 ? 
+                        `Большинство пользователей (${Math.round((activeUsersCount / totalUsersCount) * 100)}%) активно пользуются библиотекой. Это отличный показатель!` :
+                        `Только ${Math.round((activeUsersCount / totalUsersCount) * 100)}% пользователей активно пользуются библиотекой. Рекомендуется провести акции для привлечения читателей.`}
+                    </p>
+                    <Link href="/admin/users" className="mt-4 inline-block">
+                      <motion.span 
+                        className="text-white hover:text-emerald-300 text-sm font-medium flex items-center"
+                        whileHover={{ x: 3 }}
+                      >
+                        Управление пользователями
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                    <h4 className="font-medium text-white mb-2">Топ читатели</h4>
+                    <p className="text-sm text-white">
+                      Самые активные читатели: {topUsersData.slice(0, 3).map(user => user.name).join(', ')}.
+                      Рекомендуется рассмотреть программу лояльности для постоянных читателей.
+                    </p>
+                    <Link href="/admin/users/create" className="mt-4 inline-block">
+                      <motion.span 
+                        className="text-white hover:text-emerald-300 text-sm font-medium flex items-center"
+                        whileHover={{ x: 3 }}
+                      >
+                        Добавить пользователя
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            </FadeInView>
+          </TabsContent>
 
-        {/* Статистика по штрафам */}
-        <TabsContent value="fines" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Динамика штрафов</CardTitle>
-                <CardDescription>
-                  Сумма штрафов за последние 6 месяцев
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={monthlyFinesData}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorFines" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <RechartsTooltip
-                      formatter={formatTooltipValueMoney}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="amount"
-                      name="Штрафы"
-                      stroke="#EF4444"
-                      fillOpacity={1}
-                      fill="url(#colorFines)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          {/* Статистика по резервациям */}
+          <TabsContent value="reservations" className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
+              <ChartCard 
+                title="Динамика резерваций" 
+                description="Количество резерваций за последние 6 месяцев"
+                delay={0.3}
+                icon={<CalendarClock className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="График показывает динамику резерваций книг за последние полгода. Помогает отслеживать сезонные тренды и активность пользователей."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={monthlyBorrowedData}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <RechartsTooltip
+                        formatter={formatTooltipValueReservations}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="borrowed"
+                        name="Резервации"
+                        stroke="#F59E0B"
+                        fillOpacity={1}
+                        fill="url(#colorReservations)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Пользователи со штрафами</CardTitle>
-                <CardDescription>
-                  Топ пользователей по сумме штрафов
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={users
-                      .filter((user) => (user.fineAmount || 0) > 0)
-                      .sort((a, b) => (b.fineAmount || 0) - (a.fineAmount || 0))
-                      .slice(0, 5)
-                      .map((user) => ({
-                        name: user.fullName.split(' ')[0],
-                        value: user.fineAmount || 0,
-                      }))}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" />
-                    <RechartsTooltip
-                      formatter={formatTooltipValueMoney}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-                    <Bar dataKey="value" fill="#EF4444" barSize={20} radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+              <ChartCard 
+                title="Статусы резерваций" 
+                description="Распределение резерваций по статусам"
+                delay={0.4}
+                icon={<CalendarClock className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="График показывает распределение резерваций по статусам: выполненные, в обработке и отмененные."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={statusDistribution}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <RechartsTooltip
+                        formatter={formatTooltipValueReservations}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {statusDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
+            </div>
+            
+            <FadeInView delay={0.5}>
+              <motion.div 
+                className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                    Анализ резерваций
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
+                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                    <h4 className="font-medium text-white mb-2">Эффективность обработки</h4>
+                    <p className="text-sm text-white">
+                      {completedReservations > canceledReservations * 2 ? 
+                        `Высокая эффективность обработки заявок: ${Math.round((completedReservations / reservations.length) * 100)}% заявок выполнено успешно.` :
+                        `Средняя эффективность обработки заявок: ${Math.round((completedReservations / reservations.length) * 100)}% заявок выполнено успешно. Рекомендуется улучшить процесс обработки.`}
+                    </p>
+                    <Link href="/admin/reservations" className="mt-4 inline-block">
+                      <motion.span 
+                        className="text-white hover:text-emerald-300 text-sm font-medium flex items-center"
+                        whileHover={{ x: 3 }}
+                      >
+                        Управление резервациями
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                    <h4 className="font-medium text-white mb-2">Текущие заявки</h4>
+                    <p className="text-sm text-white">
+                      В настоящее время в обработке находится {pendingReservations} заявок.
+                      {pendingReservations > 10 ? 
+                        " Рекомендуется ускорить обработку заявок для улучшения пользовательского опыта." : 
+                        " Хороший показатель скорости обработки заявок."}
+                    </p>
+                    <Link href="/admin/reservations/create" className="mt-4 inline-block">
+                      <motion.span 
+                        className="text-white hover:text-emerald-300 text-sm font-medium flex items-center"
+                        whileHover={{ x: 3 }}
+                      >
+                        Создать резервацию
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            </FadeInView>
+          </TabsContent>
+
+          {/* Статистика по штрафам */}
+          <TabsContent value="fines" className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
+              <ChartCard 
+                title="Динамика штрафов" 
+                description="Сумма штрафов за последние 6 месяцев"
+                delay={0.3}
+                icon={<CircleDollarSign className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="График показывает динамику штрафов за последние полгода. Помогает отслеживать тенденции в нарушениях сроков возврата книг."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={monthlyFinesData}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorFines" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <RechartsTooltip
+                        formatter={formatTooltipValueMoney}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        name="Штрафы"
+                        stroke="#EF4444"
+                        fillOpacity={1}
+                        fill="url(#colorFines)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
+
+              <ChartCard 
+                title="Пользователи со штрафами" 
+                description="Топ пользователей по сумме штрафов"
+                delay={0.4}
+                icon={<CircleDollarSign className="w-5 h-5 text-emerald-500" />}
+                infoTooltip="График показывает пользователей с наибольшими суммами штрафов. Помогает выявить проблемных читателей."
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={users
+                        .filter((user) => (user.fineAmount || 0) > 0)
+                        .sort((a, b) => (b.fineAmount || 0) - (a.fineAmount || 0))
+                        .slice(0, 5)
+                        .map((user) => ({
+                          name: user.fullName.split(' ')[0],
+                          value: user.fineAmount || 0,
+                        }))}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" />
+                      <RechartsTooltip
+                        formatter={formatTooltipValueMoney}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Bar dataKey="value" fill="#EF4444" barSize={20} radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
+            </div>
+            
+            <FadeInView delay={0.5}>
+              <motion.div 
+                className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                    Анализ штрафов
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                    <h4 className="font-medium text-white mb-2">Общая сумма штрафов</h4>
+                    <p className="text-sm text-white">
+                      Общая сумма штрафов составляет {totalFines.toFixed(2)} ₽.
+                      {totalFines > 5000 ? 
+                        " Это высокий показатель. Рекомендуется улучшить систему уведомлений о сроках возврата." : 
+                        " Это нормальный показатель для библиотеки данного размера."}
+                    </p>
+                    <Link href="/admin/users/fines" className="mt-4 inline-block">
+                      <motion.span 
+                        className="text-white hover:text-emerald-300 text-sm font-medium flex items-center"
+                        whileHover={{ x: 3 }}
+                      >
+                        Управление штрафами
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                    <h4 className="font-medium text-white mb-2">Рекомендации</h4>
+                    <p className="text-sm text-white">
+                      {users.filter(u => (u.fineAmount || 0) > 0).length > totalUsersCount * 0.1 ? 
+                        `${users.filter(u => (u.fineAmount || 0) > 0).length} пользователей имеют штрафы. Рекомендуется пересмотреть политику штрафов и улучшить систему уведомлений.` : 
+                        `Только ${users.filter(u => (u.fineAmount || 0) > 0).length} пользователей имеют штрафы. Это хороший показатель дисциплины читателей.`}
+                    </p>
+                    <Link href="/admin/settings" className="mt-4 inline-block">
+                      <motion.span 
+                        className="text-white hover:text-emerald-300 text-sm font-medium flex items-center"
+                        whileHover={{ x: 3 }}
+                      >
+                        Настройки системы
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            </FadeInView>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
-} 
+}

@@ -2,31 +2,35 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import JournalForm from "@/components/admin/forms/JournalForm";
+import JournalForm, { JournalInput } from "@/components/admin/forms/JournalForm";
 
-// Интерфейс Journal
-interface JournalInput {
+// Интерфейс для данных создания журнала
+interface JournalCreateDto {
   title: string;
   issn: string;
-  registrationNumber?: string | null;
-  format: "Print" | "Electronic" | "Mixed";
-  periodicity: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually";
-  pagesPerIssue: number;
-  description?: string | null;
-  publisher?: string | null;
-  foundationDate: Date;
-  circulation: number;
-  isOpenAccess: boolean;
-  category: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News";
-  targetAudience?: string | null;
-  isPeerReviewed: boolean;
-  isIndexedInRINTS: boolean;
-  isIndexedInScopus: boolean;
-  isIndexedInWebOfScience: boolean;
-  publicationDate: Date;
-  pageCount: number;
-  coverImageUrl?: string | null;
+  publisher: string;
+  startYear: number;
+  endYear?: number;
+  frequency?: string;
+  description: string;
+  coverImage?: string;
+  website?: string;
 }
+
+// Адаптер для преобразования JournalInput в JournalCreateDto
+const adaptInputToApiDto = (input: JournalInput): JournalCreateDto => {
+  return {
+    title: input.title,
+    issn: input.issn || '',
+    publisher: input.publisher || '',
+    startYear: input.foundationDate ? new Date(input.foundationDate).getFullYear() : new Date().getFullYear(),
+    endYear: undefined,
+    frequency: input.periodicity || 'Monthly',
+    description: input.description || '',
+    coverImage: input.coverImageUrl || undefined,
+    website: input.website || undefined
+  };
+};
 
 export default function JournalCreatePage() {
   const [creating, setCreating] = useState<boolean>(false);
@@ -38,21 +42,25 @@ export default function JournalCreatePage() {
     setCreateError(null);
     
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-
-      const res = await fetch(`${baseUrl}/api/journals`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(journalData),
+      // Преобразуем данные в формат API
+      const apiData = adaptInputToApiDto(journalData);
+      
+      // Используем fetch вместо API-утилиты
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+      const response = await fetch(`${baseUrl}/api/journals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiData),
       });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Не удалось создать журнал");
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Не удалось создать журнал');
       }
-
-      const newJournal = await res.json();
+      
+      const newJournal = await response.json();
       
       // Перенаправляем на страницу деталей журнала после успешного создания
       router.push(`/admin/journals/${newJournal.id}`);

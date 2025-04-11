@@ -21,7 +21,7 @@ type AdminLayoutProps = {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-[#55c3aa] to-[#9bce8d]">
+    <div className="min-h-screen flex bg-[url('/images/bg2.jpg')] bg-cover bg-center bg-fixed bg-no-repeat">
       <div className="flex flex-col flex-1">
         <TopNavigation session={dummySession} />
         <main className="p-6">{children}</main>

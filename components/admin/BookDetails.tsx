@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronLeft, BookOpen, Edit, ArrowLeft } from 'lucide-react';
 
 interface Book {
   id: string;
@@ -38,149 +40,229 @@ interface BookDetailsProps {
   book: Book;
 }
 
-const getThemeClasses = () => {
-  return {
-    card: "bg-white/70 dark:bg-neutral-200/70 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform hover:translate-y-[-5px] transition-all duration-300",
-    statsCard: "bg-white/70 dark:bg-neutral-200/70 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 rounded-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform hover:translate-y-[-5px] transition-all duration-300",
-    mainContainer: "bg-gradient-to-r from-brand-800/30 via-neutral-800/30 to-brand-900/30 dark:from-neutral-200 dark:via-brand-200 dark:to-neutral-300",
-    button: "bg-primary-admin/90 hover:bg-primary-admin text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2",
-    tab: "bg-white/20 dark:bg-neutral-200/20 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 rounded-lg",
-    tabActive: "bg-primary-admin/90 text-white rounded-lg",
-    infoOval: "bg-white/40 dark:bg-neutral-300/40 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 rounded-full px-6 py-3 shadow-sm",
-  };
+// Компонент для анимированного появления
+const FadeInView = ({ children, delay = 0, duration = 0.5 }: { children: React.ReactNode; delay?: number; duration?: number }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// Компонент для информационного поля
+const InfoField = ({ label, value }: { label: string; value: string }) => {
+  return (
+    <motion.div 
+      className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-xl p-3 border border-white/20 dark:border-gray-700/30 shadow-sm"
+      whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
+      transition={{ duration: 0.2 }}
+    >
+      <span className="font-medium text-gray-700 dark:text-gray-200">{label}:</span>{" "}
+      <span className="text-gray-600 dark:text-gray-300">{value}</span>
+    </motion.div>
+  );
+};
+
+// Компонент для вкладок
+const AnimatedTabsTrigger = ({ value, label, isActive }: { value: string; label: string; isActive: boolean }) => {
+  return (
+    <TabsTrigger value={value} className="relative">
+      <div className="py-2 px-1">
+        <span>{label}</span>
+      </div>
+      {isActive && (
+        <motion.div
+          layoutId="activeBookTab"
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        />
+      )}
+    </TabsTrigger>
+  );
 };
 
 export default function BookDetails({ book }: BookDetailsProps) {
-  const themeClasses = getThemeClasses();
+  const [activeTab, setActiveTab] = useState("details");
 
   return (
-    <div className={`min-h-screen flex flex-col ${themeClasses.mainContainer} p-6`}>
-      {/* Header */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/30 dark:bg-neutral-100/30 border-b border-white/20 dark:border-neutral-700/20 p-4 flex items-center justify-between shadow-sm mb-6">
-        <h1 className="text-2xl font-bold text-neutral-100 dark:text-neutral-1000">Просмотр книги</h1>
-      </header>
+    <div className="min-h-screen relative">
+      {/* Floating shapes */}
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+      
+      <div className="container mx-auto p-6 relative z-10">
+        {/* Header */}
+        <FadeInView>
+          <div className="mb-8 flex items-center gap-4">
+            <motion.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Link 
+                href="/admin/books" 
+                className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+                <span className="font-medium">Назад к списку книг</span>
+              </Link>
+            </motion.div>
+            
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-3xl font-bold text-gray-800 dark:text-white"
+            >
+              Просмотр книги
+            </motion.h1>
+          </div>
+        </FadeInView>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-5xl mx-auto space-y-8">
-        <Card className={themeClasses.card}>
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-neutral-200 dark:text-neutral-100">
-              {book.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 pb-8">
+        {/* Main Content */}
+        <FadeInView delay={0.2}>
+          <motion.div 
+            className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+            whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)" }}
+          >
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{book.title}</h2>
+              <p className="text-gray-600 dark:text-gray-300">{book.authors}</p>
+            </div>
+            
             <div className="flex flex-col md:flex-row gap-8">
               {/* Cover Image */}
               <div className="flex-shrink-0">
                 {book.cover ? (
-                  <div className="relative w-[250px] h-[400px] rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-all duration-300">
-                    <Image src={book.cover} alt={book.title} fill className="object-cover rounded-xl" priority />
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.05, rotate: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                    className="relative w-[250px] h-[400px] rounded-xl shadow-lg overflow-hidden"
+                  >
+                    <Image src={book.cover || "/placeholder.svg"} alt={book.title} fill className="object-cover rounded-xl" priority />
+                  </motion.div>
                 ) : (
-                  <div className={`${themeClasses.card} w-[250px] h-[400px] flex items-center justify-center text-neutral-200 dark:text-neutral-400`}>
-                    Нет обложки
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.05, rotate: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                    className="w-[250px] h-[400px] flex items-center justify-center backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-lg"
+                  >
+                    <BookOpen className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+                  </motion.div>
                 )}
               </div>
 
               {/* Basic Info */}
               <div className="flex-grow space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InfoOval label="Название" value={book.title} />
-                  <InfoOval label="Авторы" value={book.authors} />
-                  <InfoOval label="ISBN" value={book.isbn} />
-                  <InfoOval label="Жанр" value={book.genre || "Не указан"} />
-                  <InfoOval label="Издательство" value={book.publisher || "Не указано"} />
-                  <InfoOval label="Год публикации" value={book.publicationYear?.toString() || "Не указан"} />
-                  <InfoOval label="Количество страниц" value={book.pageCount?.toString() || "Не указано"} />
-                  <InfoOval label="Язык" value={book.language || "Не указан"} />
+                  <InfoField label="Название" value={book.title} />
+                  <InfoField label="Авторы" value={book.authors} />
+                  <InfoField label="ISBN" value={book.isbn} />
+                  <InfoField label="Жанр" value={book.genre || "Не указан"} />
+                  <InfoField label="Издательство" value={book.publisher || "Не указано"} />
+                  <InfoField label="Год публикации" value={book.publicationYear?.toString() || "Не указан"} />
+                  <InfoField label="Количество страниц" value={book.pageCount?.toString() || "Не указано"} />
+                  <InfoField label="Язык" value={book.language || "Не указан"} />
                   {!book.isEbook && (
-                    <InfoOval label="Доступно копий" value={book.availableCopies.toString()} />
+                    <InfoField label="Доступно копий" value={book.availableCopies.toString()} />
                   )}
-                  <InfoOval label="Электронная книга" value={book.isEbook ? "Да" : "Нет"} />
+                  <InfoField label="Электронная книга" value={book.isEbook ? "Да" : "Нет"} />
                 </div>
               </div>
             </div>
 
             {/* Tabs */}
             <div className="mt-8">
-              <Tabs defaultValue="details">
-                <TabsList className="grid grid-cols-3 gap-4 mb-6 w-full max-w-2xl mx-auto bg-transparent">
-                  
-                  <TabsTrigger
-                    value="details"
-                    className={`${themeClasses.tab} flex items-center justify-center`}
-                  >
-                    Детальная информация
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="additional"
-                    className={`${themeClasses.tab} flex items-center justify-center`}
-                  >
-                    Дополнительно
-                  </TabsTrigger>
+              <Tabs defaultValue="details" onValueChange={setActiveTab}>
+                <TabsList className="bg-white/30 dark:bg-gray-800/30 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md">
+                  <AnimatedTabsTrigger 
+                    value="details" 
+                    label="Детальная информация" 
+                    isActive={activeTab === "details"} 
+                  />
+                  <AnimatedTabsTrigger 
+                    value="additional" 
+                    label="Дополнительно" 
+                    isActive={activeTab === "additional"} 
+                  />
                 </TabsList>
 
-                <TabsContent value="details" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <InfoOval label="Категоризация" value={book.categorization || "Не указана"} />
-                  <InfoOval label="Издательство" value={book.publisher || "Не указано"} />
-                  {!book.isEbook && (
-                    <>
-                      <InfoOval label="Состояние" value={book.condition || "Не указано"} />
-                    </>
-                  )}
-                  <InfoOval label="Формат" value={book.format || "Не указан"} />
-                  <InfoOval label="Цена" value={book.price != null ? book.price.toString() : "Не указана"} />
-                  <InfoOval label="УДК" value={book.udk || "Не указан"} />
-                  <InfoOval label="ББК" value={book.bbk || "Не указан"} />
-                  <div className={`col-span-full ${themeClasses.infoOval} overflow-auto max-h-60`}>
-                    <span className="font-semibold text-neutral-200 dark:text-primary">Описание книги:</span>{" "}
-                    <span className="text-neutral-400 dark:text-neutral-200">{book.description || "Отсутствует"}</span>
+                <TabsContent value="details" className="mt-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <InfoField label="Категоризация" value={book.categorization || "Не указана"} />
+                    <InfoField label="Издательство" value={book.publisher || "Не указано"} />
+                    {!book.isEbook && (
+                      <InfoField label="Состояние" value={book.condition || "Не указано"} />
+                    )}
+                    <InfoField label="Формат" value={book.format || "Не указан"} />
+                    <InfoField label="Цена" value={book.price != null ? book.price.toString() : "Не указана"} />
+                    <InfoField label="УДК" value={book.udk || "Не указан"} />
+                    <InfoField label="ББК" value={book.bbk || "Не указан"} />
                   </div>
+                  
+                  <motion.div 
+                    className="mt-4 backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-xl p-4 border border-white/20 dark:border-gray-700/30 shadow-sm"
+                    whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <h3 className="font-medium text-gray-700 dark:text-gray-200 mb-2">Описание книги:</h3>
+                    <p className="text-gray-600 dark:text-gray-300">{book.description || "Отсутствует"}</p>
+                  </motion.div>
                 </TabsContent>
 
-                <TabsContent value="additional" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <InfoOval label="Электронная книга" value={book.isEbook ? "Да" : "Нет"} />
-                  <InfoOval label="Оригинальное название" value={book.originalTitle || "Не указано"} />
-                  <InfoOval label="Оригинальный язык" value={book.originalLanguage || "Не указан"} />
-                  <InfoOval label="Издание" value={book.edition || "Не указано"} />
-                  <div className={`col-span-full ${themeClasses.infoOval} overflow-auto max-h-60`}>
-                    <span className="font-semibold text-neutral-200 dark:text-primary">Резюме книги:</span>{" "}
-                    <span className="text-neutral-400 dark:text-neutral-200">{book.summary || "Отсутствует"}</span>
+                <TabsContent value="additional" className="mt-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <InfoField label="Электронная книга" value={book.isEbook ? "Да" : "Нет"} />
+                    <InfoField label="Оригинальное название" value={book.originalTitle || "Не указано"} />
+                    <InfoField label="Оригинальный язык" value={book.originalLanguage || "Не указан"} />
+                    <InfoField label="Издание" value={book.edition || "Не указано"} />
                   </div>
+                  
+                  <motion.div 
+                    className="mt-4 backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-xl p-4 border border-white/20 dark:border-gray-700/30 shadow-sm"
+                    whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <h3 className="font-medium text-gray-700 dark:text-gray-200 mb-2">Резюме книги:</h3>
+                    <p className="text-gray-600 dark:text-gray-300">{book.summary || "Отсутствует"}</p>
+                  </motion.div>
                 </TabsContent>
               </Tabs>
             </div>
 
             {/* Buttons */}
             <div className="flex gap-4 justify-end mt-8">
-              <Link
-                href={`/admin/books/${book.id}/update`}
-                className={themeClasses.button}
-              >
-                Редактировать
+              <Link href={`/admin/books/${book.id}/update`}>
+                <motion.button
+                  className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                  whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Edit className="w-4 h-4" />
+                  Редактировать
+                </motion.button>
               </Link>
-              <Link
-                href="/admin/books"
-                className="bg-neutral-500/90 hover:bg-neutral-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2"
-              >
-                Назад
+              <Link href="/admin/books">
+                <motion.button
+                  className="bg-gray-500/90 hover:bg-gray-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                  whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Назад
+                </motion.button>
               </Link>
             </div>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
-  );
-}
-
-// InfoOval Component
-function InfoOval({ label, value, fullWidth = false }: { label: string; value: string; fullWidth?: boolean }) {
-  const themeClasses = getThemeClasses();
-  return (
-    <div className={`${fullWidth ? "col-span-full" : ""} ${themeClasses.infoOval} ${fullWidth ? "overflow-auto max-h-60" : ""}`}>
-      <span className="font-semibold text-neutral-200 dark:text-primary">{label}:</span>{" "}
-      <span className="text-neutral-400 dark:text-neutral-200">{value}</span>
+          </motion.div>
+        </FadeInView>
+      </div>
     </div>
   );
 }

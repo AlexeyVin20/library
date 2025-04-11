@@ -6,7 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Loader2, BookOpen, Search, FileText, BookmarkIcon, LayoutGrid, BookCopy, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, BookOpen, Search, FileText, BookmarkIcon, LayoutGrid, BookCopy, X, ChevronRight, Upload, Download, Plus } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -26,25 +27,40 @@ interface Position {
   y: number;
 }
 
-// Определение стилей glassmorphism
-const getThemeClasses = () => {
-  return {
-    card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
-    statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between",
-    mainContainer: "bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6",
-    button: "bg-gradient-to-r from-primary-admin/90 to-primary-admin/70 dark:from-primary-admin/80 dark:to-primary-admin/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
-    input: "bg-white/40 dark:bg-neutral-300/40 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-2",
-    textarea: "bg-white/40 dark:bg-neutral-300/40 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-2 resize-none",
-    tab: "bg-white/20 dark:bg-neutral-200/20 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 rounded-lg",
-    tabActive: "bg-primary-admin/90 text-white rounded-lg",
-    select: "bg-white/40 dark:bg-neutral-300/40 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg",
-    sectionTitle: "text-2xl font-bold mb-4 text-neutral-500 dark:text-white border-b pb-2 border-white/30 dark:border-neutral-700/30",
-    statusBadge: {
-      completed: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-green-600/90 backdrop-blur-sm",
-      processing: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-yellow-600/90 backdrop-blur-sm",
-      canceled: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-red-600/90 backdrop-blur-sm",
-    },
-  };
+// Компонент для анимированного появления
+const FadeInView = ({ children, delay = 0, duration = 0.5 }: { children: React.ReactNode; delay?: number; duration?: number }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// Компонент для вкладок
+const AnimatedTabsTrigger = ({ value, icon, label, isActive }: { value: string; icon: React.ReactNode; label: string; isActive: boolean }) => {
+  return (
+    <TabsTrigger value={value} className="relative">
+      <div className="flex items-center gap-2 py-2 px-1">
+        <span className={isActive ? "text-emerald-500" : "text-gray-500 dark:text-gray-400"}>
+          {icon}
+        </span>
+        <span>{label}</span>
+      </div>
+      {isActive && (
+        <motion.div
+          layoutId="activeBookFormTab"
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        />
+      )}
+    </TabsTrigger>
+  );
 };
 
 interface BookFormProps {
@@ -63,7 +79,6 @@ const BookForm = ({
   shelves = [],
 }: BookFormProps) => {
   const router = useRouter();
-  const themeClasses = getThemeClasses();
   const [showManualCoverInput, setShowManualCoverInput] = useState(false);
   const [manualCoverUrl, setManualCoverUrl] = useState("");
   const [isbn, setIsbn] = useState(initialData?.isbn || "");
@@ -242,7 +257,11 @@ const BookForm = ({
     };
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-white/10 hover:bg-white/20 transition-all">
+      <motion.div 
+        className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 hover:bg-white/30 dark:hover:bg-gray-800/30 transition-all border-white/30 dark:border-gray-700/30"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
         <input
           type="file"
           className="hidden"
@@ -251,13 +270,13 @@ const BookForm = ({
           id="gemini-file-input"
         />
         <label htmlFor="gemini-file-input" className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
-          <BookOpen className="w-10 h-10 mb-2 text-primary-admin" />
-          <p className="mb-2 text-sm text-center text-gray-500 dark:text-gray-400">
+          <Upload className="w-10 h-10 mb-2 text-emerald-500" />
+          <p className="mb-2 text-sm text-center text-gray-600 dark:text-gray-300">
             Перетащите файл сюда или нажмите для загрузки
           </p>
-          {fileName && <p className="text-xs text-primary-admin">{fileName}</p>}
+          {fileName && <p className="text-xs text-emerald-500">{fileName}</p>}
         </label>
-      </div>
+      </motion.div>
     );
   };
 
@@ -505,41 +524,43 @@ const BookForm = ({
   const ShelvesModal = () => {
     return (
       <Dialog open={showShelvesModal} onOpenChange={setShowShelvesModal}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 shadow-lg">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Выберите полку и позицию</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-2xl font-bold text-gray-800 dark:text-white">Выберите полку и позицию</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-300">
               Нажмите на полку, затем выберите позицию для книги
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="text-lg font-semibold mb-2">Доступные полки</h4>
+              <h4 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">Доступные полки</h4>
               <div className="space-y-2 max-h-80 overflow-y-auto p-2">
                 {shelves && shelves.length > 0 ? (
                   shelves.map((shelf) => (
-                    <div
+                    <motion.div
                       key={shelf.id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      className={`p-3 rounded-lg cursor-pointer transition-all backdrop-blur-xl border ${
                         selectedShelf === shelf.id
-                          ? "bg-primary-admin/20 border-primary-admin"
-                          : "bg-white/10 hover:bg-white/20 border-white/20"
+                          ? "bg-emerald-500/20 border-emerald-500/50 dark:bg-emerald-500/10 dark:border-emerald-500/30"
+                          : "bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/30 hover:bg-white/30 dark:hover:bg-gray-700/30"
                       }`}
                       onClick={() => setSelectedShelf(shelf.id)}
+                      whileHover={{ x: 3 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      <h5 className="font-medium">{shelf.category}</h5>
-                      <p className="text-sm text-gray-500">Мест: {shelf.capacity}</p>
-                      <p className="text-sm text-gray-500">Категория: {shelf.category || "Общая"}</p>
-                    </div>
+                      <h5 className="font-medium text-gray-700 dark:text-gray-200">{shelf.category}</h5>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Мест: {shelf.capacity}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Категория: {shelf.category || "Общая"}</p>
+                    </motion.div>
                   ))
                 ) : (
-                  <p>Нет доступных полок</p>
+                  <p className="text-gray-600 dark:text-gray-300">Нет доступных полок</p>
                 )}
               </div>
             </div>
             {selectedShelf && (
               <div>
-                <h4 className="text-lg font-semibold mb-2">Выберите позицию на полке {shelves.find(s => s.id === selectedShelf)?.category || 'N/A'}</h4>
+                <h4 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">Выберите позицию на полке {shelves.find(s => s.id === selectedShelf)?.category || 'N/A'}</h4>
                 <div className="grid grid-cols-5 gap-2 max-h-80 overflow-y-auto p-2">
                   {Array.from({ length: shelves.find(s => s.id === selectedShelf)?.capacity || 0 }).map((_, i) => {
                     // Проверяем занятость позиции
@@ -550,23 +571,25 @@ const BookForm = ({
                       initialData?.position === i;
 
                     return (
-                      <div
+                      <motion.div
                         key={i}
                         className={`aspect-square border rounded-lg flex items-center justify-center p-2 cursor-pointer transition-all ${
                           selectedPosition === i
-                            ? "bg-primary-admin/20 border-primary-admin"
+                            ? "bg-emerald-500/20 border-emerald-500/50 dark:bg-emerald-500/10 dark:border-emerald-500/30"
                             : isOccupied && !isCurrentBook
                             ? "bg-gray-300/30 border-gray-400/30 cursor-not-allowed"
-                            : "bg-white/10 hover:bg-white/20 border-white/20"
+                            : "bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/30 hover:bg-white/30 dark:hover:bg-gray-700/30"
                         }`}
                         onClick={() => {
                           if (!isOccupied || isCurrentBook) {
                             setSelectedPosition(i);
                           }
                         }}
+                        whileHover={!isOccupied || isCurrentBook ? { scale: 1.05 } : {}}
+                        whileTap={!isOccupied || isCurrentBook ? { scale: 0.95 } : {}}
                       >
                         {i}
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
@@ -574,13 +597,17 @@ const BookForm = ({
             )}
           </div>
           <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowShelvesModal(false)}
+              className="bg-gray-500/90 hover:bg-gray-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
             >
               Отмена
-            </Button>
-            <Button
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 if (selectedShelf !== undefined && selectedPosition !== undefined) {
                   setValue("shelfId", selectedShelf);
@@ -589,9 +616,10 @@ const BookForm = ({
                 }
               }}
               disabled={selectedShelf === undefined || selectedPosition === undefined}
+              className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md disabled:opacity-50"
             >
               Выбрать
-            </Button>
+            </motion.button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -696,114 +724,158 @@ const BookForm = ({
   };
 
   return (
-    <div className={`min-h-screen flex flex-col ${themeClasses.mainContainer}`}>
-      {/* Header */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/30 dark:bg-neutral-100/30 border-b border-white/20 dark:border-neutral-700/20 p-4 flex items-center justify-between shadow-sm mb-6">
-        <h1 className="text-2xl font-bold text-neutral-500 dark:text-white">
-          {mode === "create" ? "Добавление новой книги" : "Редактирование книги"}
-        </h1>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 max-w-4xl mx-auto space-y-8 p-6">
-        <Card className={themeClasses.card}>
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold flex items-center text-neutral-500 dark:text-white">
-              <BookOpen className="mr-2 h-6 w-6 text-primary-admin" />
-              {mode === "create" ? "Добавление книги" : "Редактирование книги"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Gemini AI Block */}
-            <div className={`${themeClasses.statsCard}`}>
-              <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
-                Загрузить изображение для сканирования обложки книги
-              </label>
-              <GeminiFileUpload onFileChange={handleGeminiFileChange} />
-              {geminiLoading && (
-                <div className="flex items-center mt-2">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  <span>Обработка изображения...</span>
-                </div>
-              )}
-              {geminiImage && !geminiLoading && (
-                <Button onClick={handleGeminiUpload} variant="outline" size="sm" className="mt-2">
-                  Перезагрузить
-                </Button>
-              )}
+    <div className="min-h-screen relative">
+      {/* Floating shapes */}
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+      
+      <div className="container mx-auto p-6 relative z-10">
+        {/* Header */}
+        <FadeInView>
+          <motion.div 
+            className="sticky top-0 z-10 backdrop-blur-xl bg-white/30 dark:bg-gray-800/30 border-b border-white/20 dark:border-gray-700/30 p-4 rounded-xl shadow-lg mb-6"
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-6 w-6 text-emerald-500" />
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+                {mode === "create" ? "Добавление новой книги" : "Редактирование книги"}
+              </h1>
             </div>
+          </motion.div>
+        </FadeInView>
+
+        {/* Main Content */}
+        <FadeInView delay={0.2}>
+          <motion.div 
+            className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-2xl p-6 shadow-lg border border-white/20 dark:border-gray-700/30"
+            whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)" }}
+          >
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-emerald-500" />
+                {mode === "create" ? "Добавление книги" : "Редактирование книги"}
+              </h2>
+            </div>
+            
+            {/* Gemini AI Block */}
+            <FadeInView delay={0.3}>
+              <motion.div 
+                className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-xl p-4 mb-6 border border-white/20 dark:border-gray-700/30 shadow-md"
+                whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
+              >
+                <label className="block text-base font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                  Загрузить изображение для сканирования обложки книги
+                </label>
+                <GeminiFileUpload onFileChange={handleGeminiFileChange} />
+                {geminiLoading && (
+                  <div className="flex items-center mt-2 text-gray-600 dark:text-gray-300">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2 text-emerald-500" />
+                    <span>Обработка изображения...</span>
+                  </div>
+                )}
+                {geminiImage && !geminiLoading && (
+                  <motion.button 
+                    onClick={handleGeminiUpload} 
+                    className="mt-2 backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Перезагрузить
+                  </motion.button>
+                )}
+              </motion.div>
+            </FadeInView>
 
             {/* Form */}
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-8">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-3 gap-4 mb-8 w-full bg-transparent h-12">
-                  <TabsTrigger
-                    value="basic-info"
-                    className={`${themeClasses.tab} ${activeTab === "basic-info" ? themeClasses.tabActive : ""} flex items-center justify-center`}
-                  >
-                    <BookmarkIcon className="h-4 w-4 mr-2" />
-                    Основная информация
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="details"
-                    className={`${themeClasses.tab} ${activeTab === "details" ? themeClasses.tabActive : ""} flex items-center justify-center`}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Детальная информация
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="rare-fields"
-                    className={`${themeClasses.tab} ${activeTab === "rare-fields" ? themeClasses.tabActive : ""} flex items-center justify-center`}
-                  >
-                    <LayoutGrid className="h-4 w-4 mr-2" />
-                    Дополнительно
-                  </TabsTrigger>
+                <TabsList className="bg-white/30 dark:bg-gray-800/30 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md">
+                  <AnimatedTabsTrigger 
+                    value="basic-info" 
+                    icon={<BookmarkIcon className="w-4 h-4" />} 
+                    label="Основная информация" 
+                    isActive={activeTab === "basic-info"} 
+                  />
+                  <AnimatedTabsTrigger 
+                    value="details" 
+                    icon={<FileText className="w-4 h-4" />} 
+                    label="Детальная информация" 
+                    isActive={activeTab === "details"} 
+                  />
+                  <AnimatedTabsTrigger 
+                    value="rare-fields" 
+                    icon={<LayoutGrid className="w-4 h-4" />} 
+                    label="Дополнительно" 
+                    isActive={activeTab === "rare-fields"} 
+                  />
                 </TabsList>
 
                 {/* Основная информация */}
-                <TabsContent value="basic-info" className="space-y-6">
+                <TabsContent value="basic-info" className="space-y-6 mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Название книги *
                       </label>
                       <Input
                         placeholder="Введите название книги"
                         {...register("title")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Авторы *
                       </label>
                       <Input
                         placeholder="Введите имена авторов через запятую"
                         {...register("authors")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.authors && <p className="text-red-500 text-sm mt-1">{errors.authors.message}</p>}
                     </div>
 
                     <div className="grid gap-3">
-                      <Label htmlFor="isbn">ISBN</Label>
+                      <Label htmlFor="isbn" className="text-gray-700 dark:text-gray-200">ISBN</Label>
                       <div className="relative">
-                        <Input
-                          id="isbn"
-                          placeholder="000-0000000000"
-                          className={cn(
-                            errors.isbn && "focus-visible:ring-red-500"
-                          )}
-                          value={isbn}
-                          {...register("isbn", {
-                            onChange: (e) => {
-                              setIsbn(e.target.value);
-                            },
-                            value: isbn
-                          })}
-                        />
+                        <div className="flex">
+                          <Input
+                            id="isbn"
+                            placeholder="000-0000000000"
+                            className={cn(
+                              "backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-l-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm flex-1",
+                              errors.isbn && "focus-visible:ring-red-500"
+                            )}
+                            value={isbn}
+                            {...register("isbn", {
+                              onChange: (e) => {
+                                setIsbn(e.target.value);
+                              },
+                              value: isbn
+                            })}
+                          />
+                          <motion.button
+                            type="button"
+                            onClick={handleFetchByISBN}
+                            disabled={isSearchLoading}
+                            className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-r-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {isSearchLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Search className="h-4 w-4" />
+                            )}
+                            Поиск
+                          </motion.button>
+                        </div>
                         {errors.isbn && (
                           <p className="text-xs text-red-500 mt-1">
                             {errors.isbn.message}
@@ -813,19 +885,19 @@ const BookForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Жанр
                       </label>
                       <Input
                         placeholder="Введите жанр книги"
                         {...register("genre")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.genre && <p className="text-red-500 text-sm mt-1">{errors.genre.message}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Год публикации
                       </label>
                       <Input
@@ -834,7 +906,7 @@ const BookForm = ({
                         min={1000}
                         max={new Date().getFullYear()}
                         {...register("publicationYear", { valueAsNumber: true })}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.publicationYear && (
                         <p className="text-red-500 text-sm mt-1">{errors.publicationYear.message}</p>
@@ -842,13 +914,13 @@ const BookForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Издательство
                       </label>
                       <Input
                         placeholder="Введите название издательства"
                         {...register("publisher")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.publisher && <p className="text-red-500 text-sm mt-1">{errors.publisher.message}</p>}
                     </div>
@@ -859,8 +931,9 @@ const BookForm = ({
                           id="isEbook"
                           checked={isEbook}
                           onCheckedChange={(checked) => setValue("isEbook", checked === true)}
+                          className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
                         />
-                        <label className="text-base font-semibold text-neutral-500 dark:text-white">
+                        <label htmlFor="isEbook" className="text-base font-medium text-gray-700 dark:text-gray-200">
                           Электронная книга
                         </label>
                       </div>
@@ -869,7 +942,7 @@ const BookForm = ({
                     {!isEbook && (
                       <>
                         <div>
-                          <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                          <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                             Доступные экземпляры
                           </label>
                           <Input
@@ -877,7 +950,7 @@ const BookForm = ({
                             placeholder="Введите количество доступных экземпляров"
                             min={0}
                             {...register("availableCopies", { valueAsNumber: true })}
-                            className={themeClasses.input}
+                            className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                           />
                           {errors.availableCopies && (
                             <p className="text-red-500 text-sm mt-1">{errors.availableCopies.message}</p>
@@ -885,17 +958,17 @@ const BookForm = ({
                         </div>
 
                         <div>
-                          <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                          <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                             Состояние книги
                           </label>
                           <Select
                             onValueChange={(value) => setValue("condition", value)}
                             defaultValue={initialData?.condition || ""}
                           >
-                            <SelectTrigger className={themeClasses.select}>
+                            <SelectTrigger className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm">
                               <SelectValue placeholder="Выберите состояние" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/30">
                               <SelectItem value="Новое">Новое</SelectItem>
                               <SelectItem value="Б/У">Б/У</SelectItem>
                               <SelectItem value="Не определено">Не определено</SelectItem>
@@ -905,25 +978,27 @@ const BookForm = ({
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                          <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                             Расположение на полке
                           </label>
                           <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-4">
                               <div className="flex-1">
-                                <Button
+                                <motion.button
                                   type="button"
                                   onClick={() => setShowShelvesModal(true)}
-                                  className={`${themeClasses.button} w-full flex items-center justify-center`}
+                                  className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 w-full flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
+                                  whileHover={{ y: -2 }}
+                                  whileTap={{ scale: 0.98 }}
                                 >
-                                  <BookCopy className="h-4 w-4 mr-2" />
+                                  <BookCopy className="h-4 w-4" />
                                   {selectedShelf && selectedPosition !== undefined 
                                     ? `Полка: ${shelves.find(s => s.id === selectedShelf)?.category || 'N/A'} #${shelves.find(s => s.id === selectedShelf)?.shelfNumber || 'N/A'}, Позиция: ${selectedPosition + 1}` 
                                     : "Выбрать расположение"}
-                                </Button>
+                                </motion.button>
                               </div>
                               {selectedShelf && selectedPosition !== undefined && (
-                                <Button
+                                <motion.button
                                   type="button"
                                   onClick={() => {
                                     setSelectedShelf(undefined);
@@ -931,11 +1006,12 @@ const BookForm = ({
                                     setValue("shelfId", undefined);
                                     setValue("position", undefined);
                                   }}
-                                  variant="outline"
-                                  className="px-3"
+                                  className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 text-gray-700 dark:text-gray-200 rounded-lg p-2"
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
                                 >
                                   <X size={16} />
-                                </Button>
+                                </motion.button>
                               )}
                             </div>
                             {(errors.shelfId) && (
@@ -949,38 +1025,48 @@ const BookForm = ({
                     )}
 
                     <div className="md:col-span-2">
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2 text-center">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2 text-center">
                         Обложка книги
                       </label>
                       <div className="flex flex-row gap-4 justify-center">
                         <div className="flex flex-col items-center">
                           {previewUrl ? (
-                            <div className="relative w-48 h-64 mb-4 rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-all duration-300">
-                              <Image src={previewUrl} alt="Предпросмотр обложки" fill className="object-cover rounded-xl" />
-                              <button
+                            <motion.div 
+                              className="relative w-48 h-64 mb-4 rounded-xl shadow-lg overflow-hidden"
+                              whileHover={{ scale: 1.05, rotate: 1 }}
+                              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                            >
+                              <Image src={previewUrl || "/placeholder.svg"} alt="Предпросмотр обложки" fill className="object-cover rounded-xl" />
+                              <motion.button
                                 type="button"
                                 onClick={handleRemoveCover}
-                                className="absolute top-2 right-2 bg-red-500/90 text-white p-1 rounded-full hover:bg-red-500 transition-all duration-200"
+                                className="absolute top-2 right-2 bg-red-500/90 text-white p-1 rounded-full hover:bg-red-600 transition-all duration-200"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                               >
-                                ✕
-                              </button>
-                            </div>
+                                <X className="h-4 w-4" />
+                              </motion.button>
+                            </motion.div>
                           ) : (
-                            <div
-                              className={`${themeClasses.card} w-48 h-64 mb-4 flex items-center justify-center text-neutral-500 dark:text-neutral-400`}
+                            <motion.div
+                              className="w-48 h-64 mb-4 flex items-center justify-center backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md text-gray-500 dark:text-gray-400"
+                              whileHover={{ scale: 1.02 }}
                             >
-                              Нет обложки
-                            </div>
+                              <BookOpen className="h-12 w-12" />
+                            </motion.div>
                           )}
                           <div className="flex gap-2">
-                            <Button
+                            <motion.button
                               type="button"
                               onClick={() => document.getElementById("coverInput")?.click()}
-                              className={themeClasses.button}
+                              className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                              whileHover={{ y: -2 }}
+                              whileTap={{ scale: 0.98 }}
                             >
+                              <Upload className="h-4 w-4" />
                               {previewUrl ? "Изменить обложку" : "Загрузить обложку"}
-                            </Button>
-                            <Button
+                            </motion.button>
+                            <motion.button
                               type="button"
                               onClick={async () => {
                                 setShowManualCoverInput(false);
@@ -1037,10 +1123,13 @@ const BookForm = ({
                                   });
                                 }
                               }}
-                              className={themeClasses.button}
+                              className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                              whileHover={{ y: -2 }}
+                              whileTap={{ scale: 0.98 }}
                             >
-                              Обновить обложку
-                            </Button>
+                              <Search className="h-4 w-4" />
+                              Найти обложку
+                            </motion.button>
                           </div>
                           <input
                             id="coverInput"
@@ -1053,7 +1142,7 @@ const BookForm = ({
                         {showManualCoverInput && (
                           <div className="flex flex-col w-full max-w-xs">
                             <div className="mt-3">
-                              <label className="block text-xs font-semibold text-neutral-500 dark:text-white mb-1">
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
                                 Вставьте ссылку на обложку
                               </label>
                               <Input
@@ -1064,7 +1153,7 @@ const BookForm = ({
                                   setValue("cover", e.target.value);
                                   setPreviewUrl(e.target.value);
                                 }}
-                                className={`${themeClasses.input} text-xs h-8`}
+                                className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm text-xs h-8"
                               />
                             </div>
                           </div>
@@ -1075,23 +1164,23 @@ const BookForm = ({
                 </TabsContent>
 
                 {/* Детальная информация */}
-                <TabsContent value="details" className="space-y-6">
+                <TabsContent value="details" className="space-y-6 mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Описание книги
                       </label>
                       <Textarea
                         placeholder="Введите описание книги"
                         {...register("description")}
                         rows={7}
-                        className={themeClasses.textarea}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm resize-none"
                       />
                       {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Количество страниц
                       </label>
                       <Input
@@ -1099,35 +1188,35 @@ const BookForm = ({
                         placeholder="Введите количество страниц"
                         min={1}
                         {...register("pageCount", { valueAsNumber: true })}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.pageCount && <p className="text-red-500 text-sm mt-1">{errors.pageCount.message}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Язык
                       </label>
                       <Input
                         placeholder="Введите язык книги"
                         {...register("language")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.language && <p className="text-red-500 text-sm mt-1">{errors.language.message}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Формат книги
                       </label>
                       <Select
                         onValueChange={(value) => setValue("format", value)}
                         defaultValue={initialData?.format || ""}
                       >
-                        <SelectTrigger className={themeClasses.select}>
+                        <SelectTrigger className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm">
                           <SelectValue placeholder="Выберите формат" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/30">
                           <SelectItem value="Твердый переплет">Твердый переплет</SelectItem>
                           <SelectItem value="Мягкий переплет">Мягкий переплет</SelectItem>
                           <SelectItem value="Электронный">Электронный</SelectItem>
@@ -1138,7 +1227,7 @@ const BookForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Цена
                       </label>
                       <Input
@@ -1147,19 +1236,19 @@ const BookForm = ({
                         min={0}
                         step="0.01"
                         {...register("price", { valueAsNumber: true })}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price.message}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Категоризация
                       </label>
                       <Input
                         placeholder="Введите категоризацию"
                         {...register("categorization")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.categorization && (
                         <p className="text-red-500 text-sm mt-1">{errors.categorization.message}</p>
@@ -1167,25 +1256,25 @@ const BookForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         УДК
                       </label>
                       <Input
                         placeholder="Введите УДК"
                         {...register("udk")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.udk && <p className="text-red-500 text-sm mt-1">{errors.udk.message}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         ББК
                       </label>
                       <Input
                         placeholder="Введите ББК"
                         {...register("bbk")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.bbk && <p className="text-red-500 text-sm mt-1">{errors.bbk.message}</p>}
                     </div>
@@ -1193,16 +1282,16 @@ const BookForm = ({
                 </TabsContent>
 
                 {/* Дополнительные поля */}
-                <TabsContent value="rare-fields" className="space-y-6">
+                <TabsContent value="rare-fields" className="space-y-6 mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Оригинальное название
                       </label>
                       <Input
                         placeholder="Введите оригинальное название книги"
                         {...register("originalTitle")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.originalTitle && (
                         <p className="text-red-500 text-sm mt-1">{errors.originalTitle.message}</p>
@@ -1210,13 +1299,13 @@ const BookForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Оригинальный язык
                       </label>
                       <Input
                         placeholder="Введите оригинальный язык книги"
                         {...register("originalLanguage")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.originalLanguage && (
                         <p className="text-red-500 text-sm mt-1">{errors.originalLanguage.message}</p>
@@ -1224,26 +1313,26 @@ const BookForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Издание
                       </label>
                       <Input
                         placeholder="Введите информацию об издании"
                         {...register("edition")}
-                        className={themeClasses.input}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
                       />
                       {errors.edition && <p className="text-red-500 text-sm mt-1">{errors.edition.message}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">
+                      <label className="block text-base font-medium text-gray-700 dark:text-gray-200 mb-2">
                         Резюме книги
                       </label>
                       <Textarea
                         placeholder="Введите резюме книги"
                         {...register("summary")}
                         rows={5}
-                        className={themeClasses.textarea}
+                        className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm resize-none"
                       />
                       {errors.summary && <p className="text-red-500 text-sm mt-1">{errors.summary.message}</p>}
                     </div>
@@ -1251,8 +1340,8 @@ const BookForm = ({
                 </TabsContent>
               </Tabs>
 
-              <div className="pt-4 border-t border-white/10 dark:border-neutral-700/30 flex flex-col md:flex-row gap-4">
-                <Button
+              <div className="pt-4 border-t border-white/20 dark:border-gray-700/30 flex flex-col md:flex-row gap-4">
+                <motion.button
                   type="button"
                   onClick={() => {
                     try {
@@ -1294,41 +1383,49 @@ const BookForm = ({
                       });
                     }
                   }}
-                  className={`${themeClasses.button} py-3 w-full md:w-1/3`}
+                  className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 w-full md:w-1/3 flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <FileText className="h-5 w-5 mr-2" />
+                  <Download className="h-5 w-5" />
                   Импорт из JSON
-                </Button>
+                </motion.button>
 
-                <Button
+                <motion.button
                   type="button"
                   onClick={() => router.back()}
-                  className="bg-neutral-500/90 hover:bg-neutral-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-3 md:w-1/3"
+                  className="bg-gray-500/90 hover:bg-gray-600/90 text-white font-medium rounded-lg px-4 py-2 w-full md:w-1/3 flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.98 }}
                 >
+                  <X className="h-5 w-5" />
                   Отмена
-                </Button>
-                <Button
+                </motion.button>
+                
+                <motion.button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`${themeClasses.button} py-3 md:w-2/3`}
+                  className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 w-full md:w-2/3 flex items-center justify-center gap-2 shadow-md backdrop-blur-md disabled:opacity-70"
+                  whileHover={!isSubmitting ? { y: -3 } : {}}
+                  whileTap={!isSubmitting ? { scale: 0.98 } : {}}
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      <Loader2 className="h-5 w-5 animate-spin" />
                       Сохранение...
                     </>
                   ) : (
                     <>
-                      <BookOpen className="h-5 w-5 mr-2" />
+                      <Plus className="h-5 w-5" />
                       {mode === "create" ? "Добавить книгу" : "Сохранить изменения"}
                     </>
                   )}
-                </Button>
+                </motion.button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-      </main>
+          </motion.div>
+        </FadeInView>
+      </div>
 
       {/* Модальное окно для выбора полки */}
       <ShelvesModal />

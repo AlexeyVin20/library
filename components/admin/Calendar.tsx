@@ -1,280 +1,494 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+  ChevronLeft,
+  ChevronRight,
+  CalendarIcon,
+  Clock,
+  X,
+  BookOpen,
+  User,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+} from "lucide-react"
 
 // Определение типов
 export type CalendarEvent = {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
-  notes?: string;
-  userName?: string;
-  bookTitle?: string;
-};
+  id: string
+  userId: string
+  bookId: string
+  reservationDate: string
+  expirationDate: string
+  status: string
+  notes?: string
+  userName?: string
+  bookTitle?: string
+}
 
 interface CalendarProps {
-  initialEvents?: CalendarEvent[];
+  initialEvents?: CalendarEvent[]
 }
 
 export default function Calendar({ initialEvents = [] }: CalendarProps) {
-  const [currentMonth, setCurrentMonth] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  );
-  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedDayEvents, setSelectedDayEvents] = useState<CalendarEvent[]>([]);
-  
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+  const [currentMonth, setCurrentMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [selectedDayEvents, setSelectedDayEvents] = useState<CalendarEvent[]>([])
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
 
   useEffect(() => {
-    fetchReservations();
-  }, []);
+    if (initialEvents.length === 0) {
+      fetchReservations()
+    }
+  }, [initialEvents.length])
+
+  useEffect(() => {
+    // Close modal when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        closeModal()
+      }
+    }
+
+    if (showModal) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showModal])
 
   const fetchReservations = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
 
       const response = await fetch(`${baseUrl}/api/Reservation`, {
         headers: { "Content-Type": "application/json" },
-      });
+      })
 
       if (!response.ok) {
-        throw new Error(`Ошибка при загрузке данных: ${response.status}`);
+        throw new Error(`Ошибка при загрузке данных: ${response.status}`)
       }
 
-      const data = await response.json();
+      const data = await response.json()
       const calendarEvents = data.map((reservation: any) => ({
         id: reservation.id,
         userId: reservation.userId,
         bookId: reservation.bookId,
-        reservationDate: new Date(reservation.reservationDate).toISOString().split('T')[0],
-        expirationDate: new Date(reservation.expirationDate).toISOString().split('T')[0],
+        reservationDate: new Date(reservation.reservationDate).toISOString().split("T")[0],
+        expirationDate: new Date(reservation.expirationDate).toISOString().split("T")[0],
         status: reservation.status,
         notes: reservation.notes,
         userName: reservation.user?.fullName || "Неизвестный пользователь",
-        bookTitle: reservation.book?.title || "Неизвестная книга"
-      }));
+        bookTitle: reservation.book?.title || "Неизвестная книга",
+      }))
 
-      setEvents(calendarEvents);
+      setEvents(calendarEvents)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке резерваций");
-      console.error("Ошибка при загрузке резерваций:", err);
+      setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке резерваций")
+      console.error("Ошибка при загрузке резерваций:", err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handlePrevMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
-    );
-  };
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+  }
 
   const handleNextMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
-    );
-  };
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+  }
 
   const generateDays = (month: Date) => {
-    const year = month.getFullYear();
-    const monthIndex = month.getMonth();
-    const firstDay = new Date(year, monthIndex, 1);
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-    const offset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+    const year = month.getFullYear()
+    const monthIndex = month.getMonth()
+    const firstDay = new Date(year, monthIndex, 1)
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
+    const offset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1
 
-    const days = [];
+    const days = []
     for (let i = 0; i < offset; i++) {
-      days.push(null);
+      days.push(null)
     }
     for (let d = 1; d <= daysInMonth; d++) {
-      days.push(new Date(year, monthIndex, d));
+      days.push(new Date(year, monthIndex, d))
     }
-    return days;
-  };
+    return days
+  }
 
-  const days = generateDays(currentMonth);
+  const days = generateDays(currentMonth)
 
   const getEventColor = (status: string) => {
-    switch(status) {
-      case "Выполнена": return "bg-green-100 text-green-800";
-      case "Отменена": return "bg-red-100 text-red-800";
-      case "Истекла": return "bg-blue-100 text-blue-800";
+    switch (status) {
+      case "Выполнена":
+        return {
+          bg: "bg-emerald-100/80 dark:bg-emerald-900/30",
+          text: "text-emerald-800 dark:text-emerald-300",
+          border: "border-emerald-500/70",
+          icon: <CheckCircle className="w-4 h-4 text-emerald-500" />,
+        }
+      case "Отменена":
+        return {
+          bg: "bg-gray-100/80 dark:bg-gray-900/30",
+          text: "text-black dark:text-gray-300",
+          border: "border-gray-500/70",
+          icon: <XCircle className="w-4 h-4 text-gray-500" />,
+        }
+      case "Истекла":
+        return {
+          bg: "bg-blue-100/80 dark:bg-blue-900/30",
+          text: "text-blue-800 dark:text-blue-300",
+          border: "border-blue-500/70",
+          icon: <AlertCircle className="w-4 h-4 text-blue-500" />,
+        }
       case "Обрабатывается":
-      default: return "bg-yellow-100 text-yellow-800";
+      default:
+        return {
+          bg: "bg-emerald-50/80 dark:bg-emerald-900/20",
+          text: "text-emerald-700 dark:text-emerald-300",
+          border: "border-emerald-400/70",
+          icon: <Clock className="w-4 h-4 text-emerald-400" />,
+        }
     }
-  };
+  }
 
   const getDayEvents = (day: Date) => {
-    const dayStr = day.toISOString().split("T")[0];
-    return events.filter((event) => event.expirationDate === dayStr && event.status === "Выполнена");
-  };
+    const dayStr = day.toISOString().split("T")[0]
+    return events.filter((event) => event.expirationDate === dayStr)
+  }
 
   const handleDayClick = (day: Date) => {
-    const dayStr = day.toISOString().split("T")[0];
-    const eventsOnDay = events.filter((event) => event.expirationDate === dayStr);
-    setSelectedDay(day);
-    setSelectedDayEvents(eventsOnDay);
-    setShowModal(true);
-  };
+    const dayStr = day.toISOString().split("T")[0]
+    const eventsOnDay = events.filter((event) => event.expirationDate === dayStr)
+    setSelectedDay(day)
+    setSelectedDayEvents(eventsOnDay)
+    setShowModal(true)
+  }
 
   const closeModal = () => {
-    setShowModal(false);
-    setSelectedDay(null);
-    setSelectedDayEvents([]);
-  };
+    setShowModal(false)
+    setSelectedDay(null)
+    setSelectedDayEvents([])
+  }
 
   const formatEventDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ru-RU", {
       day: "2-digit",
       month: "long",
-      year: "numeric"
-    });
-  };
+      year: "numeric",
+    })
+  }
+
+  // Animation variants
+  const calendarVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+  }
+
+  const dayVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: (custom: number) => ({
+      opacity: 1,
+      scale: 1,
+      transition: {
+        delay: custom * 0.01,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    }),
+    hover: {
+      y: -4,
+      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      transition: {
+        duration: 0.2,
+        ease: "easeOut",
+      },
+    },
+    tap: {
+      scale: 0.98,
+      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+      transition: {
+        duration: 0.1,
+      },
+    },
+  }
+
+  const eventVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: (custom: number) => ({
+      opacity: 1,
+      x: 0,
+      transition: {
+        delay: 0.1 + custom * 0.05,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    }),
+    hover: {
+      scale: 1.03,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  }
+
+  const modalVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.9,
+      transition: {
+        duration: 0.2,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+  }
+
+  const modalContentVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: 0.1,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+  }
+
+  const buttonVariants = {
+    hover: {
+      y: -3,
+      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      transition: {
+        duration: 0.2,
+        ease: "easeOut",
+      },
+    },
+    tap: {
+      scale: 0.98,
+      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+      transition: {
+        duration: 0.1,
+      },
+    },
+  }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto bg-white/30 dark:bg-neutral-800/30 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 shadow-[0_10px_40px_rgba(0,0,0,0.15)]">
-      {error && (
-        <div className="bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg mb-4">
-          {error}
-        </div>
-      )}
-
-      <div className="flex justify-between items-center mb-4">
-        <button
-          onClick={handlePrevMonth}
-          className="bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
-        >
-          &lt; Пред.
-        </button>
-
-        <h2 className="text-xl font-bold text-neutral-700 dark:text-neutral-200">
-          {currentMonth.toLocaleString("ru-RU", { month: "long", year: "numeric" })}
-        </h2>
-
-        <button
-          onClick={handleNextMonth}
-          className="bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
-        >
-          След. &gt;
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((dayLabel, index) => (
-          <div key={index} className="text-center font-bold py-1 bg-white/30 dark:bg-neutral-800/30 backdrop-blur-xl rounded-lg border border-white/30 dark:border-neutral-700/30">
-            {dayLabel}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((day, index) => {
-          if (!day) return <div key={`empty-${index}`} className="h-24 bg-white/20 dark:bg-neutral-800/20 backdrop-blur-xl rounded-lg border border-white/30 dark:border-neutral-700/30"></div>;
-
-          const dayEvents = getDayEvents(day);
-          const isToday = day.toDateString() === new Date().toDateString();
-          const hasEvents = dayEvents.length > 0;
-
-          return (
-            <div
-              key={`day-${index}`}
-              className={`h-24 border overflow-auto p-1 rounded-lg transition-all ${
-                isToday ? "border-blue-600 shadow-md" : "border-white/30 dark:border-neutral-700/30"
-              } ${hasEvents ? "cursor-pointer hover:bg-white/40 dark:hover:bg-neutral-700/40" : ""} bg-white/30 dark:bg-neutral-800/30 backdrop-blur-xl`}
-              onClick={hasEvents ? () => handleDayClick(day) : undefined}
+    <motion.div
+      className="w-full h-full bg-green-500/20 dark:bg-green-800/30 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 dark:border-gray-700/30 overflow-hidden"
+      variants={calendarVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-lg font-bold text-black dark:text-gray-100 flex items-center gap-2">
+            <CalendarIcon className="w-5 h-5 text-emerald-500" />
+            {currentMonth.toLocaleString("ru-RU", { month: "long", year: "numeric" })}
+          </h2>
+          <div className="flex space-x-2">
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: "rgba(16, 185, 129, 0.1)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handlePrevMonth}
+              className="p-2 rounded-full hover:bg-emerald-50/70 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 shadow-sm"
             >
-              <div className="text-right font-semibold text-neutral-700 dark:text-neutral-200">{day.getDate()}</div>
+              <ChevronLeft className="w-5 h-5" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: "rgba(16, 185, 129, 0.1)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleNextMonth}
+              className="p-2 rounded-full hover:bg-emerald-50/70 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 shadow-sm"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </motion.button>
+          </div>
+        </div>
 
-              {dayEvents.map(event => (
-                <div
-                  key={event.id}
-                  className={`${getEventColor(event.status)} p-2 my-1 rounded-lg text-xs shadow-sm backdrop-blur-sm`}
-                  title={`${event.userName} - ${event.bookTitle}`}
-                >
-                  <div className="font-bold truncate">{event.bookTitle}</div>
-                  <div className="truncate">{event.userName}</div>
-                </div>
-              ))}
+        <div className="grid grid-cols-7 gap-1">
+          {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((day) => (
+            <div key={day} className="py-2 text-center text-sm font-medium text-black dark:text-gray-300">
+              {day}
             </div>
-          );
-        })}
-      </div>
+          ))}
 
-      {/* Модальное окно для отображения событий дня */}
-      {showModal && selectedDay && (
-        <div className="fixed inset-0 backdrop-blur-3xl flex items-center justify-center z-50 p-4">
-          <div className="bg-white/80 dark:bg-neutral-800/80 backdrop-blur-xl rounded-2xl shadow-xl max-w-xl w-full max-h-[80vh] overflow-auto border border-gray-200 dark:border-neutral-700/30">
-            <div className="border-b border-white/30 dark:border-neutral-700/30 p-4 flex justify-between">
-              <h3 className="text-xl font-semibold text-neutral-700 dark:text-neutral-200">
-                Возвраты на {selectedDay.toLocaleString("ru-RU", { day: "2-digit", month: "long", year: "numeric" })}
-              </h3>
-              <button onClick={closeModal} className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200">
-                &times;
-              </button>
-            </div>
-            <div className="p-4">
-              {selectedDayEvents.length > 0 ? (
-                <div className="space-y-4">
-                  {selectedDayEvents.map((event) => (
-                    <div 
-                      key={event.id}
-                      className={`p-4 rounded-lg border-l-4 backdrop-blur-xl ${
-                        event.status === "Выполнена" 
-                          ? "border-green-500 bg-green-50/80 dark:bg-green-900/20" 
-                          : event.status === "Отменена" 
-                          ? "border-red-500 bg-red-50/80 dark:bg-red-900/20"
-                          : "border-yellow-500 bg-yellow-50/80 dark:bg-yellow-900/20"
+          {days.map((day, index) => {
+            const isCurrentMonth = day ? day.getMonth() === currentMonth.getMonth() : false
+            const isToday = day ? day.toDateString() === new Date().toDateString() : false
+            const hasEvents = day ? getDayEvents(day).length > 0 : false
+            const dayEvents = day ? getDayEvents(day) : []
+
+            return (
+              <motion.div
+                key={index}
+                custom={index}
+                variants={dayVariants}
+                initial="hidden"
+                animate="visible"
+                whileHover={day && isCurrentMonth ? "hover" : {}}
+                whileTap={day && isCurrentMonth ? "tap" : {}}
+                onClick={() => day && isCurrentMonth && handleDayClick(day)}
+                className={`relative h-20 md:h-20 p-1 rounded-lg border ${
+                  day
+                    ? isCurrentMonth
+                      ? isToday
+                        ? "bg-emerald-50/70 dark:bg-emerald-900/30 border-emerald-500/60 shadow-md"
+                        : "bg-white/40 dark:bg-gray-800/30 backdrop-blur-sm border-white/20 dark:border-gray-700/30 cursor-pointer"
+                      : "bg-gray-50/40 dark:bg-gray-800/40 text-black dark:text-gray-600 border-transparent"
+                    : "border-transparent"
+                }`}
+              >
+                {day && (
+                  <>
+                    <div
+                      className={`text-sm ${
+                        isCurrentMonth
+                          ? isToday
+                            ? "font-bold text-emerald-600 dark:text-emerald-400"
+                            : "font-medium text-black dark:text-gray-100"
+                          : "text-black dark:text-gray-600"
                       }`}
                     >
-                      <div className="flex justify-between">
-                        <h4 className="font-medium text-lg text-neutral-700 dark:text-neutral-200">{event.bookTitle}</h4>
-                        <span className={`px-2 py-1 text-xs rounded-full ${getEventColor(event.status)} backdrop-blur-sm`}>
-                          {event.status}
-                        </span>
-                      </div>
-                      <p className="text-sm mt-2 text-neutral-600 dark:text-neutral-300">Пользователь: <span className="font-medium">{event.userName}</span></p>
-                      <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400 grid grid-cols-2 gap-2">
-                        <div>
-                          <p>Дата резервации:</p>
-                          <p className="font-medium">{formatEventDate(event.reservationDate)}</p>
-                        </div>
-                        <div>
-                          <p>Дата возврата:</p>
-                          <p className="font-medium">{formatEventDate(event.expirationDate)}</p>
-                        </div>
-                      </div>
-                      {event.notes && (
-                        <div className="mt-3 pt-3 border-t border-white/30 dark:border-neutral-700/30">
-                          <p className="text-sm text-neutral-600 dark:text-neutral-300">Примечания:</p>
-                          <p className="text-sm text-neutral-500 dark:text-neutral-400">{event.notes}</p>
-                        </div>
-                      )}
+                      {day.getDate()}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-neutral-500 dark:text-neutral-400 py-6">Нет возвратов на выбранную дату</p>
-              )}
-            </div>
-            <div className="border-t border-white/30 dark:border-neutral-700/30 p-4 flex justify-end">
-              <button 
-                onClick={closeModal}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-              >
-                Закрыть
-              </button>
-            </div>
-          </div>
+
+                    {hasEvents && (
+                      <div className="mt-1 space-y-1">
+                        {dayEvents.slice(0, 2).map((event, eventIndex) => {
+                          const colors = getEventColor(event.status)
+                          return (
+                            <motion.div
+                              key={`${event.id}-${eventIndex}`}
+                              className={`${colors.bg} ${colors.text} text-xs px-1.5 py-0.5 rounded truncate flex items-center shadow-sm`}
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.1 * eventIndex }}
+                            >
+                              {colors.icon}
+                              <span className="ml-1 truncate">{event.bookTitle?.slice(0, 8) || "Книга"}</span>
+                            </motion.div>
+                          )
+                        })}
+                        {dayEvents.length > 2 && (
+                          <div className="text-xs text-black dark:text-gray-300">+{dayEvents.length - 2}</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            )
+          })}
         </div>
-      )}
-    </div>
-  );
+      </div>
+
+      <AnimatePresence>
+        {showModal && selectedDay && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeModal}
+          >
+            <motion.div
+              ref={modalRef}
+              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 rounded-xl shadow-xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-black dark:text-gray-100">
+                  {selectedDay.toLocaleString("ru-RU", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </h3>
+                <motion.button
+                  whileHover={{ scale: 1.1, backgroundColor: "rgba(16, 185, 129, 0.1)" }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={closeModal}
+                  className="p-2 rounded-full hover:bg-emerald-50/70 dark:hover:bg-emerald-900/30 text-emerald-500 shadow-sm"
+                >
+                  <X className="w-5 h-5" />
+                </motion.button>
+              </div>
+
+              <div className="space-y-3">
+                {selectedDayEvents.length > 0 ? (
+                  selectedDayEvents.map((event, index) => {
+                    const colors = getEventColor(event.status)
+                    return (
+                      <motion.div
+                        key={event.id}
+                        custom={index}
+                        variants={eventVariants}
+                        initial="hidden"
+                        animate="visible"
+                        whileHover="hover"
+                        className={`p-3 rounded-lg ${colors.bg} border-l-4 ${colors.border} shadow-md`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center">
+                              <BookOpen className="w-4 h-4 mr-2 text-black dark:text-gray-300" />
+                              <h4 className={`font-medium ${colors.text}`}>{event.bookTitle}</h4>
+                            </div>
+                            <div className="mt-2 flex items-center">
+                              <User className="w-4 h-4 mr-2 text-black dark:text-gray-300" />
+                              <p className="text-sm text-black dark:text-gray-300">{event.userName}</p>
+                            </div>
+                            <div className="mt-1 text-xs text-black dark:text-gray-400 flex items-center">
+                              <Clock className="w-3 h-3 mr-1" />
+                              <span>Срок возврата: {formatEventDate(event.expirationDate)}</span>
+                            </div>
+                          </div>
+                          <div className="ml-2">{colors.icon}</div>
+                        </div>
+                      </motion.div>
+                    )
+                  })
+                ) : (
+                  <p className="text-black dark:text-gray-300 text-center py-4">Нет событий на этот день</p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
 }
+

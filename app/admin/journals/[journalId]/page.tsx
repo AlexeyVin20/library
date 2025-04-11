@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -31,7 +31,66 @@ interface Journal {
   publicationDate: string;
   pageCount: number;
   coverImageUrl?: string | null;
+  website?: string | null;
+  editorInChief?: string | null;
+  editorialBoard?: string[] | null;
+  issues?: IssueShort[] | null;
 }
+
+// Интерфейс для API-модели журнала
+interface ApiJournal {
+  id: number;
+  title: string;
+  issn?: string;
+  publisher?: string;
+  startYear?: number;
+  endYear?: number;
+  description?: string;
+  coverImage?: string;
+  website?: string;
+  issues?: IssueShort[];
+}
+
+// Интерфейс для краткой информации о выпуске
+interface IssueShort {
+  id: number;
+  volumeNumber: number;
+  issueNumber: number;
+  publicationDate: string;
+  cover?: string | null;
+  specialTheme?: string | null;
+}
+
+// Функция для преобразования данных API к нашему интерфейсу
+const adaptApiJournalToJournal = (apiJournal: ApiJournal): Journal => {
+  return {
+    id: apiJournal.id,
+    title: apiJournal.title,
+    issn: apiJournal.issn || '',
+    registrationNumber: null,
+    format: "Print" as const,
+    periodicity: "Monthly" as const,
+    pagesPerIssue: 0,
+    description: apiJournal.description || null,
+    publisher: apiJournal.publisher || null,
+    foundationDate: apiJournal.startYear?.toString() || new Date().toISOString(),
+    circulation: 0,
+    isOpenAccess: false,
+    category: "Scientific" as const,
+    targetAudience: null,
+    isPeerReviewed: false,
+    isIndexedInRINTS: false,
+    isIndexedInScopus: false,
+    isIndexedInWebOfScience: false,
+    publicationDate: apiJournal.startYear?.toString() || new Date().toISOString(),
+    pageCount: 0,
+    coverImageUrl: apiJournal.coverImage || null,
+    website: apiJournal.website || null,
+    editorInChief: null,
+    editorialBoard: null,
+    issues: apiJournal.issues || null
+  };
+};
 
 // Theme classes
 const getThemeClasses = () => {
@@ -52,8 +111,7 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
     if (!confirm("Вы уверены, что хотите удалить этот журнал?")) return;
     
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
       
       const res = await fetch(`${baseUrl}/api/journals/${journal.id}`, {
         method: "DELETE",
@@ -81,16 +139,32 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
 
   // Форматирование даты
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(date);
+    try {
+      // Проверяем, что dateString не пустая и не null
+      if (!dateString) {
+        return "Дата не указана";
+      }
+      
+      const date = new Date(dateString);
+      
+      // Проверяем валидность даты (NaN возвращается, если дата невалидна)
+      if (isNaN(date.getTime())) {
+        return "Некорректная дата";
+      }
+      
+      return new Intl.DateTimeFormat('ru-RU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }).format(date);
+    } catch (error) {
+      console.error("Ошибка форматирования даты:", error);
+      return "Ошибка в дате";
+    }
   };
 
   // Преобразование перечислений в русский текст
-  const formatEnum = (value: string, type: string) => {
+  const formatEnum = (value: string, type: 'format' | 'periodicity' | 'category') => {
     const formatMap = {
       format: {
         Print: "Печатный",
@@ -114,9 +188,9 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
         Literary: "Литературный",
         News: "Новостной",
       },
-    };
+    } as const;
     
-    return formatMap[type][value] || value;
+    return formatMap[type][value as keyof typeof formatMap[typeof type]] || value;
   };
 
   return (
@@ -242,50 +316,142 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
                     <p className="text-neutral-800 dark:text-neutral-200">{journal.targetAudience}</p>
                   </div>
                 )}
+                
+                {journal.website && (
+                  <div>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Веб-сайт:</p>
+                    <a href={journal.website} target="_blank" rel="noopener noreferrer" 
+                       className="text-primary-admin hover:text-primary-admin/80 dark:text-primary-admin dark:hover:text-primary-admin/80">
+                      {journal.website}
+                    </a>
+                  </div>
+                )}
+                
+                {journal.editorInChief && (
+                  <div>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Главный редактор:</p>
+                    <p className="text-neutral-800 dark:text-neutral-200">{journal.editorInChief}</p>
+                  </div>
+                )}
               </div>
             </div>
             
             {/* Дополнительная информация */}
             <div className={`${themeClasses.card} p-6`}>
               <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100 mb-4">
-                Дополнительная информация
+                Индексация журнала
               </h2>
-              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isOpenAccess ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Открытый доступ</span>
+                <div className={`${journal.isPeerReviewed ? "bg-green-100 dark:bg-green-800/20" : "bg-red-100 dark:bg-red-800/20"} p-3 rounded-lg`}>
+                  <p className="text-center font-medium">Рецензируемый</p>
+                  <p className="text-center text-2xl font-bold">{journal.isPeerReviewed ? "Да" : "Нет"}</p>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isPeerReviewed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Рецензируемый</span>
+                <div className={`${journal.isIndexedInRINTS ? "bg-green-100 dark:bg-green-800/20" : "bg-red-100 dark:bg-red-800/20"} p-3 rounded-lg`}>
+                  <p className="text-center font-medium">РИНЦ</p>
+                  <p className="text-center text-2xl font-bold">{journal.isIndexedInRINTS ? "Да" : "Нет"}</p>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isIndexedInRINTS ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Индексируется в РИНЦ</span>
+                <div className={`${journal.isIndexedInScopus ? "bg-green-100 dark:bg-green-800/20" : "bg-red-100 dark:bg-red-800/20"} p-3 rounded-lg`}>
+                  <p className="text-center font-medium">Scopus</p>
+                  <p className="text-center text-2xl font-bold">{journal.isIndexedInScopus ? "Да" : "Нет"}</p>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isIndexedInScopus ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Индексируется в Scopus</span>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <div className={`h-5 w-5 rounded-full ${journal.isIndexedInWebOfScience ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Индексируется в Web of Science</span>
+                <div className={`${journal.isIndexedInWebOfScience ? "bg-green-100 dark:bg-green-800/20" : "bg-red-100 dark:bg-red-800/20"} p-3 rounded-lg md:col-start-2`}>
+                  <p className="text-center font-medium">Web of Science</p>
+                  <p className="text-center text-2xl font-bold">{journal.isIndexedInWebOfScience ? "Да" : "Нет"}</p>
                 </div>
               </div>
             </div>
             
-            {/* Описание */}
+            {/* Редакционная коллегия */}
+            {journal.editorialBoard && journal.editorialBoard.length > 0 && (
+              <div className={`${themeClasses.card} p-6`}>
+                <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100 mb-4">
+                  Редакционная коллегия
+                </h2>
+                <ul className="list-disc list-inside">
+                  {journal.editorialBoard.map((member, index) => (
+                    <li key={index} className="mb-1 text-neutral-800 dark:text-neutral-200">{member}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            {/* Выпуски */}
+            {journal.issues && journal.issues.length > 0 && (
+              <div className={`${themeClasses.card} p-6`}>
+                <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100 mb-4 flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Выпуски журнала
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {journal.issues.map((issue) => (
+                    <Link href={`/admin/journals/${journal.id}/issues/${issue.id}`} key={issue.id}>
+                      <div className={`${themeClasses.statsCard} h-full cursor-pointer`}>
+                        <div className="relative w-full aspect-[3/4] mb-2 rounded overflow-hidden">
+                          {issue.cover ? (
+                            <Image
+                              src={issue.cover}
+                              alt={`Выпуск ${issue.volumeNumber}.${issue.issueNumber}`}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                              <BookText className="h-12 w-12 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <h3 className="font-semibold text-neutral-800 dark:text-neutral-100 mb-1">
+                          Том {issue.volumeNumber}, Выпуск {issue.issueNumber}
+                        </h3>
+                        <p className="text-sm text-neutral-500">
+                          {formatDate(issue.publicationDate)}
+                        </p>
+                        {issue.specialTheme && (
+                          <p className="text-sm text-neutral-800 dark:text-neutral-300 mt-1">
+                            {issue.specialTheme}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <div className="mt-4 flex justify-center">
+                  <Link href={`/admin/journals/${journal.id}/issues/create`}>
+                    <button className={`${themeClasses.button} w-full md:w-auto`}>
+                      <BookText className="h-4 w-4 mr-2" />
+                      Добавить выпуск
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            )}
+            
+            {(!journal.issues || journal.issues.length === 0) && (
+              <div className={`${themeClasses.card} p-6 text-center`}>
+                <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100 mb-4 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Выпуски журнала
+                </h2>
+                <p className="text-neutral-500 mb-4">У этого журнала пока нет выпусков</p>
+                <Link href={`/admin/journals/${journal.id}/issues/create`}>
+                  <button className={themeClasses.button}>
+                    <BookText className="h-4 w-4 mr-2" />
+                    Добавить выпуск
+                  </button>
+                </Link>
+              </div>
+            )}
+            
+            {/* Описание журнала */}
             {journal.description && (
               <div className={`${themeClasses.card} p-6`}>
                 <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100 mb-4">
                   Описание
                 </h2>
-                <p className="text-neutral-700 dark:text-neutral-300 whitespace-pre-line">{journal.description}</p>
+                <p className="text-neutral-800 dark:text-neutral-200 whitespace-pre-line">
+                  {journal.description}
+                </p>
               </div>
             )}
           </div>
@@ -298,44 +464,41 @@ const JournalDetails = ({ journal }: { journal: Journal }) => {
 export default function JournalDetailPage({
   params,
 }: {
-  params: Promise<{ journalId: string }>;
+  params: { journalId: string };
 }) {
+  const journalId = params.journalId;
   const [journal, setJournal] = useState<Journal | null>(null);
-  const [error, setError] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  // Распарсим params
-  const resolvedParams = use(params);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchJournal = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-        if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-
-        const res = await fetch(`${baseUrl}/api/journals/${resolvedParams.journalId}`, {
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) {
-          setError(true);
-          return;
+        setLoading(true);
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+        const response = await fetch(`${baseUrl}/api/journals/${journalId}`);
+        
+        if (!response.ok) {
+          throw new Error('Журнал не найден');
         }
-
-        const journalData = await res.json();
-        setJournal(journalData);
+        
+        const journalData = await response.json();
+        if (journalData) {
+          setJournal(adaptApiJournalToJournal(journalData));
+        } else {
+          setJournal(null);
+        }
       } catch (error) {
         console.error("Error fetching journal:", error);
-        setError(true);
+        setJournal(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchJournal();
-  }, [resolvedParams.journalId]);
+  }, [journalId]);
 
-  if (error) return notFound();
   if (loading) return <div className="text-center text-neutral-500 dark:text-neutral-400">Загрузка...</div>;
   if (!journal) return <div className="text-center text-neutral-500 dark:text-neutral-400">Журнал не найден</div>;
 

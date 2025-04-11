@@ -2,13 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, User } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UserUpdateDto {
   id: string;
@@ -32,107 +27,63 @@ interface UserUpdateDto {
   borrowedBooks?: any[];
 }
 
+const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+  >
+    {children}
+  </motion.div>
+);
+
 export default function UpdateUserPage() {
   const router = useRouter();
   const params = useParams();
   const userId = params.userId as string;
-  
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<UserUpdateDto | null>(null);
 
-  // Загрузка данных пользователя при монтировании
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
         const response = await fetch(`${baseUrl}/api/User/${userId}`);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Ошибка ответа сервера:", errorText);
-          throw new Error(`Ошибка загрузки данных: ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error("Ошибка при загрузке данных");
         const userData = await response.json();
-        console.log("Данные пользователя для формы:", userData);
-        
-        // Функция для форматирования даты в формат yyyy-MM-dd для input type="date"
-        const formatDateForInput = (dateString: string | null | undefined): string => {
-          if (!dateString) return "";
-          try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return "";
-            
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            
-            return `${year}-${month}-${day}`;
-          } catch (error) {
-            console.error("Ошибка форматирования даты:", error);
-            return "";
-          }
-        };
-        
         setFormData({
-          id: userData.id,
-          fullName: userData.fullName ?? "",
-          email: userData.email ?? "",
-          phone: userData.phone ?? "",
-          dateOfBirth: formatDateForInput(userData.dateOfBirth),
-          passportNumber: userData.passportNumber ?? "",
-          passportIssuedBy: userData.passportIssuedBy ?? "",
-          passportIssuedDate: formatDateForInput(userData.passportIssuedDate) ?? "",
-          address: userData.address ?? "",
-          dateRegistered: formatDateForInput(userData.dateRegistered),
-          borrowedBooksCount: userData.borrowedBooksCount ?? 0,
-          fineAmount: userData.fineAmount ?? 0,
-          isActive: userData.isActive ?? true,
-          loanPeriodDays: userData.loanPeriodDays ?? 14,
-          maxBooksAllowed: userData.maxBooksAllowed ?? 5,
-          passwordHash: userData.passwordHash ?? "",
-          username: userData.username ?? "",
-          userRoles: userData.userRoles || [],
-          borrowedBooks: userData.borrowedBooks || []
+          ...userData,
+          dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split("T")[0] : "",
+          dateRegistered: userData.dateRegistered ? new Date(userData.dateRegistered).toISOString().split("T")[0] : "",
+          passportIssuedDate: userData.passportIssuedDate ? new Date(userData.passportIssuedDate).toISOString().split("T")[0] : "",
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
-        console.error("Ошибка загрузки данных:", err);
       } finally {
         setLoading(false);
       }
     };
-    
     if (userId) fetchUserData();
-  }, [userId]);
+  }, [userId, baseUrl]);
 
-  // Обработка изменений в форме
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    
-    if (type === "checkbox") {
-      const { checked } = e.target;
-      setFormData((prev) => (prev ? { ...prev, [name]: checked } : null));
-    } else if (type === "number") {
-      setFormData((prev) => (prev ? { ...prev, [name]: value ? Number(value) : 0 } : null));
-    } else {
-      setFormData((prev) => (prev ? { ...prev, [name]: value } : null));
-    }
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => prev ? {
+      ...prev,
+      [name]: type === "checkbox" ? checked : type === "number" ? (value ? Number(value) : 0) : value,
+    } : null);
   };
 
-  // Отправка формы для обновления данных
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData) return;
-    
     setSubmitting(true);
     setError(null);
-    
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
       const response = await fetch(`${baseUrl}/api/User/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -141,297 +92,166 @@ export default function UpdateUserPage() {
           dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : null,
           dateRegistered: formData.dateRegistered ? new Date(formData.dateRegistered).toISOString() : null,
           passportIssuedDate: formData.passportIssuedDate ? new Date(formData.passportIssuedDate).toISOString() : null,
-          userRoles: formData.userRoles || [],
-          borrowedBooks: formData.borrowedBooks || []
         }),
       });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Ошибка ответа сервера при обновлении:", errorText);
-        throw new Error(`Ошибка: ${response.status}`);
-      }
-      
+      if (!response.ok) throw new Error("Ошибка при обновлении пользователя");
       router.push(`/admin/users/${userId}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при обновлении пользователя");
-      console.error("Ошибка обновления:", err);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="p-8 flex justify-center">Загрузка...</div>;
-  if (error && !formData) return <div className="p-8 text-red-500">Ошибка: {error}</div>;
-  if (!formData) return <div className="p-8 text-red-500">Пользователь не найден</div>;
+  if (loading) return (
+    <div className="flex flex-col justify-center items-center h-screen">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+        className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full"
+      />
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="mt-4 text-emerald-600 dark:text-emerald-400 font-medium"
+      >
+        Загрузка данных...
+      </motion.p>
+    </div>
+  );
+
+  if (error && !formData) return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="p-6 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg"
+    >
+      {error}
+    </motion.div>
+  );
+
+  if (!formData) return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="p-6 bg-yellow-100/80 dark:bg-yellow-900/80 backdrop-blur-xl border border-yellow-400 text-yellow-700 dark:text-yellow-200 rounded-lg"
+    >
+      Пользователь не найден
+    </motion.div>
+  );
 
   return (
-      <div className="p-6 max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
-            Редактирование пользователя
-          </h1>
-          <button
+    <div className="min-h-screen relative p-6 max-w-2xl mx-auto">
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
+
+      <FadeInView>
+        <motion.div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-black-800 dark:text-black-100">Редактирование пользователя</h1>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.back()}
-            className="bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
+            className="bg-gray-500/80 hover:bg-gray-600/80 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
           >
+            <ArrowLeft className="w-4 h-4" />
             Назад
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
+      </FadeInView>
 
-        {error && (
-          <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mb-6 p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg"
+        >
+          {error}
+        </motion.div>
+      )}
 
+      <FadeInView delay={0.2}>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white/30 dark:bg-neutral-800/30 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)]">
+          <motion.div
+            className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg border border-white/20 dark:border-gray-700/30"
+            whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1)" }}
+          >
             <div className="space-y-4">
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  ФИО
-                </label>
-                <input
-                  type="text"
-                  id="fullName"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Имя пользователя
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Телефон
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="dateOfBirth" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Дата рождения
-                </label>
-                <input
-                  type="date"
-                  id="dateOfBirth"
-                  name="dateOfBirth"
-                  value={formData.dateOfBirth}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="passportNumber" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Номер паспорта
-                </label>
-                <input
-                  type="text"
-                  id="passportNumber"
-                  name="passportNumber"
-                  value={formData.passportNumber}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="passportIssuedBy" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Кем выдан паспорт
-                </label>
-                <input
-                  type="text"
-                  id="passportIssuedBy"
-                  name="passportIssuedBy"
-                  value={formData.passportIssuedBy}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="passportIssuedDate" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Дата выдачи паспорта
-                </label>
-                <input
-                  type="date"
-                  id="passportIssuedDate"
-                  name="passportIssuedDate"
-                  value={formData.passportIssuedDate}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="address" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Адрес
-                </label>
-                <input
-                  type="text"
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="dateRegistered" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Дата регистрации
-                </label>
-                <input
-                  type="date"
-                  id="dateRegistered"
-                  name="dateRegistered"
-                  value={formData.dateRegistered}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="loanPeriodDays" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Срок выдачи (дней)
-                </label>
-                <input
-                  type="number"
-                  id="loanPeriodDays"
-                  name="loanPeriodDays"
-                  value={formData.loanPeriodDays}
-                  onChange={handleChange}
-                  min="1"
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="maxBooksAllowed" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Максимальное количество книг
-                </label>
-                <input
-                  type="number"
-                  id="maxBooksAllowed"
-                  name="maxBooksAllowed"
-                  value={formData.maxBooksAllowed}
-                  onChange={handleChange}
-                  min="1"
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="borrowedBooksCount" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Текущее количество книг
-                </label>
-                <input
-                  type="number"
-                  id="borrowedBooksCount"
-                  name="borrowedBooksCount"
-                  value={formData.borrowedBooksCount}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="fineAmount" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Штраф (руб.)
-                </label>
-                <input
-                  type="number"
-                  id="fineAmount"
-                  name="fineAmount"
-                  value={formData.fineAmount}
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
+              {[
+                { label: "ФИО", name: "fullName", type: "text", required: true },
+                { label: "Email", name: "email", type: "email", required: true },
+                { label: "Имя пользователя", name: "username", type: "text", required: true },
+                { label: "Телефон", name: "phone", type: "tel", required: true },
+                { label: "Дата рождения", name: "dateOfBirth", type: "date", required: true },
+                { label: "Номер паспорта", name: "passportNumber", type: "text" },
+                { label: "Кем выдан паспорт", name: "passportIssuedBy", type: "text" },
+                { label: "Дата выдачи паспорта", name: "passportIssuedDate", type: "date" },
+                { label: "Адрес", name: "address", type: "text" },
+                { label: "Дата регистрации", name: "dateRegistered", type: "date", required: true },
+                { label: "Срок выдачи (дней)", name: "loanPeriodDays", type: "number", min: 1 },
+                { label: "Максимальное количество книг", name: "maxBooksAllowed", type: "number", min: 1 },
+                { label: "Текущее количество книг", name: "borrowedBooksCount", type: "number", min: 0 },
+                { label: "Штраф (руб.)", name: "fineAmount", type: "number", min: 0, step: 0.01 },
+              ].map((field, index) => (
+                <div key={field.name}>
+                  <label htmlFor={field.name} className="block text-sm font-medium text-black-600 dark:text-black-300 mb-1">
+                    {field.label}
+                  </label>
+                  <motion.input
+                    id={field.name}
+                    name={field.name}
+                    type={field.type}
+                    value={formData[field.name as keyof UserUpdateDto] as string | number}
+                    onChange={handleChange}
+                    required={field.required}
+                    min={field.min}
+                    step={field.step}
+                    className="w-full p-3 rounded-lg bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-black-800 dark:text-black-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    whileFocus={{ scale: 1.02 }}
+                  />
+                </div>
+              ))}
+              <div className="flex items-center gap-2">
+                <motion.input
                   id="isActive"
                   name="isActive"
+                  type="checkbox"
                   checked={formData.isActive}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => (prev ? { ...prev, isActive: !!checked } : null))
-                  }
+                  onChange={handleChange}
+                  className="h-4 w-4 text-emerald-500 focus:ring-emerald-500 border-white/30 dark:border-gray-700/30 rounded"
+                  whileHover={{ scale: 1.1 }}
                 />
-                <label
-                  htmlFor="isActive"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
+                <label htmlFor="isActive" className="text-sm font-medium text-black-600 dark:text-black-300">
                   Активный пользователь
                 </label>
               </div>
             </div>
-          </div>
-
+          </motion.div>
           <div className="flex justify-end gap-4">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => router.back()}
-              className="bg-gradient-to-r from-gray-600/90 to-gray-700/70 dark:from-gray-700/80 dark:to-gray-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
+              className="bg-gray-500/80 hover:bg-gray-600/80 text-white font-medium rounded-lg px-4 py-2 shadow-md backdrop-blur-md"
             >
               Отмена
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="submit"
               disabled={submitting}
-              className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md disabled:opacity-50"
             >
-              {submitting ? "Сохранение..." : "Сохранить изменения"}
-            </button>
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Сохранить изменения
+            </motion.button>
           </div>
         </form>
-      </div>
+      </FadeInView>
+    </div>
   );
 }

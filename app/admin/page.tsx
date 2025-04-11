@@ -1,16 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Calendar from "@/components/admin/Calendar";
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
-import { BookOpen } from "lucide-react";
-import { TableVirtuoso } from "react-virtuoso";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { BookOpen, Users, AlertCircle, TrendingUp, CalendarIcon, BookMarked, Clock, ChevronRight, CheckCircle2, XCircle, BarChart3, Layers, ArrowRight } from 'lucide-react';
 import React from "react";
-
-// Динамический импорт компонентов с графиками
-const MyChartStats = dynamic(() => import("@/components/admin/ChartStats"), { ssr: false });
-const BorrowedBooksChart = dynamic(() => import("@/components/admin/BorrowedBooksChart"), { ssr: false });
 
 // Определение типов
 interface User {
@@ -53,30 +50,357 @@ interface MonthlyBorrowedData {
   borrowed: number;
 }
 
-// Обычные классы стилей
-const getThemeClasses = () => ({
-  card: "bg-transparent dark:bg-transparent rounded-2xl p-6 shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col border border-gray-200 dark:border-neutral-700",
-  statsCard: "bg-transparent dark:bg-transparent rounded-2xl p-6 shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between border border-gray-200 dark:border-neutral-700",
-  mainContainer: "min-h-screen p-6",
-  button: "bg-primary-admin dark:bg-primary-admin/80 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
-  bookCard: "flex p-4 bg-transparent dark:bg-transparent rounded-lg border border-gray-200 dark:border-neutral-700 mb-3 transition-all duration-300 hover:shadow-lg hover:-translate-x-1",
-  sectionTitle: "text-2xl font-bold mb-4 text-neutral-500 dark:text-white border-b pb-2 border-gray-200 dark:border-neutral-700",
-  requestCard: "mb-4 p-5 rounded-lg border border-gray-200 dark:border-neutral-700 bg-transparent dark:bg-transparent hover:shadow-lg transition-all duration-300",
-  statusBadge: {
-    completed: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-green-600",
-    processing: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-yellow-600",
-    canceled: "inline-block px-3 py-1 text-sm font-semibold text-white rounded-full bg-red-600",
-  },
-  tableRow: {
-    even: "bg-transparent dark:bg-transparent",
-    odd: "bg-transparent dark:bg-transparent",
-  },
-  actionButton: {
-    approve: "bg-green-600 dark:bg-green-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
-    reject: "bg-red-600 dark:bg-red-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
-    neutral: "bg-blue-600 dark:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 flex items-center justify-center gap-2",
-  },
-});
+// Компонент для анимированного счетчика
+const CountUp = ({ end, duration = 2, decimals = 0 }: { end: number; duration?: number; decimals?: number }) => {
+  const [count, setCount] = useState(0);
+  const countRef = useRef(0);
+  const startTime = useRef(0);
+  
+  useEffect(() => {
+    startTime.current = Date.now();
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const progress = Math.min((now - startTime.current) / (duration * 1000), 1);
+      countRef.current = progress * end;
+      setCount(countRef.current);
+      
+      if (progress === 1) {
+        clearInterval(interval);
+      }
+    }, 16);
+    
+    return () => clearInterval(interval);
+  }, [end, duration]);
+  
+  return <>{count.toFixed(decimals)}</>;
+};
+
+// Компонент для анимированного появления
+const FadeInView = ({ children, delay = 0, duration = 0.5 }: { children: React.ReactNode; delay?: number; duration?: number }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// Компонент для карточки статистики
+const StatCard = ({ 
+  title, 
+  value, 
+  subtitle, 
+  additionalInfo, 
+  icon, 
+  color, 
+  delay = 0 
+}: { 
+  title: string; 
+  value: number; 
+  subtitle: string; 
+  additionalInfo?: React.ReactNode; 
+  icon: React.ReactNode; 
+  color: string;
+  delay?: number;
+}) => {
+  return (
+    <FadeInView delay={delay}>
+      <motion.div 
+        className={`backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-white/20 dark:border-gray-700/30 relative overflow-hidden`}
+      >
+        <div className={`absolute top-0 left-0 w-1.5 h-full ${color}`}></div>
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            {icon}
+            {title}
+          </h3>
+          <div className={`w-10 h-10 rounded-full ${color} bg-opacity-20 dark:bg-opacity-30 flex items-center justify-center shadow-inner`}>
+            {icon}
+          </div>
+        </div>
+        <div>
+          <p className={`text-4xl font-bold mb-2 text-white`}>
+            <CountUp end={value} />
+          </p>
+          <p className="text-sm text-white">{subtitle}</p>
+          {additionalInfo && (
+            <div className="mt-3 text-sm text-white">
+              {additionalInfo}
+            </div>
+          )}
+        </div>
+        <Link href="/admin/statistics" className="mt-4">
+          <span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center">
+            Подробная статистика
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </span>
+        </Link>
+      </motion.div>
+    </FadeInView>
+  );
+};
+
+// Компонент для карточки с графиком
+const ChartCard = ({ 
+  title, 
+  children, 
+  delay = 0 
+}: { 
+  title: string; 
+  children: React.ReactNode; 
+  delay?: number;
+}) => {
+  return (
+    <FadeInView delay={delay}>
+      <motion.div 
+        className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30"
+      >
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-emerald-500" />
+          {title}
+        </h3>
+        <div className="flex-1 h-[300px] bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+          {children}
+        </div>
+        <Link href="/admin/statistics" className="mt-4">
+          <span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center">
+            Подробная статистика
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </span>
+        </Link>
+      </motion.div>
+    </FadeInView>
+  );
+};
+
+// Компонент для карточки с запросом
+const RequestCard = ({ 
+  request, 
+  onApprove, 
+  onReject, 
+  type = "user",
+  index = 0
+}: { 
+  request: Reservation; 
+  onApprove: (id: string) => void; 
+  onReject: (id: string) => void;
+  type?: "user" | "book";
+  index?: number;
+}) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.1 * index, duration: 0.3 }}
+      className={`mb-4 p-5 rounded-xl border border-white/20 dark:border-gray-700/30 backdrop-blur-xl bg-green/20 dark:bg-green/40 hover:shadow-lg transition-all duration-300 relative overflow-hidden`}
+    >
+      <div className={`absolute top-0 left-0 w-1 h-full ${type === "user" ? "bg-emerald-500" : "bg-emerald-400"}`}></div>
+      <div className="flex justify-between">
+        <div>
+          <p className="text-lg font-medium text-white">
+            {type === "user" 
+              ? request.user?.fullName || "Неизвестный пользователь"
+              : request.book?.title || "Неизвестная книга"
+            }
+          </p>
+          <p className="text-sm text-white mt-2">
+            {type === "user" 
+              ? request.book?.title || "Неизвестная книга"
+              : `Пользователь: ${request.user?.fullName || "Неизвестный пользователь"}`
+            }
+          </p>
+          <p className="text-xs text-white mt-2 flex items-center">
+            <Clock className="w-3 h-3 mr-1" />
+            {new Date(request.reservationDate).toLocaleString("ru-RU", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 flex gap-3">
+        <motion.button 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => onApprove(request.id)} 
+          className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center justify-center gap-2 transition-colors backdrop-blur-md shadow-md"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          Одобрить
+        </motion.button>
+        <motion.button 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => onReject(request.id)} 
+          className="bg-gray-500/80 hover:bg-gray-600/80 text-white font-medium rounded-lg px-4 py-2 flex items-center justify-center gap-2 transition-colors backdrop-blur-md shadow-md"
+        >
+          <XCircle className="w-4 h-4" />
+          Отклонить
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+};
+
+// Компонент для карточки книги
+const BookCard = ({ book, index = 0 }: { book: Book; index?: number }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.1 * index, duration: 0.3 }}
+      className="flex p-4 backdrop-blur-xl bg-green/20 dark:bg-gray-800/30 rounded-xl border border-white/20 dark:border-gray-700/30 mb-3 transition-all duration-300 hover:shadow-lg"
+    >
+      <div className="flex items-center w-full">
+        <div className="w-12 h-16 flex-shrink-0 bg-emerald-100/70 dark:bg-emerald-900/30 rounded-lg mr-4 overflow-hidden shadow-md">
+          {book.cover ? (
+            <img src={book.cover || "/placeholder.svg"} alt={book.title} className="w-full h-full object-cover" loading="lazy" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <BookOpen className="w-6 h-6 text-emerald-400" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <Link href={`/admin/books/${book.id}`}>
+            <h3 className="text-white font-medium truncate hover:text-emerald-300 transition-colors">
+              {book.title}
+            </h3>
+          </Link>
+          <p className="text-sm text-white mt-1">
+            {book.authors || "Автор не указан"}
+          </p>
+          <p className="text-xs text-white mt-1 flex items-center">
+            <span className="inline-block px-2 py-0.5 bg-emerald-100/70 dark:bg-emerald-900/30 text-white rounded-full mr-1">
+              {book.availableCopies}
+            </span>
+            экз.
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Компонент для секции
+const Section = ({ 
+  title, 
+  children, 
+  action, 
+  delay = 0 
+}: { 
+  title: string; 
+  children: React.ReactNode; 
+  action?: { label: string; href: string }; 
+  delay?: number;
+}) => {
+  return (
+    <FadeInView delay={delay}>
+      <motion.div 
+        className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold text-white">{title}</h2>
+          {action && (
+            <Link href={action.href}>
+              <motion.span 
+                className="text-white hover:text-emerald-300 transition-colors text-sm font-medium flex items-center"
+                whileHover={{ x: 3 }}
+              >
+                {action.label}
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </motion.span>
+            </Link>
+          )}
+        </div>
+        <div className="flex-1">
+          {children}
+        </div>
+      </motion.div>
+    </FadeInView>
+  );
+};
+
+// Компонент для статуса
+const StatusBadge = ({ status }: { status: string }) => {
+  let color = "";
+  let label = "";
+  
+  if (status === "Выполнена") {
+    color = "bg-emerald-500";
+    label = "Выполнена";
+  } else if (status === "Обрабатывается") {
+    color = "bg-emerald-400";
+    label = "В обработке";
+  } else {
+    color = "bg-gray-500";
+    label = "Отменена";
+  }
+  
+  return (
+    <span className={`inline-block px-3 py-1 text-xs font-medium text-white rounded-full ${color} backdrop-blur-md shadow-sm`}>
+      {label}
+    </span>
+  );
+};
+
+// Компонент для действий
+const ActionButton = ({ 
+  href, 
+  label, 
+  color = "emerald", 
+  icon 
+}: { 
+  href: string; 
+  label: string; 
+  color?: "emerald" | "emerald-light" | "gray"; 
+  icon?: React.ReactNode;
+}) => {
+  const colors = {
+    "emerald": "bg-green-500/20 hover:bg-green-600/90 backdrop-blur-xl",
+    "emerald-light": "bg-green-400/20 hover:bg-green-500/90 backdrop-blur-xl",
+    "gray": "bg-green-500/20 hover:bg-green-600/90 backdrop-blur-xl"
+  };
+  
+  return (
+    <Link href={href}>
+      <motion.div 
+        className={`${colors[color]} backdrop-blur-xl text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 px-4 py-3 flex items-center justify-center gap-2 border border-white/10`}
+        whileTap={{ scale: 0.98 }}
+      >
+        {icon}
+        {label}
+      </motion.div>
+    </Link>
+  );
+};
+
+// Компонент загрузки
+const LoadingSpinner = () => {
+  return (
+    <div className="flex flex-col justify-center items-center h-screen">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+        className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full"
+      />
+      <motion.p 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="mt-4 text-emerald-600 dark:text-emerald-400 font-medium"
+      >
+        Загрузка данных...
+      </motion.p>
+    </div>
+  );
+};
 
 export default function DashboardPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -91,9 +415,19 @@ export default function DashboardPage() {
   const [recentBorrowed, setRecentBorrowed] = useState<number>(5);
   const [monthlyBorrowedData, setMonthlyBorrowedData] = useState<MonthlyBorrowedData[]>([]);
   const [recentBooks, setRecentBooks] = useState<Book[]>([]);
+  
+  // Ref для отслеживания скролла
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+  
+  const opacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.1], [1, 0.95]);
+  const y = useTransform(scrollYProgress, [0, 0.1], [0, -20]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-  const themeClasses = getThemeClasses();
 
   // Мемоизация вычисляемых свойств
   const activeUsersCount = useMemo(() => users.filter((u) => u.borrowedBooksCount > 0).length, [users]);
@@ -170,7 +504,8 @@ export default function DashboardPage() {
     fetchData();
   }, [baseUrl]);
 
-  const formatDate = useCallback((dateString: string) => {
+  // Восстанавливаем определение функции formatDate
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ru-RU", {
       day: "2-digit",
       month: "long",
@@ -178,7 +513,7 @@ export default function DashboardPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  }, []);
+  };
 
   const handleApproveRequest = useCallback(async (id: string) => {
     try {
@@ -255,237 +590,236 @@ export default function DashboardPage() {
     [reservations]
   );
 
-  if (loading) return <div className="flex justify-center items-center h-screen text-neutral-200 dark:text-neutral-100">Загрузка...</div>;
-  if (error) return <div className="text-red-500 p-4 border border-red-300 rounded">{error}</div>;
+  // Добавляем стиль для анимации строк таблицы
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
+  if (loading) return <LoadingSpinner />;
+  
+  if (error) return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col items-center justify-center h-screen p-6"
+    >
+      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl text-red-600 dark:text-red-400 p-6 rounded-xl border border-white/20 dark:border-gray-700/30 max-w-md w-full text-center shadow-lg">
+        <AlertCircle className="w-12 h-12 mx-auto mb-4" />
+        <h2 className="text-xl font-bold mb-2">Произошла ошибка</h2>
+        <p>{error}</p>
+        <motion.button 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => window.location.reload()}
+          className="mt-4 bg-emerald-500/90 hover:bg-emerald-600/90 text-white px-4 py-2 rounded-lg font-medium shadow-md backdrop-blur-md"
+        >
+          Попробовать снова
+        </motion.button>
+      </div>
+    </motion.div>
+  );
 
   return (
-    <div className={themeClasses.mainContainer}>
-      <main className="flex-1 space-y-8">
+    <div className="min-h-screen relative" ref={containerRef}>
+
+      {/* Floating shapes */}
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+
+      <main className="max-w-7xl mx-auto space-y-8 relative z-10 p-6">
+
         {/* Статистические карточки */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className={`${themeClasses.statsCard} border-l-4 border-blue-600 min-h-[200px]`}>
-            <h3 className={themeClasses.sectionTitle}>Книги</h3>
-            <p className="text-3xl font-bold text-blue-800 mt-4">{totalAvailableBooks}</p>
-            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">доступных ресурсов</p>
-            <p className="text-sm text-green-800 mt-2 flex items-center">
-              <span className="mr-1">+</span>{recentBorrowed} <span className="ml-1">за последний месяц</span>
-            </p>
-          </div>
-          <div className={`${themeClasses.statsCard} border-l-4 border-green-600 min-h-[200px]`}>
-            <h3 className={themeClasses.sectionTitle}>Пользователи</h3>
-            <p className="text-3xl font-bold text-green-800 mt-4">{activeUsersCount}</p>
-            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">взяли книги</p>
-            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">
-              {totalUsersCount ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0}% от общего числа
-            </p>
-          </div>
-          <div className={`${themeClasses.statsCard} border-l-4 border-red-600 min-h-[200px]`}>
-            <h3 className={themeClasses.sectionTitle}>Штрафы</h3>
-            <p className="text-3xl font-bold text-red-800 mt-4">
-              {users.reduce((sum, user) => sum + (user.fineAmount || 0), 0).toFixed(2)} ₽
-            </p>
-            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2">общая сумма</p>
-            <p className="text-sm text-neutral-500 dark:text-neutral-200 mt-2 flex items-center">
-              <span className={themeClasses.statusBadge.processing}>{pendingReservations}</span>
-              <span className="ml-2">в обработке</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Графики */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className={themeClasses.card}>
-            <div className="flex-1 h-[300px]">
-              <MyChartStats totalBooks={totalAvailableBooks} recentBorrowed={recentBorrowed} totalBorrowed={totalBorrowedBooks} />
-            </div>
-          </div>
-          <div className={themeClasses.card}>
-            <div className="flex-1 h-[300px]">
-              <BorrowedBooksChart data={monthlyBorrowedData} />
-            </div>
-          </div>
+          <StatCard 
+            title="Книги" 
+            value={totalAvailableBooks}
+            subtitle="доступных ресурсов"
+            additionalInfo={
+              <p className="text-white-600 dark:text-white-400 flex items-center">
+                <span className="mr-1">+</span>{recentBorrowed} <span className="ml-1">за последний месяц</span>
+              </p>
+            }
+            icon={<BookOpen className="w-5 h-5 text-emerald-500" />}
+            color="bg-emerald-500"
+            delay={0.1}
+          />
+          <StatCard 
+            title="Пользователи" 
+            value={activeUsersCount}
+            subtitle="взяли книги"
+            additionalInfo={
+              <p className="text-black-600 dark:text-black-300">
+                {totalUsersCount ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0}% от общего числа
+              </p>
+            }
+            icon={<Users className="w-5 h-5 text-emerald-400" />}
+            color="bg-emerald-400"
+            delay={0.2}
+          />
+          <StatCard 
+            title="Штрафы" 
+            value={users.reduce((sum, user) => sum + (user.fineAmount || 0), 0)}
+            subtitle="общая сумма"
+            additionalInfo={
+              <div className="flex items-center">
+                <StatusBadge status="Обрабатывается" />
+                <span className="ml-2">{pendingReservations} в обработке</span>
+              </div>
+            }
+            icon={<AlertCircle className="w-5 h-5 text-gray-500" />}
+            color="bg-gray-500"
+            delay={0.3}
+          />
         </div>
 
         {/* Календарь и последние книги */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className={themeClasses.card}>
-            <h2 className={themeClasses.sectionTitle}>Календарь возвратов</h2>
-            <div className="flex-1 h-[400px]">
+            <div className="flex-1 h-[700px]">
               <Calendar initialEvents={reservationEvents} />
             </div>
-          </div>
-          <div className={themeClasses.card}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={themeClasses.sectionTitle}>Последние книги</h2>
-              <Link href="/admin/books" className="text-blue-700 hover:text-blue-800 transition-colors hover:underline text-sm">
-                Все книги →
-              </Link>
-            </div>
+
             <div className="space-y-3 flex-1">
               {recentBooks.length > 0 ? (
-                recentBooks.map((book) => (
-                  <div key={book.id} className={themeClasses.bookCard}>
-                    <div className="flex items-center w-full">
-                      <div className="w-12 h-16 flex-shrink-0 bg-gray-200 dark:bg-neutral-700 rounded mr-4 overflow-hidden">
-                        {book.cover ? (
-                          <img src={book.cover} alt={book.title} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <BookOpen className="w-6 h-6 text-neutral-400" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/admin/books/${book.id}`}>
-                          <h3 className="text-neutral-400 dark:text-neutral-100 font-medium truncate hover:text-blue-600 transition-colors">
-                            {book.title}
-                          </h3>
-                        </Link>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                          {book.authors || "Автор не указан"}
-                        </p>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 flex items-center">
-                          <span className="inline-block px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 rounded-full mr-1">
-                            {book.availableCopies}
-                          </span>
-                          экз.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                recentBooks.map((book, index) => (
+                  <BookCard key={book.id} book={book} index={index} />
                 ))
               ) : (
-                <p className="text-neutral-400 dark:text-neutral-400">Нет доступных книг</p>
+                <p className="text-black-600 dark:text-black-300">Нет доступных книг</p>
               )}
             </div>
-          </div>
         </div>
 
         {/* Запросы */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className={themeClasses.card}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={themeClasses.sectionTitle}>Запросы пользователей</h2>
-              <Link href="/admin/requests/users" className="text-blue-600 hover:text-blue-800 transition-colors hover:underline text-sm">
-                Все запросы →
-              </Link>
-            </div>
+          <Section 
+            title="Запросы пользователей" 
+            action={{ label: "Все запросы", href: "/admin/requests/users" }}
+            delay={0.8}
+          >
             <div className="flex-1 max-h-[400px] overflow-y-auto">
               {userRequests.length > 0 ? (
-                userRequests.slice(0, 3).map((reservation) => (
-                  <div key={reservation.id} className={`${themeClasses.requestCard} border-l-4 border-yellow-500`}>
-                    <p className="text-lg font-medium text-neutral-500 dark:text-neutral-100">
-                      {reservation.user?.fullName || "Неизвестный пользователь"}
-                    </p>
-                    <p className="text-sm text-neutral-400 dark:text-neutral-400 mt-2">{reservation.book?.title || "Неизвестная книга"}</p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(reservation.reservationDate)}</p>
-                    <div className="mt-4 flex gap-3">
-                      <button onClick={() => handleApproveRequest(reservation.id)} className={themeClasses.actionButton.approve}>
-                        Одобрить
-                      </button>
-                      <button onClick={() => handleRejectRequest(reservation.id)} className={themeClasses.actionButton.reject}>
-                        Отклонить
-                      </button>
-                    </div>
-                  </div>
+                userRequests.slice(0, 3).map((reservation, index) => (
+                  <RequestCard 
+                    key={reservation.id} 
+                    request={reservation} 
+                    onApprove={handleApproveRequest} 
+                    onReject={handleRejectRequest}
+                    type="user"
+                    index={index}
+                  />
                 ))
               ) : (
-                <p className="text-neutral-400 dark:text-neutral-400">Нет запросов пользователей</p>
+                <div className="flex flex-col items-center justify-center h-40 text-black-600 dark:text-black-300">
+                  <Users className="w-12 h-12 mb-2 text-black-300 dark:text-black-600" />
+                  <p>Нет запросов пользователей</p>
+                </div>
               )}
             </div>
-          </div>
+          </Section>
 
-          <div className={themeClasses.card}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={themeClasses.sectionTitle}>Запросы на книги</h2>
-              <Link href="/admin/requests/books" className="text-blue-600 hover:text-blue-800 transition-colors hover:underline text-sm">
-                Все запросы →
-              </Link>
-            </div>
+          <Section 
+            title="Запросы на книги" 
+            action={{ label: "Все запросы", href: "/admin/requests/books" }}
+            delay={0.9}
+          >
             <div className="flex-1 max-h-[400px] overflow-y-auto">
               {bookRequests.length > 0 ? (
-                bookRequests.slice(0, 3).map((request) => (
-                  <div key={request.id} className={`${themeClasses.requestCard} border-l-4 border-blue-500`}>
-                    <p className="text-lg font-medium text-neutral-500 dark:text-neutral-100">{request.book?.title || "Неизвестная книга"}</p>
-                    <p className="text-sm text-neutral-400 dark:text-neutral-400 mt-2">
-                      Пользователь: {request.user?.fullName || "Неизвестный пользователь"}
-                    </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatDate(request.reservationDate)}</p>
-                    <div className="mt-4 flex gap-3">
-                      <button onClick={() => handleApproveRequest(request.id)} className={themeClasses.actionButton.approve}>
-                        Одобрить
-                      </button>
-                      <button onClick={() => handleRejectRequest(request.id)} className={themeClasses.actionButton.reject}>
-                        Отклонить
-                      </button>
-                    </div>
-                  </div>
+                bookRequests.slice(0, 3).map((request, index) => (
+                  <RequestCard 
+                    key={request.id} 
+                    request={request} 
+                    onApprove={handleApproveRequest} 
+                    onReject={handleRejectRequest}
+                    type="book"
+                    index={index}
+                  />
                 ))
               ) : (
-                <p className="text-neutral-400 dark:text-neutral-400">Нет активных запросов на книги</p>
+                <div className="flex flex-col items-center justify-center h-40 text-black-600 dark:text-black-300">
+                  <BookMarked className="w-12 h-12 mb-2 text-black-300 dark:text-black-600" />
+                  <p>Нет активных запросов на книги</p>
+                </div>
               )}
             </div>
-          </div>
+          </Section>
         </div>
 
         {/* Последние активности с виртуализацией через react-virtuoso */}
-        <div className={themeClasses.card}>
-          <h2 className={themeClasses.sectionTitle}>Последние активности</h2>
-          <div className="flex-1 max-h-[400px]">
-            <TableVirtuoso
-              style={{ height: 400 }}
-              data={recentActivities}
-              totalCount={recentActivities.length}
-              fixedHeaderContent={() => (
-                <tr className="bg-transparent dark:bg-transparent rounded-t-lg">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Действие</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Книга</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Дата</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 dark:text-neutral-400 uppercase tracking-wider">Статус</th>
-                </tr>
-              )}
-              itemContent={(index) => {
-                const reservation = recentActivities[index];
-                return (
-                  <>
-                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">Резервация</td>
-                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{reservation.book?.title || "Неизвестная книга"}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-white">{formatDate(reservation.reservationDate)}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={
-                          reservation.status === "Выполнена"
-                            ? themeClasses.statusBadge.completed
-                            : reservation.status === "Обрабатывается"
-                            ? themeClasses.statusBadge.processing
-                            : themeClasses.statusBadge.canceled
-                        }
-                      >
-                        {reservation.status === "Выполнена"
-                          ? "Выполнена"
-                          : reservation.status === "Обрабатывается"
-                          ? "В обработке"
-                          : "Отменена"}
-                      </span>
-                    </td>
-                  </>
-                );
-              }}
-            />
+        <Section title="Последние активности" delay={1.0}>
+          <div className="flex-1 max-h-[400px] bg-green/20 dark:bg-gren/70 backdrop-blur-md rounded-xl overflow-hidden border border-white/30 dark:border-gray-700/30 w-full">
+            <div className="overflow-auto" style={{ height: 400, width: "100%" }}>
+              <table className="min-w-full" cellPadding={0} cellSpacing={0}>
+                <thead className="sticky top-0 bg-emerald-50/80 dark:bg-emerald-900/30 backdrop-blur-md w-full">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/4">Действие</th>
+                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/4">Книга</th>
+                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/4">Дата</th>
+                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/4">Статус</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentActivities.map((reservation, index) => (
+                    <tr 
+                      key={reservation.id}
+                      className="border-b border-white/20 dark:border-gray-700/30"
+                      style={{
+                        opacity: 0,
+                        transform: 'translateX(-20px)',
+                        animation: `fadeIn 0.5s ease-out ${0.1 * index}s forwards`
+                      }}
+                    >
+                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">Резервация</td>
+                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">{reservation.book?.title || "Неизвестная книга"}</td>
+                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">{formatDate(reservation.reservationDate)}</td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={reservation.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </Section>
 
         {/* Быстрые действия */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <Link href="/admin/reservations" className={themeClasses.actionButton.neutral}>
-            Посмотреть резервации
-          </Link>
-          <Link href="/admin/books" className={themeClasses.actionButton.approve}>
-            Все книги
-          </Link>
-          <Link href="/admin/users" className={themeClasses.actionButton.neutral}>
-            Управление пользователями
-          </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
+          <ActionButton 
+            href="/admin/reservations" 
+            label="Посмотреть резервации" 
+            color="emerald-light"
+            icon={<CalendarIcon className="w-5 h-5" />}
+          />
+          <ActionButton 
+            href="/admin/books" 
+            label="Все книги" 
+            color="emerald" 
+            icon={<Layers className="w-5 h-5" />}
+          />
+          <ActionButton 
+            href="/admin/users" 
+            label="Управление пользователями" 
+            color="emerald-light" 
+            icon={<Users className="w-5 h-5" />}
+          />
         </div>
       </main>
     </div>

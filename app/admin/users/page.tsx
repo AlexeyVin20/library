@@ -1,14 +1,26 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Users, UserPlus, CheckCircle, XCircle, BookOpen } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { motion, AnimatePresence } from "framer-motion";
+import { Users, UserPlus, ChevronRight, ArrowRight } from "lucide-react";
 import { UsersPieChart } from "@/components/admin/UsersPieChart";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 import { FinesChart } from "@/components/admin/FinesChart";
+
+// CSS для анимации строк таблицы
+const fadeInAnimation = `
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+`;
 
 interface User {
   id: string;
@@ -33,6 +45,114 @@ interface Reservation {
   book?: { title: string };
 }
 
+const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+  >
+    {children}
+  </motion.div>
+);
+
+const StatCard = ({
+  title,
+  value,
+  subtitle,
+  icon,
+  color,
+  delay = 0,
+}: {
+  title: string;
+  value: number;
+  subtitle: string;
+  icon: React.ReactNode;
+  color: string;
+  delay?: number;
+}) => (
+  <FadeInView delay={delay}>
+    <motion.div
+      className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-white/20 dark:border-gray-700/30 relative overflow-hidden"
+    >
+      <div className={`absolute top-0 left-0 w-1.5 h-full ${color}`}></div>
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          {icon}
+          {title}
+        </h3>
+        <div className={`w-10 h-10 rounded-full ${color} bg-opacity-20 dark:bg-opacity-30 flex items-center justify-center shadow-inner`}>
+          {icon}
+        </div>
+      </div>
+      <div>
+        <p className={`text-4xl font-bold mb-2 text-white`}>
+          {value}
+        </p>
+        <p className="text-sm text-white">{subtitle}</p>
+      </div>
+      <Link href="/admin/statistics" className="mt-4">
+        <span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center">
+          Подробная статистика
+          <ArrowRight className="w-4 h-4 ml-1" />
+        </span>
+      </Link>
+    </motion.div>
+  </FadeInView>
+);
+
+const LoadingSpinner = () => (
+  <div className="flex flex-col justify-center items-center h-screen">
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+      className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full"
+    />
+    <motion.p
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.5 }}
+      className="mt-4 text-emerald-600 dark:text-emerald-400 font-medium"
+    >
+      Загрузка данных...
+    </motion.p>
+  </div>
+);
+
+// Добавляем определение компонента Section
+const Section = ({
+  title,
+  children,
+  action,
+  delay = 0,
+}: {
+  title: string;
+  children: React.ReactNode;
+  action?: { label: string; href: string };
+  delay?: number;
+}) => (
+  <FadeInView delay={delay}>
+    <motion.div
+      className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30"
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold text-white">{title}</h2>
+        {action && (
+          <Link href={action.href}>
+            <motion.span
+              className="text-white hover:text-emerald-300 transition-colors text-sm font-medium flex items-center"
+              whileHover={{ x: 3 }}
+            >
+              {action.label}
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </motion.span>
+          </Link>
+        )}
+      </div>
+      <div className="flex-1">{children}</div>
+    </motion.div>
+  </FadeInView>
+);
+
 export default function AllUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -42,255 +162,302 @@ export default function AllUsersPage() {
   const [sortField, setSortField] = useState<keyof User>("fullName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
+  // Вставка CSS анимации в DOM
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-        
-        const [usersResponse, reservationsResponse] = await Promise.all([
-          fetch(`${baseUrl}/api/User`),
-          fetch(`${baseUrl}/api/Reservation`),
-        ]);
-        
-        if (!usersResponse.ok) throw new Error(`Ошибка загрузки пользователей: ${usersResponse.status}`);
-        if (!reservationsResponse.ok) throw new Error(`Ошибка загрузки резерваций: ${reservationsResponse.status}`);
-        
-        const usersData = await usersResponse.json();
-        const reservationsData = await reservationsResponse.json();
-        
-        setUsers(usersData);
-        setReservations(reservationsData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
-        console.error("Ошибка загрузки данных:", err);
-      } finally {
-        setLoading(false);
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
       }
-    };
+    `;
+    document.head.appendChild(styleElement);
     
-    fetchData();
+    return () => {
+      document.head.removeChild(styleElement);
+    };
   }, []);
 
-  // Подготовка данных для отображения
-  const usersWithNextReturn = users.map((user) => {
-    const userReservations = reservations.filter(
-      (r) => r.userId === user.id && r.status === "Выполнена"
-    );
-    
-    const nextReservation = userReservations.length > 0
-      ? userReservations.sort(
-          (a, b) => 
-            new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime()
-        )[0]
-      : null;
-    
-    return {
-      ...user,
-      nextReturnDate: nextReservation?.expirationDate 
-        ? new Date(nextReservation.expirationDate).toLocaleDateString("ru-RU")
-        : "Нет",
-      nextReturnBook: nextReservation?.book?.title || "Нет",
-    };
-  });
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [usersResponse, reservationsResponse] = await Promise.all([
+        fetch(`${baseUrl}/api/User`),
+        fetch(`${baseUrl}/api/Reservation`),
+      ]);
 
-  // Фильтрация пользователей по поисковому запросу
-  const filteredUsers = usersWithNextReturn.filter(
-    (user) =>
-      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      if (!usersResponse.ok) throw new Error("Ошибка при загрузке пользователей");
+      if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резерваций");
 
-  // Сортировка пользователей
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    if (a[sortField] < b[sortField]) return sortDirection === "asc" ? -1 : 1;
-    if (a[sortField] > b[sortField]) return sortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
+      const usersData = await usersResponse.json();
+      const reservationsData = await reservationsResponse.json();
 
-  // Статистика для графиков
-  const activeUsersCount = users.filter(u => u.isActive).length;
-  const inactiveUsersCount = users.length - activeUsersCount;
-  
-  const totalBorrowed = users.reduce((sum, user) => sum + user.borrowedBooksCount, 0);
-  const totalFines = users.reduce((sum, user) => sum + (user.fineAmount || 0), 0);
-  
-  // Данные для графика штрафов
-  const usersWithFines = users.filter(u => u.fineAmount > 0);
-  const finesData = usersWithFines.map(u => ({
-    name: u.fullName,
-    value: u.fineAmount
-  }));
+      setUsers(usersData);
+      setReservations(reservationsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
+    } finally {
+      setLoading(false);
+    }
+  }, [baseUrl]);
 
-  // Данные для графика использования библиотеки
-  const borrowingChartData = {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const usersWithNextReturn = useMemo(() =>
+    users.map((user) => {
+      const userReservations = reservations.filter(
+        (r) => r.userId === user.id && r.status === "Выполнена"
+      );
+      const nextReservation = userReservations.length > 0
+        ? userReservations.sort(
+            (a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime()
+          )[0]
+        : null;
+      return {
+        ...user,
+        nextReturnDate: nextReservation?.expirationDate
+          ? new Date(nextReservation.expirationDate).toLocaleDateString("ru-RU")
+          : "Нет",
+        nextReturnBook: nextReservation?.book?.title || "Нет",
+      };
+    }), [users, reservations]);
+
+  const filteredUsers = useMemo(() =>
+    usersWithNextReturn.filter(
+      (user) =>
+        user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [usersWithNextReturn, searchTerm]);
+
+  const sortedUsers = useMemo(() =>
+    [...filteredUsers].sort((a, b) => {
+      if (a[sortField] < b[sortField]) return sortDirection === "asc" ? -1 : 1;
+      if (a[sortField] > b[sortField]) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    }), [filteredUsers, sortField, sortDirection]);
+
+  const activeUsersCount = useMemo(() => users.filter(u => u.isActive).length, [users]);
+  const totalBorrowed = useMemo(() => users.reduce((sum, user) => sum + user.borrowedBooksCount, 0), [users]);
+  const totalFines = useMemo(() => users.reduce((sum, user) => sum + (user.fineAmount || 0), 0), [users]);
+
+  const finesData = useMemo(() =>
+    users.filter(u => u.fineAmount > 0).map(u => ({
+      name: u.fullName,
+      value: u.fineAmount
+    })), [users]);
+
+  const borrowingChartData = useMemo(() => ({
     borrowed: totalBorrowed,
     available: users.reduce((sum, user) => sum + (user.maxBooksAllowed - user.borrowedBooksCount), 0),
     reservations: reservations.filter(r => r.status === "Обрабатывается").length
-  };
+  }), [users, reservations, totalBorrowed]);
 
-  const handleDeleteUser = async (id: string) => {
+  const handleDeleteUser = useCallback(async (id: string) => {
     if (!confirm("Вы уверены, что хотите удалить этого пользователя?")) return;
-
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
       const response = await fetch(`${baseUrl}/api/User/${id}`, {
         method: "DELETE",
       });
-
       if (!response.ok) throw new Error("Ошибка при удалении пользователя");
       setUsers(users.filter(user => user.id !== id));
     } catch (err) {
-      console.error("Ошибка при удалении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при удалении пользователя");
     }
+  }, [users, baseUrl]);
+
+  const handleSort = (field: keyof User) => {
+    setSortField(field);
+    setSortDirection(sortField === field && sortDirection === "asc" ? "desc" : "asc");
   };
 
-  if (loading) return (
-      <div className="flex justify-center items-center h-screen text-neutral-500 dark:text-neutral-200">
-        Загрузка...
-      </div>
-  );
+  if (loading) return <LoadingSpinner />;
 
   if (error) return (
-      <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
-        {error}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col items-center justify-center h-screen p-6"
+    >
+      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl text-red-600 dark:text-red-400 p-6 rounded-xl border border-white/20 dark:border-gray-700/30 max-w-md w-full text-center shadow-lg">
+        <h2 className="text-xl font-bold mb-2">Произошла ошибка</h2>
+        <p>{error}</p>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => window.location.reload()}
+          className="mt-4 bg-emerald-500/90 hover:bg-emerald-600/90 text-white px-4 py-2 rounded-lg font-medium shadow-md backdrop-blur-md"
+        >
+          Попробовать снова
+        </motion.button>
       </div>
+    </motion.div>
   );
 
   return (
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
-            Пользователи
-          </h1>
+    <div className="min-h-screen relative p-6 max-w-7xl mx-auto">
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
+
+      <main className="space-y-8 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-between items-center"
+        >
+          <h1 className="text-3xl font-bold text-white">Пользователи</h1>
           <div className="flex gap-4">
-            <Link 
-              href="/admin/users/create"
-              className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
-            >
-              Добавить пользователя
+            <Link href="/admin/users/create">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+              >
+                <UserPlus className="w-4 h-4" />
+                Добавить пользователя
+              </motion.button>
             </Link>
-            <Link 
-              href="/admin"
-              className="bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
-            >
-              Назад
+            <Link href="/admin">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                className="bg-gray-500/80 hover:bg-gray-600/80 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+              >
+                Назад
+              </motion.button>
             </Link>
           </div>
+        </motion.div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <StatCard
+            title="Активные пользователи"
+            value={activeUsersCount}
+            subtitle="из общего числа"
+            icon={<Users className="w-5 h-5 text-emerald-500" />}
+            color="bg-emerald-500"
+            delay={0.1}
+          />
+          <StatCard
+            title="Взято книг"
+            value={totalBorrowed}
+            subtitle="всего"
+            icon={<Users className="w-5 h-5 text-emerald-400" />}
+            color="bg-emerald-400"
+            delay={0.2}
+          />
+          <StatCard
+            title="Штрафы"
+            value={totalFines}
+            subtitle="общая сумма"
+            icon={<Users className="w-5 h-5 text-gray-500" />}
+            color="bg-gray-500"
+            delay={0.3}
+          />
         </div>
 
-        {/* Графики статистики */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-transparent backdrop-blur-xl border-none">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Активность пользователей</CardTitle>
-              <CardDescription>Распределение активных/неактивных</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <UsersPieChart activeUsers={activeUsersCount} inactiveUsers={inactiveUsersCount} />
-            </CardContent>
-          </Card>
-
-          <Card className="bg-transparent backdrop-blur-xl border-none">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Использование библиотеки</CardTitle>
-              <CardDescription>Статистика по всем пользователям</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Section title="Активность пользователей" delay={0.4}>
+            <div className="h-[300px] bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+              <UsersPieChart activeUsers={activeUsersCount} inactiveUsers={users.length - activeUsersCount} />
+            </div>
+          </Section>
+          <Section title="Использование библиотеки" delay={0.5}>
+            <div className="h-[300px] bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
               <UserBorrowingChart data={borrowingChartData} />
-            </CardContent>
-          </Card>
-
-          <Card className="bg-transparent backdrop-blur-xl border-none">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Штрафы пользователей</CardTitle>
-              <CardDescription>Общая сумма: {totalFines.toFixed(2)} ₽</CardDescription>
-            </CardHeader>
-            <CardContent>
+            </div>
+          </Section>
+          <Section title="Штрафы пользователей" delay={0.6}>
+            <div className="h-[300px] bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
               <FinesChart data={finesData} />
-            </CardContent>
-          </Card>
+            </div>
+          </Section>
         </div>
 
-        {/* Поиск */}
-        <div className="mb-6">
-          <input
+        <Section title="Список пользователей" action={{ label: "Все пользователи", href: "/admin/users" }} delay={0.7}>
+          <motion.input
             type="text"
             placeholder="Поиск по имени или email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-transparent backdrop-blur-xl w-full p-2 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-primary-admin transform hover:-translate-y-1 transition-all duration-300"
+            className="w-full p-3 mb-4 rounded-lg bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-black-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
           />
-        </div>
-
-        {/* Список пользователей */}
-        <div className="grid gap-6">
-          {sortedUsers.map((user) => (
-            <div
-              key={user.id}
-              className="bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300"
-            >
-              <div className="flex justify-between items-start">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-semibold text-neutral-500 dark:text-neutral-200">
-                      {user.fullName}
-                    </h2>
-                    <p className="text-neutral-600 dark:text-neutral-300 mt-1">
-                      {user.email}
-                    </p>
-                    <p className="text-neutral-600 dark:text-neutral-300">
-                      {user.phone}
-                    </p>
-                  </div>
-
-                  <div className="bg-white/20 dark:bg-neutral-700/20 rounded-lg p-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">Роль</p>
-                        <p className="text-neutral-700 dark:text-neutral-200">{user.role}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">Взято книг</p>
-                        <p className="text-neutral-700 dark:text-neutral-200">
-                          {user.borrowedBooksCount} / {user.maxBooksAllowed}
-                        </p>
-                      </div>
-                      {user.fineAmount && user.fineAmount > 0 && (
-                        <div className="col-span-2">
-                          <p className="text-sm text-red-500 dark:text-red-400">Штраф</p>
-                          <p className="text-red-600 dark:text-red-300">{user.fineAmount} ₽</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <Link
-                    href={`/admin/users/${user.id}`}
-                    className="bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 text-center"
-                  >
-                    Подробнее
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteUser(user.id)}
-                    className="bg-gradient-to-r from-red-600/90 to-red-700/70 dark:from-red-700/80 dark:to-red-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
-                  >
-                    Удалить
-                  </button>
-                </div>
-              </div>
+          <div className="max-h-[400px] bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl overflow-hidden border border-white/30 dark:border-gray-700/30">
+            <div className="overflow-auto" style={{ height: 400 }}>
+              <table className="min-w-full" cellPadding={0} cellSpacing={0}>
+                <thead className="sticky top-0 bg-emerald-50/80 dark:bg-emerald-900/30 backdrop-blur-md">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer" onClick={() => handleSort("fullName")}>
+                      Имя {sortField === "fullName" && (sortDirection === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer" onClick={() => handleSort("email")}>
+                      Email {sortField === "email" && (sortDirection === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer" onClick={() => handleSort("borrowedBooksCount")}>
+                      Книги {sortField === "borrowedBooksCount" && (sortDirection === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedUsers.slice(0, 50).map((user, index) => (
+                    <tr
+                      key={user.id}
+                      className="border-b border-white/20 dark:border-gray-700/30"
+                      style={{
+                        opacity: 0,
+                        transform: 'translateX(-20px)',
+                        animation: `fadeIn 0.5s ease-out ${0.1 * index}s forwards`
+                      }}
+                    >
+                      <td className="px-6 py-4 text-white">{user.fullName}</td>
+                      <td className="px-6 py-4 text-white">{user.email}</td>
+                      <td className="px-6 py-4 text-white">{user.borrowedBooksCount}/{user.maxBooksAllowed}</td>
+                      <td className="px-6 py-4 flex gap-2">
+                        <Link href={`/admin/users/${user.id}`}>
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md"
+                          >
+                            Подробнее
+                          </motion.button>
+                        </Link>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="bg-red-500/90 hover:bg-red-600/90 text-white font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md"
+                        >
+                          Удалить
+                        </motion.button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          </div>
+        </Section>
 
         {sortedUsers.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-8 text-white"
+          >
             Нет пользователей, соответствующих критериям поиска
-          </div>
+          </motion.div>
         )}
-      </div>
+      </main>
+    </div>
   );
 }

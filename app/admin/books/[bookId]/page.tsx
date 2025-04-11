@@ -64,6 +64,8 @@ export default function BookDetailPage({
         }
 
         const bookData = await res.json();
+        console.log("Book detail API response:", bookData);
+        
         if (!bookData.authors || typeof bookData.authors !== "string") {
           bookData.authors = "";
         }
