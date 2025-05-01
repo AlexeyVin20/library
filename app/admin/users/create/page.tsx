@@ -1,29 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, User } from "lucide-react";
+
+interface UserRole {
+  roleId: number;
+}
+
+interface Book {
+  // Можно оставить пустым, если не требуется при создании
+}
 
 interface UserCreateDto {
   id: string;
   fullName: string;
   email: string;
-  phone: string;
+  phone: string | null;
   dateOfBirth: string;
-  passportNumber: string;
-  passportIssuedBy: string;
-  passportIssuedDate: string;
-  address: string;
+  passportNumber: string | null;
+  passportIssuedBy: string | null;
+  passportIssuedDate: string | null;
+  address: string | null;
   dateRegistered: string;
-  borrowedBooksCount: number;
+  borrowedBooksCount: number | null;
   fineAmount: number;
   isActive: boolean;
-  lastLoginDate: string;
   loanPeriodDays: number;
-  maxBooksAllowed: number;
-  passwordHash: string;
+  maxBooksAllowed: number | null;
+  password: string;
   username: string;
+  userRoles: UserRole[] | null;
+  borrowedBooks: Book[] | null;
 }
 
 const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
@@ -45,28 +54,63 @@ export default function CreateUserPage() {
     fullName: "",
     email: "",
     phone: "",
-    dateOfBirth: "",
+    dateOfBirth: new Date().toISOString().slice(0, 10),
     passportNumber: "",
     passportIssuedBy: "",
-    passportIssuedDate: "",
+    passportIssuedDate: new Date().toISOString().slice(0, 10),
     address: "",
-    dateRegistered: new Date().toISOString().split("T")[0],
+    dateRegistered: new Date().toISOString().slice(0, 10),
     borrowedBooksCount: 0,
     fineAmount: 0,
     isActive: true,
-    lastLoginDate: new Date().toISOString().split("T")[0],
-    loanPeriodDays: 14,
-    maxBooksAllowed: 5,
-    passwordHash: "",
+    loanPeriodDays: 0,
+    maxBooksAllowed: 0,
+    password: "",
     username: "",
+    userRoles: null,
+    borrowedBooks: null,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : type === "number" ? (value ? Number(value) : 0) : value,
-    }));
+    if (name === "userRoles") {
+      const roleId = parseInt(value, 10);
+      setFormData((prev) => {
+        const exists = prev.userRoles?.some((r) => r.roleId === roleId);
+        if (exists) {
+          const filtered = prev.userRoles!.filter((r) => r.roleId !== roleId);
+          return {
+            ...prev,
+            userRoles: filtered.length > 0 ? filtered : null,
+          };
+        } else {
+          return {
+            ...prev,
+            userRoles: prev.userRoles ? [...prev.userRoles, { roleId }] : [{ roleId }],
+          };
+        }
+      });
+    } else if (["dateOfBirth", "passportIssuedDate", "dateRegistered"].includes(name)) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value, // YYYY-MM-DD
+      }));
+    } else if (["borrowedBooksCount", "maxBooksAllowed", "loanPeriodDays", "fineAmount"].includes(name)) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value === "" ? 0 : Number(value),
+      }));
+    } else if (["phone", "passportNumber", "passportIssuedBy", "address"].includes(name)) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,12 +119,32 @@ export default function CreateUserPage() {
     setError(null);
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+      // Приводим даты к ISO-строке
+      const dataToSend = {
+        ...formData,
+        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : new Date().toISOString(),
+        passportIssuedDate: formData.passportIssuedDate ? new Date(formData.passportIssuedDate).toISOString() : new Date().toISOString(),
+        dateRegistered: formData.dateRegistered ? new Date(formData.dateRegistered).toISOString() : new Date().toISOString(),
+        phone: formData.phone ?? "",
+        passportNumber: formData.passportNumber ?? "",
+        passportIssuedBy: formData.passportIssuedBy ?? "",
+        address: formData.address ?? "",
+        borrowedBooksCount: formData.borrowedBooksCount ?? 0,
+        maxBooksAllowed: formData.maxBooksAllowed ?? 0,
+        loanPeriodDays: formData.loanPeriodDays ?? 0,
+        fineAmount: formData.fineAmount ?? 0,
+        userRoles: formData.userRoles && formData.userRoles.length > 0 ? formData.userRoles : null,
+        borrowedBooks: null,
+      };
       const response = await fetch(`${baseUrl}/api/User`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSend),
       });
-      if (!response.ok) throw new Error("Ошибка при создании пользователя");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Ошибка при создании пользователя");
+      }
       router.push("/admin/users");
       router.refresh();
     } catch (err) {
@@ -128,16 +192,18 @@ export default function CreateUserPage() {
           >
             <div className="space-y-4">
               {[
+                { label: "Имя пользователя", name: "username", type: "text", required: true },
+                { label: "Пароль", name: "password", type: "password", required: true },
                 { label: "ФИО", name: "fullName", type: "text", required: true },
                 { label: "Email", name: "email", type: "email", required: true },
-                { label: "Телефон", name: "phone", type: "tel", required: true },
+                { label: "Телефон", name: "phone", type: "tel" },
                 { label: "Дата рождения", name: "dateOfBirth", type: "date", required: true },
                 { label: "Номер паспорта", name: "passportNumber", type: "text" },
                 { label: "Кем выдан паспорт", name: "passportIssuedBy", type: "text" },
                 { label: "Дата выдачи паспорта", name: "passportIssuedDate", type: "date" },
                 { label: "Адрес", name: "address", type: "text" },
-                { label: "Дата регистрации", name: "dateRegistered", type: "date", required: true },
-                { label: "Срок выдачи (дней)", name: "loanPeriodDays", type: "number", min: 1 },
+                { label: "Дата регистрации", name: "dateRegistered", type: "date"},
+                { label: "Срок выдачи (дней)", name: "loanPeriodDays", type: "number", min: 1},
                 { label: "Максимальное количество книг", name: "maxBooksAllowed", type: "number", min: 1 },
                 { label: "Текущее количество книг", name: "borrowedBooksCount", type: "number", min: 0 },
                 { label: "Штраф (руб.)", name: "fineAmount", type: "number", min: 0, step: 0.01 },
@@ -160,19 +226,40 @@ export default function CreateUserPage() {
                   />
                 </div>
               ))}
-              <div className="flex items-center gap-2">
-                <motion.input
-                  id="isActive"
-                  name="isActive"
-                  type="checkbox"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-emerald-500 focus:ring-emerald-500 border-white/30 dark:border-gray-700/30 rounded"
-                  whileHover={{ scale: 1.1 }}
-                />
-                <label htmlFor="isActive" className="text-sm font-medium text-black-600 dark:text-black-300">
-                  Активный пользователь
-                </label>
+              <div>
+                <label className="block text-sm font-medium text-black-600 dark:text-black-300 mb-1">Роли пользователя</label>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      name="userRoles"
+                      value="1"
+                      checked={formData.userRoles?.some((r) => r.roleId === 1)}
+                      onChange={handleChange}
+                    />
+                    Администратор
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      name="userRoles"
+                      value="2"
+                      checked={formData.userRoles?.some((r) => r.roleId === 2)}
+                      onChange={handleChange}
+                    />
+                    Библиотекарь
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      name="userRoles"
+                      value="3"
+                      checked={formData.userRoles?.some((r) => r.roleId === 3)}
+                      onChange={handleChange}
+                    />
+                    Читатель
+                  </label>
+                </div>
               </div>
             </div>
           </motion.div>

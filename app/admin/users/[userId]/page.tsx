@@ -15,6 +15,10 @@ import {
   XCircle,
   Mail,
   Phone,
+  Shield,
+  Plus,
+  UserMinus,
+  ShieldCheck,
 } from "lucide-react";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 
@@ -56,6 +60,19 @@ interface Reservation {
   book?: { id: string; title: string };
 }
 
+interface Role {
+  id: number;
+  name: string;
+  description: string;
+}
+
+interface UserRole {
+  id: number;
+  userId: string;
+  roleId: number;
+  role: Role;
+}
+
 const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -80,7 +97,7 @@ const Section = ({
       className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
       whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1)" }}
     >
-      <h2 className="text-lg font-bold text-black-800 dark:text-black-100 mb-4 flex items-center gap-2">{title}</h2>
+      <h2 className="text-white font-bold text-white dark:text-white mb-4 flex items-center gap-2">{title}</h2>
       <div>{children}</div>
     </motion.div>
   </FadeInView>
@@ -90,7 +107,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   const color = status === "Выполнена" ? "bg-emerald-500" : status === "Обрабатывается" ? "bg-emerald-400" : "bg-gray-500";
   const label = status === "Выполнена" ? "Одобрено" : status === "Обрабатывается" ? "В обработке" : "Отклонено";
   return (
-    <span className={`inline-block px-3 py-1 text-xs font-medium text-white rounded-full ${color} backdrop-blur-md shadow-sm`}>
+    <span className={`inline-block px-3 py-1 text-whitexs font-medium text-white rounded-full ${color} backdrop-blur-md shadow-sm`}>
       {label}
     </span>
   );
@@ -107,7 +124,7 @@ const LoadingSpinner = () => (
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.5 }}
-      className="mt-4 text-emerald-600 dark:text-emerald-400 font-medium"
+      className="mt-4 text-white-600 dark:text-white-400 font-medium"
     >
       Загрузка данных...
     </motion.p>
@@ -123,16 +140,22 @@ export default function UserDetailPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRoles, setUserRoles] = useState<number[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | "">("");
+  const [isAssigningRole, setIsAssigningRole] = useState(false);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
-      const [userResponse, booksResponse, reservationsResponse] = await Promise.all([
+      const [userResponse, booksResponse, reservationsResponse, userRolesResponse, rolesResponse] = await Promise.all([
         fetch(`${baseUrl}/api/User/${userId}`),
         fetch(`${baseUrl}/api/Books/user/${userId}`),
         fetch(`${baseUrl}/api/Reservation?userId=${userId}`),
+        fetch(`${baseUrl}/api/User/${userId}/roles`),
+        fetch(`${baseUrl}/api/User/roles`),
       ]);
 
       if (!userResponse.ok) throw new Error("Ошибка при загрузке пользователя");
@@ -141,6 +164,16 @@ export default function UserDetailPage() {
 
       if (booksResponse.ok) setBorrowedBooks(await booksResponse.json());
       if (reservationsResponse.ok) setReservations(await reservationsResponse.json());
+      
+      if (userRolesResponse.ok) {
+        const userRolesData = await userRolesResponse.json();
+        setUserRoles(userRolesData.map((role: any) => role.roleId));
+      }
+      
+      if (rolesResponse.ok) {
+        const rolesData = await rolesResponse.json();
+        setAvailableRoles(rolesData);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
     } finally {
@@ -163,7 +196,70 @@ export default function UserDetailPage() {
     }
   };
 
+  const handleAssignRole = async () => {
+    if (!selectedRoleId) {
+      setError("Выберите роль для назначения");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/api/User/assign-role`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId,
+          roleId: selectedRoleId,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Ошибка при назначении роли");
+
+      // Обновляем данные о ролях пользователя
+      fetchUserData();
+      setSelectedRoleId("");
+      setIsAssigningRole(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Произошла ошибка при назначении роли");
+    }
+  };
+
+  const handleRemoveRole = async (roleId: number) => {
+    if (!confirm("Вы уверены, что хотите удалить эту роль у пользователя?")) return;
+
+    try {
+      const response = await fetch(`${baseUrl}/api/User/remove-role`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId,
+          roleId: roleId,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Ошибка при удалении роли у пользователя");
+
+      // Обновляем данные о ролях пользователя
+      fetchUserData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Произошла ошибка при удалении роли");
+    }
+  };
+
   const formatDate = (dateString: string) => dateString ? new Date(dateString).toLocaleDateString("ru-RU") : "Не указано";
+
+  // Фильтруем доступные роли, исключая те, которые уже назначены пользователю
+  const filteredAvailableRoles = availableRoles.filter(
+    (role) => !userRoles.includes(role.id)
+  );
+
+  // Получаем данные о ролях пользователя
+  const userRolesWithDetails = userRoles
+    .map(roleId => availableRoles.find(role => role.id === roleId))
+    .filter(role => role !== undefined) as Role[];
 
   if (loading) return <LoadingSpinner />;
 
@@ -171,7 +267,7 @@ export default function UserDetailPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="p-6 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg"
+      className="p-6 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-whitered-700 dark:text-whitered-200 rounded-lg"
     >
       {error}
     </motion.div>
@@ -181,7 +277,7 @@ export default function UserDetailPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="p-6 bg-yellow-100/80 dark:bg-yellow-900/80 backdrop-blur-xl border border-yellow-400 text-yellow-700 dark:text-yellow-200 rounded-lg"
+      className="p-6 bg-yellow-100/80 dark:bg-yellow-900/80 backdrop-blur-xl border border-yellow-400 text-whiteyellow-700 dark:text-whiteyellow-200 rounded-lg"
     >
       Пользователь не найден
     </motion.div>
@@ -201,7 +297,7 @@ export default function UserDetailPage() {
       <main className="space-y-8 relative z-10">
         <FadeInView>
           <motion.div className="flex justify-between items-center mb-6">
-            <Link href="/admin/users" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 flex items-center">
+            <Link href="/admin/users" className="text-white-600 hover:text-white-700 dark:text-white-400 dark:hover:text-white-300 flex items-center">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Назад к списку пользователей
             </Link>
@@ -233,26 +329,26 @@ export default function UserDetailPage() {
           <Section title="Информация о пользователе" delay={0.2}>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-black-800 dark:text-black-100 flex items-center gap-2">
-                  <User className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-whitexl font-bold text-white dark:text-white flex items-center gap-2">
+                  <User className="w-5 h-5 text-white-500" />
                   {user.fullName}
                 </h3>
                 <StatusBadge status={user.isActive ? "Выполнена" : "Отменена"} />
               </div>
-              <p className="text-sm text-black-600 dark:text-black-300 flex items-center gap-2">
+              <p className="text-white text-white dark:text-white flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 {user.email}
               </p>
               {user.phone && (
-                <p className="text-sm text-black-600 dark:text-black-300 flex items-center gap-2">
+                <p className="text-white text-white dark:text-white flex items-center gap-2">
                   <Phone className="w-4 h-4" />
                   {user.phone}
                 </p>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-lg font-semibold text-black-800 dark:text-black-100 mb-2">Основная информация</h4>
-                  <ul className="space-y-2 text-sm">
+                  <h4 className="text-white font-semibold dark:text-white mb-2">Основная информация</h4>
+                  <ul className="space-y-2 text-white">
                     <li><span className="font-medium">Логин:</span> {user.username}</li>
                     <li><span className="font-medium">Дата рождения:</span> {formatDate(user.dateOfBirth)}</li>
                     <li><span className="font-medium">Адрес:</span> {user.address || "Не указан"}</li>
@@ -261,18 +357,18 @@ export default function UserDetailPage() {
                   </ul>
                 </div>
                 <div>
-                  <h4 className="text-lg font-semibold text-black-800 dark:text-black-100 mb-2">Библиотечная информация</h4>
-                  <ul className="space-y-2 text-sm">
+                  <h4 className="text-white font-semibold text-white dark:text-white mb-2">Библиотечная информация</h4>
+                  <ul className="space-y-2 text-white">
                     <li><span className="font-medium">Книг на руках:</span> {user.borrowedBooksCount}/{user.maxBooksAllowed}</li>
                     <li><span className="font-medium">Срок выдачи:</span> {user.loanPeriodDays || 14} дней</li>
-                    <li><span className="font-medium">Штраф:</span> <span className={user.fineAmount > 0 ? "text-red-500" : ""}>{user.fineAmount.toFixed(2)} руб.</span></li>
+                    <li><span className="font-medium">Штраф:</span> <span className={user.fineAmount > 0 ? "text-whitered-500" : ""}>{user.fineAmount.toFixed(2)} руб.</span></li>
                   </ul>
                 </div>
               </div>
               {user.passportNumber && (
                 <div>
-                  <h4 className="text-lg font-semibold text-black-800 dark:text-black-100 mb-2">Паспортные данные</h4>
-                  <ul className="space-y-2 text-sm">
+                  <h4 className="text-white font-semibold text-white dark:text-white mb-2">Паспортные данные</h4>
+                  <ul className="space-y-2 text-white">
                     <li><span className="font-medium">Номер паспорта:</span> {user.passportNumber}</li>
                     {user.passportIssuedBy && <li><span className="font-medium">Кем выдан:</span> {user.passportIssuedBy}</li>}
                     {user.passportIssuedDate && <li><span className="font-medium">Дата выдачи:</span> {formatDate(user.passportIssuedDate)}</li>}
@@ -283,8 +379,115 @@ export default function UserDetailPage() {
           </Section>
 
           <Section title="Использование библиотеки" delay={0.3}>
-            <div className="h-[300px] bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+            <div className="h-[300px] bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
               <UserBorrowingChart data={chartData} />
+            </div>
+          </Section>
+
+          <Section title="Роли пользователя" delay={0.3}>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-emerald-400" />
+                  Назначенные роли
+                </h3>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsAssigningRole(!isAssigningRole)}
+                  className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white text-sm font-medium rounded-lg px-3 py-1 flex items-center gap-1 shadow-md backdrop-blur-md"
+                >
+                  <Plus className="w-3 h-3" />
+                  Добавить роль
+                </motion.button>
+              </div>
+
+              {isAssigningRole && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="p-3 bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30"
+                >
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block mb-1 text-white text-sm">Выберите роль:</label>
+                      <select 
+                        value={selectedRoleId}
+                        onChange={(e) => setSelectedRoleId(Number(e.target.value) || "")}
+                        className="w-full p-2 rounded-lg bg-green/20 dark:bg-green-800/40 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                      >
+                        <option value="">Выберите роль</option>
+                        {filteredAvailableRoles.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <motion.button
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setIsAssigningRole(false)}
+                        className="bg-gray-500/90 hover:bg-gray-600/90 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md"
+                      >
+                        Отмена
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleAssignRole}
+                        className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md"
+                      >
+                        Назначить
+                      </motion.button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              <div className="space-y-2">
+                {userRolesWithDetails.length > 0 ? (
+                  userRolesWithDetails.map((role) => (
+                    <motion.div
+                      key={role.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="p-3 bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30 flex justify-between items-center"
+                    >
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        <div>
+                          <p className="font-medium text-white">{role.name}</p>
+                          <p className="text-white text-sm">{role.description}</p>
+                        </div>
+                      </div>
+                      <motion.button
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleRemoveRole(role.id)}
+                        className="bg-red-500/90 hover:bg-red-600/90 text-white p-1 rounded-lg shadow-md backdrop-blur-md"
+                        title="Удалить роль"
+                      >
+                        <UserMinus className="w-4 h-4" />
+                      </motion.button>
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className="text-white text-center py-2">У пользователя нет ролей</p>
+                )}
+              </div>
+              
+              <Link href="/admin/roles">
+                <motion.button
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-full mt-2 bg-emerald-500/40 hover:bg-emerald-500/60 text-white text-sm font-medium rounded-lg px-3 py-2 flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
+                >
+                  <Shield className="w-4 h-4" />
+                  Управление ролями
+                </motion.button>
+              </Link>
             </div>
           </Section>
         </div>
@@ -300,14 +503,14 @@ export default function UserDetailPage() {
                   transition={{ delay: 0.1 * index }}
                   className="p-4 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30"
                 >
-                  <h4 className="font-semibold text-black-800 dark:text-black-100">{book.title}</h4>
-                  <p className="text-sm text-black-600 dark:text-black-300">Автор: {book.author}</p>
-                  <p className="text-sm text-black-600 dark:text-black-300">Дата возврата: {formatDate(book.returnDate)}</p>
+                  <h4 className="font-semibold text-white dark:text-white">{book.title}</h4>
+                  <p className="text-white text-white dark:text-white">Автор: {book.author}</p>
+                  <p className="text-white text-white dark:text-white">Дата возврата: {formatDate(book.returnDate)}</p>
                 </motion.div>
               ))}
             </div>
           ) : (
-            <p className="text-black-600 dark:text-black-300">Пользователь не брал книги</p>
+            <p className="text-white dark:text-white">Пользователь не брал книги</p>
           )}
         </Section>
 
@@ -320,22 +523,22 @@ export default function UserDetailPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * index }}
-                  className="p-4 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30"
+                  className="p-4 bg-green/20 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30"
                 >
-                  <h4 className="font-semibold text-black-800 dark:text-black-100">{reservation.book?.title || "Неизвестная книга"}</h4>
-                  <p className="text-sm text-black-600 dark:text-black-300">Срок до: {formatDate(reservation.expirationDate)}</p>
+                  <h4 className="font-semibold text-white dark:text-white">{reservation.book?.title || "Неизвестная книга"}</h4>
+                  <p className="text-white text-white dark:text-white">Срок до: {formatDate(reservation.expirationDate)}</p>
                   <div className="flex items-center mt-1">
-                    <span className="text-sm mr-1 text-black-600 dark:text-black-300">Статус:</span>
+                    <span className="text-white mr-1 text-white dark:text-white">Статус:</span>
                     <StatusBadge status={reservation.status} />
                   </div>
                   {reservation.notes && (
-                    <p className="text-sm italic mt-2 text-black-600 dark:text-black-300">Примечание: {reservation.notes}</p>
+                    <p className="text-white italic mt-2 text-white dark:text-white">Примечание: {reservation.notes}</p>
                   )}
                 </motion.div>
               ))}
             </div>
           ) : (
-            <p className="text-black-600 dark:text-black-300">У пользователя нет активных резерваций</p>
+            <p className="text-white dark:text-white">У пользователя нет активных резерваций</p>
           )}
         </Section>
       </main>

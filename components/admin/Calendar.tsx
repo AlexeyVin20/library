@@ -13,7 +13,9 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  ArrowRight,
 } from "lucide-react"
+import Link from "next/link"
 
 // Определение типов
 export type CalendarEvent = {
@@ -133,32 +135,32 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
     switch (status) {
       case "Выполнена":
         return {
-          bg: "bg-emerald-100/80 dark:bg-emerald-900/30",
+          bg: "bg-gradient-to-br from-emerald-200/80 to-emerald-400/40 dark:from-emerald-900/60 dark:to-emerald-800/40",
           text: "text-emerald-800 dark:text-emerald-300",
           border: "border-emerald-500/70",
-          icon: <CheckCircle className="w-4 h-4 text-emerald-500" />,
+          icon: <CheckCircle className="w-5 h-5 text-emerald-500" />,
         }
       case "Отменена":
         return {
-          bg: "bg-gray-100/80 dark:bg-gray-900/30",
+          bg: "bg-gradient-to-br from-gray-200/80 to-gray-400/40 dark:from-gray-900/60 dark:to-gray-800/40",
           text: "text-black dark:text-gray-300",
           border: "border-gray-500/70",
-          icon: <XCircle className="w-4 h-4 text-gray-500" />,
+          icon: <ArrowRight className="w-5 h-5 text-gray-500" />,
         }
       case "Истекла":
         return {
-          bg: "bg-blue-100/80 dark:bg-blue-900/30",
-          text: "text-blue-800 dark:text-blue-300",
-          border: "border-blue-500/70",
-          icon: <AlertCircle className="w-4 h-4 text-blue-500" />,
+          bg: "bg-gradient-to-br from-red-200/80 to-red-400/40 dark:from-red-900/60 dark:to-red-800/40",
+          text: "text-red-800 dark:text-red-300",
+          border: "border-red-500/70",
+          icon: <AlertCircle className="w-5 h-5 text-red-500" />,
         }
       case "Обрабатывается":
       default:
         return {
-          bg: "bg-emerald-50/80 dark:bg-emerald-900/20",
-          text: "text-emerald-700 dark:text-emerald-300",
-          border: "border-emerald-400/70",
-          icon: <Clock className="w-4 h-4 text-emerald-400" />,
+          bg: "bg-gradient-to-br from-blue-100/80 to-blue-300/40 dark:from-blue-900/60 dark:to-blue-800/40",
+          text: "text-blue-700 dark:text-blue-300",
+          border: "border-blue-400/70",
+          icon: <Clock className="w-5 h-5 text-blue-400" />,
         }
     }
   }
@@ -310,9 +312,11 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
     >
       <div className="p-4">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-black dark:text-gray-100 flex items-center gap-2">
+          <h2 className="text-lg font-bold flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-emerald-500" />
-            {currentMonth.toLocaleString("ru-RU", { month: "long", year: "numeric" })}
+            <span className="text-white drop-shadow-md" style={{ textTransform: 'capitalize' }}>
+              {currentMonth.toLocaleString("ru-RU", { month: "long", year: "numeric" })}
+            </span>
           </h2>
           <div className="flex space-x-2">
             <motion.button
@@ -336,7 +340,7 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
 
         <div className="grid grid-cols-7 gap-1">
           {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((day) => (
-            <div key={day} className="py-2 text-center text-sm font-medium text-black dark:text-gray-300">
+            <div key={day} className="py-2 text-center text-sm font-medium text-white dark:text-gray-300">
               {day}
             </div>
           ))}
@@ -357,15 +361,15 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
                 whileHover={day && isCurrentMonth ? "hover" : {}}
                 whileTap={day && isCurrentMonth ? "tap" : {}}
                 onClick={() => day && isCurrentMonth && handleDayClick(day)}
-                className={`relative h-20 md:h-20 p-1 rounded-lg border ${
-                  day
+                className={`relative h-20 md:h-20 p-1 rounded-xl border transition-colors duration-200
+                  ${day
                     ? isCurrentMonth
                       ? isToday
-                        ? "bg-emerald-50/70 dark:bg-emerald-900/30 border-emerald-500/60 shadow-md"
-                        : "bg-white/40 dark:bg-gray-800/30 backdrop-blur-sm border-white/20 dark:border-gray-700/30 cursor-pointer"
+                        ? "bg-gradient-to-br from-emerald-300/60 to-emerald-500/30 border-emerald-500/80 shadow-lg"
+                        : "bg-gradient-to-br from-green/40 to-green-/40 dark:from-gray-800/60 dark:to-emerald-900/30 border-white/20 dark:border-gray-700/30 cursor-pointer"
                       : "bg-gray-50/40 dark:bg-gray-800/40 text-black dark:text-gray-600 border-transparent"
                     : "border-transparent"
-                }`}
+                  }`}
               >
                 {day && (
                   <>
@@ -373,9 +377,9 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
                       className={`text-sm ${
                         isCurrentMonth
                           ? isToday
-                            ? "font-bold text-emerald-600 dark:text-emerald-400"
-                            : "font-medium text-black dark:text-gray-100"
-                          : "text-black dark:text-gray-600"
+                            ? "font-bold text-white-600 dark:text-emerald-400"
+                            : "font-medium text-white dark:text-gray-100"
+                          : "text-white dark:text-gray-600"
                       }`}
                     >
                       {day.getDate()}
@@ -422,7 +426,7 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
           >
             <motion.div
               ref={modalRef}
-              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 rounded-xl shadow-xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto"
+              className="bg-gradient-to-br from-emerald-100/90 to-white/90 dark:from-emerald-900/90 dark:to-gray-900/90 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 rounded-xl shadow-xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -451,33 +455,33 @@ export default function Calendar({ initialEvents = [] }: CalendarProps) {
                   selectedDayEvents.map((event, index) => {
                     const colors = getEventColor(event.status)
                     return (
-                      <motion.div
-                        key={event.id}
-                        custom={index}
-                        variants={eventVariants}
-                        initial="hidden"
-                        animate="visible"
-                        whileHover="hover"
-                        className={`p-3 rounded-lg ${colors.bg} border-l-4 ${colors.border} shadow-md`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="flex items-center">
-                              <BookOpen className="w-4 h-4 mr-2 text-black dark:text-gray-300" />
-                              <h4 className={`font-medium ${colors.text}`}>{event.bookTitle}</h4>
-                            </div>
-                            <div className="mt-2 flex items-center">
-                              <User className="w-4 h-4 mr-2 text-black dark:text-gray-300" />
-                              <p className="text-sm text-black dark:text-gray-300">{event.userName}</p>
-                            </div>
-                            <div className="mt-1 text-xs text-black dark:text-gray-400 flex items-center">
-                              <Clock className="w-3 h-3 mr-1" />
-                              <span>Срок возврата: {formatEventDate(event.expirationDate)}</span>
+                      <Link href={`/admin/reservations/${event.id}`} key={event.id}>
+                        <motion.div
+                          custom={index}
+                          variants={eventVariants}
+                          initial="hidden"
+                          animate="visible"
+                          whileHover="hover"
+                          className={`p-3 rounded-lg ${colors.bg} border-l-4 ${colors.border} shadow-md hover:scale-[1.02] transition-transform duration-150 cursor-pointer`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center">
+                                {colors.icon}
+                                <h4 className={`font-medium ml-2 ${colors.text}`}>{event.bookTitle}</h4>
+                              </div>
+                              <div className="mt-2 flex items-center">
+                                <User className="w-4 h-4 mr-2 text-black dark:text-gray-300" />
+                                <p className="text-sm text-black dark:text-gray-300">{event.userName}</p>
+                              </div>
+                              <div className="mt-1 text-xs text-black dark:text-gray-400 flex items-center">
+                                <Clock className="w-3 h-3 mr-1" />
+                                <span>Срок возврата: {formatEventDate(event.expirationDate)}</span>
+                              </div>
                             </div>
                           </div>
-                          <div className="ml-2">{colors.icon}</div>
-                        </div>
-                      </motion.div>
+                        </motion.div>
+                      </Link>
                     )
                   })
                 ) : (

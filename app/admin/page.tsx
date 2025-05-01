@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { BookOpen, Users, AlertCircle, TrendingUp, CalendarIcon, BookMarked, Clock, ChevronRight, CheckCircle2, XCircle, BarChart3, Layers, ArrowRight } from 'lucide-react';
+import { BookOpen, Users, AlertCircle, TrendingUp, CalendarIcon, BookMarked, Clock, ChevronRight, CheckCircle2, XCircle, BarChart3, Layers, ArrowRight, Shield } from 'lucide-react';
 import React from "react";
 
 // Определение типов
@@ -114,11 +114,11 @@ const StatCard = ({
         <div className={`absolute top-0 left-0 w-1.5 h-full ${color}`}></div>
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            {icon}
+            {React.cloneElement(icon as React.ReactElement<any, any>, { className: 'w-7 h-7 drop-shadow-lg' })}
             {title}
           </h3>
-          <div className={`w-10 h-10 rounded-full ${color} bg-opacity-20 dark:bg-opacity-30 flex items-center justify-center shadow-inner`}>
-            {icon}
+          <div className={`w-12 h-12 rounded-full ${color} bg-opacity-30 dark:bg-opacity-40 flex items-center justify-center shadow-inner`}>
+            {React.cloneElement(icon as React.ReactElement<any, any>, { className: 'w-7 h-7 drop-shadow-lg' })}
           </div>
         </div>
         <div>
@@ -460,7 +460,7 @@ export default function DashboardPage() {
         const journalsData = await journalsResponse.json();
         setJournals(journalsData);
 
-        if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резерваций");
+        if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резервирований");
         const reservationsData = await reservationsResponse.json();
         setReservations(reservationsData);
 
@@ -489,8 +489,15 @@ export default function DashboardPage() {
         }).reverse();
         setMonthlyBorrowedData(lastSixMonths);
 
+        // Количество новых книг за последний месяц
+        const now = new Date();
+        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        const newBooksThisMonth = booksData.filter((b: any) => b.dateAdded && new Date(b.dateAdded) > monthAgo).length;
+        setRecentBorrowed(newBooksThisMonth);
+        // Последние книги по дате добавления
         const recentBooksData = [...booksData]
-          .sort((a, b) => new Date(b.addedDate || "").getTime() - new Date(a.addedDate || "").getTime())
+          .filter((b) => b.dateAdded)
+          .sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime())
           .slice(0, 6);
         setRecentBooks(recentBooksData);
       } catch (err) {
@@ -518,7 +525,7 @@ export default function DashboardPage() {
   const handleApproveRequest = useCallback(async (id: string) => {
     try {
       const reservation = reservations.find((r) => r.id === id);
-      if (!reservation) throw new Error("Резервация не найдена");
+      if (!reservation) throw new Error("Резервирование не найдено");
 
       const updatedReservation = {
         ...reservation,
@@ -533,7 +540,7 @@ export default function DashboardPage() {
         body: JSON.stringify(updatedReservation),
       });
 
-      if (!response.ok) throw new Error("Ошибка при обновлении резервации");
+      if (!response.ok) throw new Error("Ошибка при обновлении резервирования");
 
       setBookRequests((prev) => prev.filter((r) => r.id !== id));
       setUserRequests((prev) => prev.filter((r) => r.id !== id));
@@ -548,7 +555,7 @@ export default function DashboardPage() {
   const handleRejectRequest = useCallback(async (id: string) => {
     try {
       const reservation = reservations.find((r) => r.id === id);
-      if (!reservation) throw new Error("Резервация не найдена");
+      if (!reservation) throw new Error("Резервирование не найдено");
 
       const updatedReservation = {
         ...reservation,
@@ -563,7 +570,7 @@ export default function DashboardPage() {
         body: JSON.stringify(updatedReservation),
       });
 
-      if (!response.ok) throw new Error("Ошибка при обновлении резервации");
+      if (!response.ok) throw new Error("Ошибка при обновлении резервирования");
 
       setBookRequests((prev) => prev.filter((r) => r.id !== id));
       setUserRequests((prev) => prev.filter((r) => r.id !== id));
@@ -657,7 +664,7 @@ export default function DashboardPage() {
                 <span className="mr-1">+</span>{recentBorrowed} <span className="ml-1">за последний месяц</span>
               </p>
             }
-            icon={<BookOpen className="w-5 h-5 text-emerald-500" />}
+            icon={<BookOpen className="text-emerald-500" />}
             color="bg-emerald-500"
             delay={0.1}
           />
@@ -670,8 +677,8 @@ export default function DashboardPage() {
                 {totalUsersCount ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0}% от общего числа
               </p>
             }
-            icon={<Users className="w-5 h-5 text-emerald-400" />}
-            color="bg-emerald-400"
+            icon={<Users className="text-blue-500" />}
+            color="bg-blue-500"
             delay={0.2}
           />
           <StatCard 
@@ -684,8 +691,8 @@ export default function DashboardPage() {
                 <span className="ml-2">{pendingReservations} в обработке</span>
               </div>
             }
-            icon={<AlertCircle className="w-5 h-5 text-gray-500" />}
-            color="bg-gray-500"
+            icon={<AlertCircle className="text-red-500" />}
+            color="bg-red-500"
             delay={0.3}
           />
         </div>
@@ -779,16 +786,17 @@ export default function DashboardPage() {
                   {recentActivities.map((reservation, index) => (
                     <tr 
                       key={reservation.id}
-                      className="border-b border-white/20 dark:border-gray-700/30"
+                      className="border-b border-white/20 dark:border-gray-700/30 hover:bg-emerald-100/40 dark:hover:bg-emerald-900/20 cursor-pointer"
                       style={{
                         opacity: 0,
                         transform: 'translateX(-20px)',
                         animation: `fadeIn 0.5s ease-out ${0.1 * index}s forwards`
                       }}
+                      onClick={() => window.location.href = `/admin/reservations/${reservation.id}`}
                     >
-                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">Резервация</td>
-                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">{reservation.book?.title || "Неизвестная книга"}</td>
-                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">{formatDate(reservation.reservationDate)}</td>
+                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100 underline">Резервирование</td>
+                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100 underline">{reservation.book?.title || "Неизвестная книга"}</td>
+                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100 underline">{formatDate(reservation.reservationDate)}</td>
                       <td className="px-6 py-4">
                         <StatusBadge status={reservation.status} />
                       </td>
@@ -804,7 +812,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
           <ActionButton 
             href="/admin/reservations" 
-            label="Посмотреть резервации" 
+            label="Посмотреть резервирования" 
             color="emerald-light"
             icon={<CalendarIcon className="w-5 h-5" />}
           />
@@ -819,6 +827,15 @@ export default function DashboardPage() {
             label="Управление пользователями" 
             color="emerald-light" 
             icon={<Users className="w-5 h-5" />}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
+          <ActionButton 
+            href="/admin/roles" 
+            label="Управление ролями" 
+            color="emerald" 
+            icon={<Shield className="w-5 h-5" />}
           />
         </div>
       </main>

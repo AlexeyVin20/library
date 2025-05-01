@@ -1,30 +1,38 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, User } from "lucide-react";
+
+interface UserRole {
+  roleId: number;
+}
+
+interface Book {
+  // Можно оставить пустым, если не требуется при обновлении
+}
 
 interface UserUpdateDto {
   id: string;
   fullName: string;
   email: string;
-  phone: string;
+  phone: string | null;
   dateOfBirth: string;
-  passportNumber: string;
-  passportIssuedBy: string;
-  passportIssuedDate: string;
-  address: string;
+  passportNumber: string | null;
+  passportIssuedBy: string | null;
+  passportIssuedDate: string | null;
+  address: string | null;
   dateRegistered: string;
   username: string;
-  passwordHash: string;
+  password: string;
   isActive: boolean;
-  borrowedBooksCount: number;
-  maxBooksAllowed: number;
+  borrowedBooksCount: number | null;
+  maxBooksAllowed: number | null;
   loanPeriodDays: number;
   fineAmount: number;
-  userRoles?: string[];
-  borrowedBooks?: any[];
+  userRoles: UserRole[] | null;
+  borrowedBooks: Book[] | null;
 }
 
 const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
@@ -36,6 +44,22 @@ const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?
     {children}
   </motion.div>
 );
+
+// Функция для преобразования даты из ISO формата в формат yyyy-MM-dd для HTML input type="date"
+const formatDateForInput = (dateString: string | null | undefined): string => {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    // Проверяем на валидность даты
+    if (isNaN(date.getTime())) return "";
+    
+    // Форматируем в yyyy-MM-dd
+    return date.toISOString().split('T')[0];
+  } catch (e) {
+    console.error("Ошибка форматирования даты:", e);
+    return "";
+  }
+};
 
 export default function UpdateUserPage() {
   const router = useRouter();
@@ -53,29 +77,73 @@ export default function UpdateUserPage() {
       try {
         setLoading(true);
         const response = await fetch(`${baseUrl}/api/User/${userId}`);
-        if (!response.ok) throw new Error("Ошибка при загрузке данных");
+        if (!response.ok) throw new Error("Ошибка загрузки данных пользователя");
+        
         const userData = await response.json();
-        setFormData({
+        
+        // Преобразуем роли в соответствии с нашим новым интерфейсом
+        let userRoles: UserRole[] | null = null;
+        if (userData.userRoles && userData.userRoles.length > 0) {
+          userRoles = userData.userRoles.map((role: any) => ({
+            roleId: role.roleId || role.id // поддерживаем возможные форматы API
+          }));
+        }
+        
+        const formattedUser: UserUpdateDto = {
           ...userData,
-          dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split("T")[0] : "",
-          dateRegistered: userData.dateRegistered ? new Date(userData.dateRegistered).toISOString().split("T")[0] : "",
-          passportIssuedDate: userData.passportIssuedDate ? new Date(userData.passportIssuedDate).toISOString().split("T")[0] : "",
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
+          userRoles,
+          // Убедимся, что все строковые поля имеют значения (не null)
+          phone: userData.phone || "",
+          passportNumber: userData.passportNumber || "",
+          passportIssuedBy: userData.passportIssuedBy || "",
+          // Корректно форматируем даты для input type="date"
+          dateOfBirth: formatDateForInput(userData.dateOfBirth),
+          passportIssuedDate: formatDateForInput(userData.passportIssuedDate),
+          dateRegistered: formatDateForInput(userData.dateRegistered),
+          address: userData.address || "",
+          // И числовые поля тоже
+          borrowedBooksCount: userData.borrowedBooksCount || 0,
+          maxBooksAllowed: userData.maxBooksAllowed || 0,
+          loanPeriodDays: userData.loanPeriodDays || 0,
+          fineAmount: userData.fineAmount || 0,
+        };
+        
+        setFormData(formattedUser);
+      } catch (error) {
+        console.error("Ошибка при загрузке пользователя:", error);
+        setError("Не удалось загрузить данные пользователя");
       } finally {
         setLoading(false);
       }
     };
+
     if (userId) fetchUserData();
   }, [userId, baseUrl]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => prev ? {
-      ...prev,
-      [name]: type === "checkbox" ? checked : type === "number" ? (value ? Number(value) : 0) : value,
-    } : null);
+    
+    if (["dateOfBirth", "passportIssuedDate", "dateRegistered"].includes(name)) {
+      setFormData((prev) => prev ? ({
+        ...prev,
+        [name]: value, // YYYY-MM-DD
+      }) : null);
+    } else if (["borrowedBooksCount", "maxBooksAllowed", "loanPeriodDays", "fineAmount"].includes(name)) {
+      setFormData((prev) => prev ? ({
+        ...prev,
+        [name]: value === "" ? 0 : Number(value),
+      }) : null);
+    } else if (["phone", "passportNumber", "passportIssuedBy", "address"].includes(name)) {
+      setFormData((prev) => prev ? ({
+        ...prev,
+        [name]: value,
+      }) : null);
+    } else {
+      setFormData((prev) => prev ? ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }) : null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,15 +152,31 @@ export default function UpdateUserPage() {
     setSubmitting(true);
     setError(null);
     try {
+      const dataToSend = {
+        ...formData,
+        // Преобразуем даты в ISO строки для API
+        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : new Date().toISOString(),
+        passportIssuedDate: formData.passportIssuedDate && formData.passportIssuedDate.trim() !== "" 
+          ? new Date(formData.passportIssuedDate).toISOString() 
+          : null,
+        dateRegistered: formData.dateRegistered ? new Date(formData.dateRegistered).toISOString() : new Date().toISOString(),
+        phone: formData.phone || null,
+        passportNumber: formData.passportNumber || null,
+        passportIssuedBy: formData.passportIssuedBy || null,
+        address: formData.address || null,
+        borrowedBooksCount: formData.borrowedBooksCount ?? 0,
+        maxBooksAllowed: formData.maxBooksAllowed ?? 0,
+        loanPeriodDays: formData.loanPeriodDays ?? 0,
+        fineAmount: formData.fineAmount ?? 0,
+        // Сохраняем существующие роли, но не даем их изменять
+        userRoles: formData.userRoles,
+        borrowedBooks: null,
+        password: formData.password,
+      };
       const response = await fetch(`${baseUrl}/api/User/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : null,
-          dateRegistered: formData.dateRegistered ? new Date(formData.dateRegistered).toISOString() : null,
-          passportIssuedDate: formData.passportIssuedDate ? new Date(formData.passportIssuedDate).toISOString() : null,
-        }),
+        body: JSON.stringify(dataToSend),
       });
       if (!response.ok) throw new Error("Ошибка при обновлении пользователя");
       router.push(`/admin/users/${userId}`);
@@ -149,7 +233,7 @@ export default function UpdateUserPage() {
 
       <FadeInView>
         <motion.div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-black-800 dark:text-black-100">Редактирование пользователя</h1>
+          <h1 className="text-3xl font-bold text-white dark:text-white">Редактирование пользователя</h1>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -180,10 +264,11 @@ export default function UpdateUserPage() {
           >
             <div className="space-y-4">
               {[
+                { label: "Имя пользователя", name: "username", type: "text", required: true },
+                { label: "Пароль", name: "password", type: "password", required: true },
                 { label: "ФИО", name: "fullName", type: "text", required: true },
                 { label: "Email", name: "email", type: "email", required: true },
-                { label: "Имя пользователя", name: "username", type: "text", required: true },
-                { label: "Телефон", name: "phone", type: "tel", required: true },
+                { label: "Телефон", name: "phone", type: "tel" },
                 { label: "Дата рождения", name: "dateOfBirth", type: "date", required: true },
                 { label: "Номер паспорта", name: "passportNumber", type: "text" },
                 { label: "Кем выдан паспорт", name: "passportIssuedBy", type: "text" },
@@ -196,19 +281,23 @@ export default function UpdateUserPage() {
                 { label: "Штраф (руб.)", name: "fineAmount", type: "number", min: 0, step: 0.01 },
               ].map((field, index) => (
                 <div key={field.name}>
-                  <label htmlFor={field.name} className="block text-sm font-medium text-black-600 dark:text-black-300 mb-1">
+                  <label htmlFor={field.name} className="block text-sm font-medium text-white dark:text-white mb-1">
                     {field.label}
                   </label>
                   <motion.input
                     id={field.name}
                     name={field.name}
                     type={field.type}
-                    value={formData[field.name as keyof UserUpdateDto] as string | number}
+                    value={
+                      field.type === "number" 
+                        ? (formData[field.name as keyof UserUpdateDto] as number) || 0
+                        : (formData[field.name as keyof UserUpdateDto] as string) || ""
+                    }
                     onChange={handleChange}
                     required={field.required}
                     min={field.min}
                     step={field.step}
-                    className="w-full p-3 rounded-lg bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-black-800 dark:text-black-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full p-3 rounded-lg bg-green/10 dark:bg-green-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     whileFocus={{ scale: 1.02 }}
                   />
                 </div>
@@ -223,7 +312,7 @@ export default function UpdateUserPage() {
                   className="h-4 w-4 text-emerald-500 focus:ring-emerald-500 border-white/30 dark:border-gray-700/30 rounded"
                   whileHover={{ scale: 1.1 }}
                 />
-                <label htmlFor="isActive" className="text-sm font-medium text-black-600 dark:text-black-300">
+                <label htmlFor="isActive" className="text-sm font-medium text-white dark:text-white">
                   Активный пользователь
                 </label>
               </div>

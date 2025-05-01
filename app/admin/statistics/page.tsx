@@ -222,7 +222,7 @@ const ChartCard = ({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 top-full mt-2 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 w-64 z-20"
+                    className="absolute right-0 top-full mt-2 p-3 bg-green dark:bg-green-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 w-64 z-20"
                   >
                     <p className="text-sm text-white">
                       {infoTooltip}
@@ -234,7 +234,7 @@ const ChartCard = ({
           )}
         </div>
         
-        <div className="flex-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+        <div className="flex-1 bg-emerald-500/10 dark:bg-emerald-900/20 backdrop-blur-md rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30">
           {children}
         </div>
       </motion.div>
@@ -247,10 +247,10 @@ const AnimatedTabsTrigger = ({ value, icon, label, isActive }: { value: string; 
   return (
     <TabsTrigger value={value} className="relative data-[state=active]:bg-transparent">
       <div className="flex items-center gap-2 py-2 px-1">
-        <span className={isActive ? "text-emerald-500" : "text-gray-500 dark:text-gray-400"}>
+        <span className={isActive ? "text-emerald-500" : "text-white"}>
           {icon}
         </span>
-        <span>{label}</span>
+        <span className={isActive ? "text-emerald-500" : "text-white"}>{label}</span>
       </div>
       {isActive && (
         <motion.div
@@ -489,7 +489,7 @@ export default function StatisticsPage() {
       {/* Floating shapes */}
       <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
       <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl"></div>
       
       <div className="container mx-auto p-6 relative z-10">
         {/* Заголовок с анимацией при скролле */}
@@ -628,7 +628,7 @@ export default function StatisticsPage() {
                   </p>
                 }
                 icon={<AlertTriangle className="w-5 h-5 text-gray-500" />}
-                color="bg-gray-500"
+                color="bg-green-500"
                 delay={0.4}
                 href="/admin/users/fines"
               />
@@ -660,9 +660,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip 
                         formatter={formatTooltipValue}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Area 
@@ -707,9 +709,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValueReservations}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Legend layout="horizontal" align="center" verticalAlign="bottom" />
@@ -752,9 +756,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValue}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Legend layout="horizontal" align="center" verticalAlign="bottom" />
@@ -785,9 +791,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValue}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]}>
@@ -816,7 +824,7 @@ export default function StatisticsPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Популярные категории</h4>
                     <p className="text-sm text-white">
                       Наиболее популярные категории книг: {bookCategoriesData.sort((a, b) => b.value - a.value).slice(0, 2).map(cat => cat.name).join(', ')}.
@@ -833,7 +841,7 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Доступность книг</h4>
                     <p className="text-sm text-white">
                       {totalBorrowedBooks > totalAvailableBooks ? 
@@ -878,9 +886,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValue}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Bar dataKey="value" fill="#10B981" barSize={20} radius={[0, 4, 4, 0]} />
@@ -919,9 +929,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValueUsers}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Legend layout="horizontal" align="center" verticalAlign="bottom" />
@@ -943,7 +955,7 @@ export default function StatisticsPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Активные пользователи</h4>
                     <p className="text-sm text-white">
                       {activeUsersCount > totalUsersCount / 2 ? 
@@ -961,7 +973,7 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Топ читатели</h4>
                     <p className="text-sm text-white">
                       Самые активные читатели: {topUsersData.slice(0, 3).map(user => user.name).join(', ')}.
@@ -1010,9 +1022,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValueReservations}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Area
@@ -1047,9 +1061,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValueReservations}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]}>
@@ -1075,7 +1091,7 @@ export default function StatisticsPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Эффективность обработки</h4>
                     <p className="text-sm text-white">
                       {completedReservations > canceledReservations * 2 ? 
@@ -1093,7 +1109,7 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Текущие заявки</h4>
                     <p className="text-sm text-white">
                       В настоящее время в обработке находится {pendingReservations} заявок.
@@ -1144,9 +1160,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValueMoney}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Area
@@ -1189,9 +1207,11 @@ export default function StatisticsPage() {
                       <RechartsTooltip
                         formatter={formatTooltipValueMoney}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
                           borderRadius: "8px",
                           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "white"
                         }}
                       />
                       <Bar dataKey="value" fill="#EF4444" barSize={20} radius={[0, 4, 4, 0]} />
@@ -1213,7 +1233,7 @@ export default function StatisticsPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Общая сумма штрафов</h4>
                     <p className="text-sm text-white">
                       Общая сумма штрафов составляет {totalFines.toFixed(2)} ₽.
@@ -1232,7 +1252,7 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Рекомендации</h4>
                     <p className="text-sm text-white">
                       {users.filter(u => (u.fineAmount || 0) > 0).length > totalUsersCount * 0.1 ? 
