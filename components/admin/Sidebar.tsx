@@ -7,13 +7,14 @@ import { cn, getInitials } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
-import { Session } from "next-auth";
 import "@/styles/admin.css"
+import { useAuth } from "@/lib/auth";
 
 // Пример условного компонента переключателя темы (ToggleButton) из shadcn
 import { Toggle } from "@/components/ui/toggle"; // замените на реальную реализацию
 
-const Sidebar = ({ session }: { session: Session }) => {
+const Sidebar = () => {
+  const { user } = useAuth();
   const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
@@ -79,12 +80,14 @@ const Sidebar = ({ session }: { session: Session }) => {
       <div className="flex items-center gap-4 mt-8">
         <Avatar>
           <AvatarFallback className="bg-amber-100 text-gray-800">
-            {getInitials(session?.user?.name || "IN")}
+            {getInitials(user?.username || "U")}
           </AvatarFallback>
         </Avatar>
         <div className="hidden md:flex flex-col">
-          <span className="font-semibold text-gray-800 dark:text-gray-200">{session?.user?.name}</span>
-          <span className="text-sm text-gray-500 dark:text-gray-400">{session?.user?.email}</span>
+          <span className="font-semibold text-gray-800 dark:text-gray-200">{user?.username}</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {user?.roles?.includes("Администратор") ? "Администратор" : "Пользователь"}
+          </span>
         </div>
       </div>
     </aside>

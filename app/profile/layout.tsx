@@ -1,7 +1,6 @@
-// app/admin/layout.tsx
+// app/profile/layout.tsx
 "use client";
 
-import Sidebar from "@/components/admin/Sidebar";
 import TopNavigation from "@/components/admin/TopNavigation";
 import Footer from "@/components/admin/Footer";
 import { ReactNode, useEffect, useState } from "react";
@@ -9,35 +8,17 @@ import "@/styles/admin.css";
 import { useAuth, User } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
-type AdminLayoutProps = {
+type ProfileLayoutProps = {
   children: ReactNode;
 };
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function ProfileLayout({ children }: ProfileLayoutProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   
-  useEffect(() => {
-    // Перенаправляем на страницу входа, если пользователь не аутентифицирован
-    // или не имеет роли администратора
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        router.push('/auth/login');
-      } else if (!user?.roles.includes("Администратор")) {
-        // Если у пользователя нет роли "Администратор"
-        router.push('/');
-      }
-    }
-  }, [isAuthenticated, isLoading, router, user]);
-
   // Показываем пустой контейнер во время загрузки, чтобы избежать мигания контента
   if (isLoading) {
     return <div className="min-h-screen flex bg-[url('/images/bg2.jpg')] bg-cover bg-center bg-fixed bg-no-repeat text-white" />;
-  }
-  
-  // Если пользователь не аутентифицирован или не имеет роли администратора, не рендерим контент
-  if (!isAuthenticated || !user?.roles.includes("Администратор")) {
-    return null;
   }
 
   return (

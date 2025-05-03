@@ -168,11 +168,12 @@ export default function CatalogMenu() {
   };
 
   const dropdownVariants = {
-    hidden: { opacity: 0, y: -10, scale: 0.95 },
+    hidden: { opacity: 0, y: -10, scale: 0.95, transformOrigin: "top center" },
     visible: { 
       opacity: 1, 
       y: 0, 
       scale: 1,
+      transformOrigin: "top center",
       transition: { 
         duration: 0.25,
         ease: [0.22, 1, 0.36, 1],
@@ -184,6 +185,7 @@ export default function CatalogMenu() {
       opacity: 0, 
       y: -10, 
       scale: 0.95,
+      transformOrigin: "top center",
       transition: { 
         duration: 0.2,
         ease: [0.22, 1, 0.36, 1]
@@ -218,10 +220,10 @@ export default function CatalogMenu() {
           }}
           whileTap={{ scale: 0.98 }}
           className={cn(
-            "relative px-4 py-2 rounded-lg text-base font-medium transition-all duration-300 group cursor-pointer",
+            "relative px-4 py-2 rounded-lg text-white font-medium transition-all duration-300 group cursor-pointer",
             pathname.includes("/admin/books") 
               ? "text-emerald-600 dark:text-emerald-400" 
-              : "text-black-700 dark:text-black-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+              : "text-white dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400"
           )}
         >
           <div className="flex items-center gap-2">
@@ -271,6 +273,7 @@ export default function CatalogMenu() {
               initial="hidden"
               animate="visible"
               exit="exit"
+              style={{ transformOrigin: "top center" }}
             >
               {loading ? (
                 <div className="p-6 text-center">
@@ -279,7 +282,7 @@ export default function CatalogMenu() {
                     animate="animate"
                     className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full mx-auto mb-3"
                   ></motion.div>
-                  <p className="text-base text-black-500 dark:text-black-400">Загрузка данных...</p>
+                  <p className="text-white text-white dark:text-white">Загрузка данных...</p>
                 </div>
               ) : (
                 <>
@@ -306,7 +309,7 @@ export default function CatalogMenu() {
                         whileTap="tap"
                       >
                         <DropdownMenuItem asChild>
-                          <Link href="/admin/books" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-base font-medium">
+                          <Link href="/admin/books" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             <LayoutGrid className="mr-3 h-5 w-5 text-emerald-500" />
                             <span>Все книги</span>
                           </Link>
@@ -320,7 +323,7 @@ export default function CatalogMenu() {
                         whileTap="tap"
                       >
                         <DropdownMenuItem asChild>
-                          <Link href="/admin/books/create" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-base font-medium">
+                          <Link href="/admin/books/create" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             <PlusCircle className="mr-3 h-5 w-5 text-emerald-500" />
                             <span>Добавить книгу</span>
                           </Link>
@@ -335,7 +338,7 @@ export default function CatalogMenu() {
                         whileHover="hover"
                         whileTap="tap"
                       >
-                        <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2.5 transition-colors text-base font-medium">
+                        <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                           <Bookmark className="mr-3 h-5 w-5 text-emerald-500" />
                           <span>Популярные книги</span>
                         </DropdownMenuSubTrigger>
@@ -344,6 +347,8 @@ export default function CatalogMenu() {
                       <DropdownMenuPortal>
                         <DropdownMenuSubContent 
                           className="max-h-[60vh] overflow-auto w-72 p-3 rounded-xl backdrop-blur-md bg-green-900/30 dark:bg-emerald-900/70 border border-emerald-200/50 dark:border-emerald-700/50 shadow-xl"
+                          sideOffset={5}
+                          style={{ transformOrigin: "top left" }}
                         >
                           <motion.div
                             variants={dropdownVariants}
@@ -362,8 +367,8 @@ export default function CatalogMenu() {
                                   <Link href={`/admin/books/${book.id}`} className="flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
                                     <Book className="flex-shrink-0 h-5 w-5 text-emerald-500" />
                                     <div className="overflow-hidden">
-                                      <p className="truncate font-medium text-base">{book.title}</p>
-                                      <p className="text-sm text-black-500 dark:text-black-400 truncate">{book.authors.join(', ')}</p>
+                                      <p className="truncate font-medium text-white">{book.title}</p>
+                                      <p className="text-sm text-white dark:text-white truncate">{book.authors.join(', ')}</p>
                                     </div>
                                   </Link>
                                 </DropdownMenuItem>
@@ -378,7 +383,7 @@ export default function CatalogMenu() {
                                 whileTap={{ scale: 0.98 }}
                               >
                                 <DropdownMenuItem asChild>
-                                  <Link href="/admin/books" className="flex items-center justify-center text-white dark:text-emerald-400 mt-2 text-base font-medium">
+                                  <Link href="/admin/books" className="flex items-center justify-center text-white dark:text-emerald-400 mt-2 text-white font-medium">
                                     Показать все ({books.length})
                                   </Link>
                                 </DropdownMenuItem>
@@ -415,7 +420,7 @@ export default function CatalogMenu() {
                         whileTap="tap"
                       >
                         <DropdownMenuItem asChild>
-                          <Link href="/admin/journals" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-base font-medium">
+                          <Link href="/admin/journals" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             <LayoutGrid className="mr-3 h-5 w-5 text-emerald-500" />
                             <span>Все журналы</span>
                           </Link>
@@ -429,7 +434,7 @@ export default function CatalogMenu() {
                         whileTap="tap"
                       >
                         <DropdownMenuItem asChild>
-                          <Link href="/admin/journals/create" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-base font-medium">
+                          <Link href="/admin/journals/create" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             <PlusCircle className="mr-3 h-5 w-5 text-emerald-500" />
                             <span>Добавить журнал</span>
                           </Link>
@@ -446,7 +451,7 @@ export default function CatalogMenu() {
                           whileHover="hover"
                           whileTap="tap"
                         >
-                          <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2.5 transition-colors text-base font-medium">
+                          <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             {categoryIcons[category] || <BookOpen className="mr-3 h-5 w-5 text-emerald-500" />}
                             <span>{category} ({journals.length})</span>
                           </DropdownMenuSubTrigger>
@@ -455,6 +460,8 @@ export default function CatalogMenu() {
                         <DropdownMenuPortal>
                           <DropdownMenuSubContent
                             className="max-h-[60vh] overflow-auto w-72 p-3 rounded-xl backdrop-blur-md bg-green-900/30 dark:bg-emerald-900/70 border border-emerald-200/50 dark:border-emerald-700/50 shadow-xl"
+                            sideOffset={5}
+                            style={{ transformOrigin: "top left" }}
                           >
                             <motion.div
                               variants={dropdownVariants}
@@ -472,7 +479,7 @@ export default function CatalogMenu() {
                                   <DropdownMenuItem asChild>
                                     <Link href={`/admin/journals/${journal.id}`} className="flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
                                       <BookOpen className="flex-shrink-0 h-5 w-5 text-emerald-500" />
-                                      <p className="truncate font-medium text-base">{journal.title}</p>
+                                      <p className="truncate font-medium text-white">{journal.title}</p>
                                     </Link>
                                   </DropdownMenuItem>
                                 </motion.div>
@@ -488,7 +495,7 @@ export default function CatalogMenu() {
                                   <DropdownMenuItem asChild>
                                     <Link 
                                       href={`/admin/journals?category=${encodeURIComponent(category)}`} 
-                                      className="flex items-center justify-center text-emerald-600 dark:text-emerald-400 mt-2 text-base font-medium"
+                                      className="flex items-center justify-center text-emerald-600 dark:text-emerald-400 mt-2 text-white font-medium"
                                     >
                                       Показать все ({journals.length})
                                     </Link>
