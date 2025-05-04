@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { ChevronLeft, BookOpen, Users, BookMarked, CalendarClock, AlertTriangle, CircleDollarSign, BarChart3, PieChartIcon, TrendingUp, Info, ArrowRight, ChevronRight } from 'lucide-react';
+import { ChevronLeft, BookOpen, Users, BookMarked, CalendarClock, AlertTriangle, CircleDollarSign, BarChart3, PieChartIcon, TrendingUp, Info, ArrowRight, ChevronRight, FileText, Copy } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AreaChart,
@@ -20,6 +20,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // Типы данных для статистики
 interface User {
@@ -28,6 +30,7 @@ interface User {
   borrowedBooksCount: number;
   maxBooksAllowed: number;
   fineAmount?: number;
+  email?: string;
 }
 
 interface Book {
@@ -277,6 +280,11 @@ export default function StatisticsPage() {
   const [topUsersData, setTopUsersData] = useState<TopUserData[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<CategoryData[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryResult, setSummaryResult] = useState("");
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ fullName: string }>({ fullName: "Администратор библиотеки" });
   
   // Ref для отслеживания скролла
   const containerRef = useRef<HTMLDivElement>(null);
@@ -305,6 +313,10 @@ export default function StatisticsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
+
+        // Лучше использовать статичное имя администратора без попытки получения данных текущего пользователя
+        // API-эндпоинт для текущего пользователя может отсутствовать или иметь другой путь
+        setCurrentUser({ fullName: "Администратор библиотеки" });
 
         // Загрузка пользователей
         const usersResponse = await fetch(`${baseUrl}/api/User`);
@@ -429,6 +441,174 @@ export default function StatisticsPage() {
     );
   };
 
+  // Функция для запроса сводки через ИИ
+  const generateSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryOpen(true);
+    
+    try {
+      const endpoint = "https://openrouter.ai/api/v1/chat/completions";
+      const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error("API ключ не настроен");
+      }
+      
+      // Используем имя из состояния currentUser
+      const currentUserFullName = currentUser.fullName;
+      
+      // Подготовка данных для отправки в API
+      const libraryData = {
+        currentUser: {
+          fullName: currentUserFullName
+        },
+        users: {
+          total: totalUsersCount,
+          active: activeUsersCount,
+          withFines: users.filter(u => (u.fineAmount || 0) > 0).length,
+          topUsers: topUsersData
+        },
+        books: {
+          total: totalAvailableBooks + totalBorrowedBooks,
+          available: totalAvailableBooks,
+          borrowed: totalBorrowedBooks,
+          categories: bookCategoriesData
+        },
+        reservations: {
+          total: reservations.length,
+          pending: pendingReservations,
+          completed: completedReservations,
+          canceled: canceledReservations,
+          monthlyStats: monthlyBorrowedData
+        },
+        fines: {
+          total: totalFines,
+          monthlyStats: monthlyFinesData
+        }
+      };
+      
+      const requestBody = {
+        model: "qwen/qwen3-30b-a3b:free",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Отвечать по-русски. Ты - ИИ-аналитик библиотеки. Проанализируй данные библиотеки и составь подробный аналитический отчет с выводами и рекомендациями для пользователя currentUserFullName. Выделяй главы и подразделы пропуском строки. Жирным шрифтом выделяй только цифры. Структура отчета должна быть СТРОГО следующей:
+
+## Аналитический отчет о состоянии библиотеки
+
+**Подготовлено:** ИИ-аналитик библиотеки
+
+### 1. Общее состояние библиотеки
+[Здесь опиши общее количество книг, пользователей, резерваций, их статусов и т.д. Используй **жирный шрифт** для выделения ключевых цифр]
+
+### 2. Анализ коллекции
+[Анализ категорий книг, наиболее популярных жанров, рекомендации по расширению коллекции]
+
+### 3. Анализ пользователей
+[Активность пользователей, топ-пользователи, пользователи с задолженностями]
+
+### 4. Анализ резерваций
+[Эффективность обработки резерваций, тенденции, проблемные моменты]
+
+### 5. Финансовый анализ
+[Анализ штрафов, динамика по месяцам, эффективность финансовой политики]
+
+### 6. Конкретные рекомендации по улучшению работы библиотеки
+[3-5 конкретных рекомендаций с обоснованием]
+
+ВАЖНО: В каждом разделе ОБЯЗАТЕЛЬНО используй **жирный шрифт** для выделения ключевых цифр и важных фактов. Применяй маркированные списки, где это уместно. Сохраняй профессиональный стиль изложения. Не отклоняйся от указанной структуры.
+
+Вот данные библиотеки: ${JSON.stringify(libraryData)}`
+              }
+            ]
+          }
+        ],
+        max_tokens: 8096
+      };
+      
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Ошибка API: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("API response:", result); // Добавим логирование для отладки
+      
+      // Исправляем доступ к данным в ответе
+      let summaryText = "Не удалось получить аналитику";
+      
+      if (result && result.choices && result.choices.length > 0) {
+        // Формат OpenAI API
+        if (result.choices[0].message?.content) {
+          summaryText = result.choices[0].message.content;
+        }
+      } else if (result && result.content) {
+        // Альтернативный формат для Gemini
+        summaryText = result.content;
+      } else if (result && result.text) {
+        // Еще один возможный формат
+        summaryText = result.text;
+      } else if (result && typeof result === 'object') {
+        // Если мы не можем найти текст в известных местах, выведем строковое представление объекта
+        summaryText = "Получен ответ в неизвестном формате: " + JSON.stringify(result, null, 2);
+      }
+      
+      setSummaryResult(summaryText);
+    } catch (err) {
+      console.error("Ошибка при генерации сводки:", err);
+      setSummaryResult(`Произошла ошибка: ${err instanceof Error ? err.message : "Неизвестная ошибка"}`);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  // Функция для получения текущей даты в формате "ДД месяц ГГГГ"
+  const getCurrentDate = () => {
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+    return new Date().toLocaleDateString('ru-RU', options);
+  };
+  
+  // Функция для копирования отчета в буфер обмена
+  const copyReportToClipboard = () => {
+    // Создаем текстовую версию отчета без HTML-тегов
+    let textReport = summaryResult
+      .replace(/<br><br>/g, '\n\n')
+      .replace(/<h3[^>]*>(.*?)<\/h3>/g, '### $1')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/g, '## $1')
+      .replace(/<span[^>]*>(.*?)<\/span>/g, '**$1**')
+      .replace(/<li[^>]*>(.*?)<\/li>/g, '* $1');
+      
+    // Добавляем текущую дату к началу отчета
+    const currentDate = getCurrentDate();
+    if (textReport.startsWith('## Аналитический отчет')) {
+      // Если отчет начинается с заголовка, добавляем дату перед ним
+      textReport = `Дата: ${currentDate}\n\n` + textReport;
+    } else {
+      // Добавляем в самое начало
+      textReport = `Дата: ${currentDate}\n\n${textReport}`;
+    }
+      
+    navigator.clipboard.writeText(textReport)
+      .then(() => {
+        setCopiedToClipboard(true);
+        setTimeout(() => setCopiedToClipboard(false), 2000);
+      })
+      .catch(err => {
+        console.error('Ошибка при копировании: ', err);
+      });
+  };
+
   if (loading) return <LoadingSpinner />;
   
   if (error) return (
@@ -497,29 +677,46 @@ export default function StatisticsPage() {
           className="mb-8 sticky top-0 z-10 pt-4 pb-6 bg-transparent"
           style={{ opacity, scale, y }}
         >
-          <div className="flex items-center gap-4">
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Link 
-                href="/admin" 
-                className="flex items-center gap-2 text-white hover:text-emerald-300 transition-colors"
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.5 }}
               >
-                <ChevronLeft className="h-5 w-5" />
-                <span className="font-medium">Назад</span>
-              </Link>
-            </motion.div>
+                <Link 
+                  href="/admin" 
+                  className="flex items-center gap-2 text-white hover:text-emerald-300 transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                  <span className="font-medium">Назад</span>
+                </Link>
+              </motion.div>
+              
+              <motion.h1 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="text-3xl font-bold text-white"
+              >
+                Статистика библиотеки
+              </motion.h1>
+            </div>
             
-            <motion.h1 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-3xl font-bold text-white"
+              transition={{ duration: 0.5, delay: 0.3 }}
             >
-              Статистика библиотеки
-            </motion.h1>
+              <Button
+                onClick={generateSummary}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                disabled={summaryLoading}
+              >
+                <FileText className="w-5 h-5" />
+                {summaryLoading ? "Генерация..." : "Подвести итоги"}
+              </Button>
+            </motion.div>
           </div>
           
           <motion.p 
@@ -1275,6 +1472,61 @@ export default function StatisticsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Модальное окно для отображения сводки */}
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="bg-green/90 dark:bg-green-800/90 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex justify-between items-center">
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <FileText className="w-5 h-5 text-emerald-500" />
+                Аналитический отчет библиотеки
+              </DialogTitle>
+              
+              <Button
+                onClick={copyReportToClipboard}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 px-3 py-1"
+                size="sm"
+              >
+                <Copy className="w-4 h-4" />
+                {copiedToClipboard ? "Скопировано!" : "Копировать"}
+              </Button>
+            </div>
+            <DialogDescription className="text-white opacity-80">
+              Сгенерированный ИИ анализ данных библиотеки
+            </DialogDescription>
+          </DialogHeader>
+          
+          {summaryLoading ? (
+            <div className="flex flex-col items-center justify-center py-10">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full"
+              />
+              <p className="mt-4 text-emerald-300">Генерация аналитики...</p>
+            </div>
+          ) : (
+            <div className="bg-green/70 dark:bg-green-900/70 rounded-lg p-6 prose prose-invert max-w-none">
+              {/* Добавляем дату сверху отчета */}
+              <div className="text-right mb-4">
+                <p className="text-emerald-400 font-medium">{getCurrentDate()}</p>
+              </div>
+              <div 
+                className="whitespace-pre-line markdown-report" 
+                dangerouslySetInnerHTML={{ 
+                  __html: summaryResult
+                    .replace(/\n\n/g, '<br><br>')
+                    .replace(/### (.*)/g, '<h3 class="text-xl font-bold text-emerald-400 mt-6 mb-3">$1</h3>')
+                    .replace(/## (.*)/g, '<h2 class="text-2xl font-bold text-emerald-300 mt-8 mb-4">$1</h2>')
+                    .replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-emerald-400">$1</span>')
+                    .replace(/\* (.*)/g, '<li class="ml-4">$1</li>')
+                }} 
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

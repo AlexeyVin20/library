@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Image from "next/image";
 
 interface Reservation {
   id: string;
@@ -22,6 +23,7 @@ interface Reservation {
   book?: {
     title: string;
     authors?: string;
+    cover?: string;
   };
 }
 
@@ -53,7 +55,7 @@ const AnimatedTabsTrigger = ({
     <TabsTrigger
       value={value}
       className={`relative transition-colors
-        ${isActive ? 'bg-emerald-900/80 text-white shadow-md' : ''}
+        ${isActive ? 'bg-transparent text-white shadow-md' : ''}
         rounded-lg px-3 py-2
       `}
     >
@@ -88,12 +90,55 @@ export default function ReservationsPage() {
   const fetchReservations = async () => {
     try {
       setLoading(true);
+      setError(null); // Сброс ошибки перед новым запросом
       const response = await fetch(`${baseUrl}/api/Reservation`);
       if (!response.ok) throw new Error("Ошибка при загрузке резервирований");
-      const data = await response.json();
-      setReservations(data);
+      const baseReservations: Reservation[] = await response.json();
+
+      // Запрашиваем детали для каждой книги и пользователя
+      const enrichedReservations = await Promise.all(
+        baseReservations.map(async (reservation) => {
+          let bookDetails = null;
+          let userDetails = null;
+
+          try {
+            // Запрос деталей книги
+            if (reservation.bookId) {
+              const bookRes = await fetch(`${baseUrl}/api/books/${reservation.bookId}`);
+              if (bookRes.ok) {
+                bookDetails = await bookRes.json();
+              } else {
+                console.warn(`Не удалось загрузить книгу ${reservation.bookId} для резервирования ${reservation.id}`);
+              }
+            }
+            // Запрос деталей пользователя
+            if (reservation.userId) {
+              const userRes = await fetch(`${baseUrl}/api/users/${reservation.userId}`);
+              if (userRes.ok) {
+                userDetails = await userRes.json();
+              } else {
+                console.warn(`Не удалось загрузить пользователя ${reservation.userId} для резервирования ${reservation.id}`);
+              }
+            }
+          } catch (err) {
+            console.error(`Ошибка при дозагрузке данных для резервирования ${reservation.id}:`, err);
+            // Не прерываем процесс из-за ошибки одного запроса, но логируем ее
+          }
+
+          return {
+            ...reservation,
+            // Добавляем или перезаписываем данные книги и пользователя
+            book: bookDetails ? { ...reservation.book, ...bookDetails } : reservation.book,
+            user: userDetails ? { ...reservation.user, ...userDetails } : reservation.user,
+          };
+        })
+      );
+
+      setReservations(enrichedReservations);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке резервирований");
+      setReservations([]); // Очищаем резервирования в случае ошибки
     } finally {
       setLoading(false);
     }
@@ -225,7 +270,7 @@ export default function ReservationsPage() {
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-            <TabsList className="bg-green/30 dark:bg-green-800/30 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md text-white">
+            <TabsList className="bg-transparent backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md text-white">
               <AnimatedTabsTrigger
                 value="all"
                 icon={<Filter className="w-4 h-4" />}
@@ -295,12 +340,28 @@ export default function ReservationsPage() {
                           </span>
                         </div>
 
-                        <h3 className="text-lg font-bold mb-2 text-white line-clamp-2">
-                          {reservation.book?.title || "Книга не указана"}
-                        </h3>
-                        <p className="text-sm text-white mb-3 line-clamp-1">
-                          {reservation.book?.authors || "Автор не указан"}
-                        </p>
+                        <div className="flex gap-4 mb-3">
+                          {reservation.book?.cover && (
+                            <div className="flex-shrink-0 w-16 h-24 relative rounded-md overflow-hidden">
+                              <Image
+                                src={reservation.book.cover}
+                                alt={reservation.book?.title || "Книга"}
+                                fill
+                                style={{ objectFit: "cover" }}
+                                className="rounded-md"
+                              />
+                            </div>
+                          )}
+                          
+                          <div className="flex-grow">
+                            <h3 className="text-lg font-bold mb-2 text-white line-clamp-2">
+                              {reservation.book?.title || "Книга не указана"}
+                            </h3>
+                            <p className="text-sm text-white mb-3 line-clamp-1">
+                              Автор: {reservation.book?.authors || "Не указан"}
+                            </p>
+                          </div>
+                        </div>
 
                         <div className="flex flex-col gap-2 mb-4">
                           <div className="flex items-center gap-2">

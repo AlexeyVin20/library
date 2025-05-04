@@ -6,8 +6,9 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText } from "lucide-react"
+import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText, Printer, Mail, Phone, BookOpen, Download } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import Image from "next/image"
 
 interface Reservation {
   id: string
@@ -21,10 +22,16 @@ interface Reservation {
     fullName: string
     email?: string
     phone?: string
+    address?: string
+    registrationDate?: string
   }
   book?: {
     title: string
     authors?: string
+    isbn?: string
+    publishYear?: number
+    category?: string
+    cover?: string
   }
 }
 
@@ -73,7 +80,7 @@ const AnimatedTabsTrigger = ({
     <TabsTrigger
       value={value}
       className={`relative transition-colors
-        ${isActive ? 'bg-emerald-900/80 text-white shadow-md' : ''}
+        ${isActive ? 'bg-transparent text-white shadow-md' : ''}
         rounded-lg px-3 py-2
       `}
     >
@@ -116,12 +123,59 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
   const fetchReservation = async () => {
     try {
       setLoading(true)
+      setError(null) // Сброс ошибки
+
+      // 1. Получаем базовое резервирование
       const response = await fetch(`${baseUrl}/api/Reservation/${reservationId}`)
-      if (!response.ok) throw new Error("Ошибка при загрузке резервирования")
-      const data = await response.json()
-      setReservation(data)
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("Резервирование не найдено")
+        }
+        throw new Error("Ошибка при загрузке резервирования")
+      }
+      const baseReservation: Reservation = await response.json()
+
+      let finalReservation = { ...baseReservation }
+      let bookDetails = null
+      let userDetails = null
+
+      try {
+        // 2. Запрашиваем полные детали книги
+        if (baseReservation.bookId) {
+          const bookRes = await fetch(`${baseUrl}/api/books/${baseReservation.bookId}`)
+          if (bookRes.ok) {
+            bookDetails = await bookRes.json()
+          } else {
+            console.warn(`Не удалось загрузить книгу ${baseReservation.bookId}`)
+          }
+        }
+
+        // 3. Запрашиваем полные детали пользователя
+        if (baseReservation.userId) {
+          const userRes = await fetch(`${baseUrl}/api/users/${baseReservation.userId}`)
+          if (userRes.ok) {
+            userDetails = await userRes.json()
+          } else {
+            console.warn(`Не удалось загрузить пользователя ${baseReservation.userId}`)
+          }
+        }
+        
+        // 4. Объединяем все данные
+        finalReservation = {
+          ...baseReservation,
+          book: bookDetails ? { ...baseReservation.book, ...bookDetails } : baseReservation.book,
+          user: userDetails ? { ...baseReservation.user, ...userDetails } : baseReservation.user,
+        }
+
+      } catch (err) {
+        console.error(`Ошибка при дозагрузке данных для резервирования ${reservationId}:`, err)
+        // Если дозагрузка не удалась, показываем хотя бы базовые данные
+      }
+      
+      setReservation(finalReservation)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке резервирования")
+      setReservation(null) // Сбрасываем резервирование в случае ошибки
     } finally {
       setLoading(false)
     }
@@ -187,6 +241,209 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
         return "bg-gray-500/90 hover:bg-gray-600/90"
     }
   }
+
+  // Функция для генерации и скачивания HTML документа
+  const generateFormular = async () => {
+    if (!reservation) return;
+
+    // Получаем актуальные данные о пользователе через API
+    let userData = null;
+    try {
+      const userResponse = await fetch(`${baseUrl}/api/user/${reservation.userId}`);
+      if (userResponse.ok) {
+        userData = await userResponse.json();
+      } else {
+        console.warn(`Не удалось загрузить данные пользователя для формуляра: ${reservation.userId}`);
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке данных пользователя:', error);
+    }
+
+    // Используем полученные данные или данные из резервирования
+    const user = userData || reservation.user || {};
+
+    // Стилизация, приближенная к дизайну приложения
+    const styles = `
+      <style>
+        body {
+          font-family: 'Segoe UI', Arial, sans-serif;
+          color: #333;
+          background-color: #f0fdf4;
+          padding: 20px;
+          max-width: 550px; /* Уменьшенная ширина для формата A5 */
+          margin: 0 auto;
+          border: 1px solid #a7f3d0;
+          border-radius: 8px;
+          font-size: 12px; /* Меньший размер шрифта для A5 */
+        }
+        h1, h2, h3 {
+          color: #047857;
+        }
+        h1 {
+          text-align: center;
+          border-bottom: 2px solid #047857;
+          padding-bottom: 5px;
+          margin-bottom: 10px;
+          font-size: 16px;
+        }
+        h2 {
+          background-color: #d1fae5;
+          padding: 3px 8px;
+          border-radius: 5px;
+          display: inline-block;
+          font-size: 14px;
+        }
+        h3 {
+          margin-top: 10px;
+          margin-bottom: 5px;
+          border-bottom: 1px solid #a7f3d0;
+          padding-bottom: 3px;
+          font-size: 13px;
+        }
+        p {
+          margin: 3px 0;
+          line-height: 1.3;
+        }
+        strong {
+          color: #059669;
+        }
+        .section {
+          margin-bottom: 10px;
+          padding: 8px;
+          background-color: #ffffff;
+          border: 1px solid #d1fae5;
+          border-radius: 6px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .signature-section {
+          margin-top: 15px;
+          padding-top: 10px;
+          border-top: 1px solid #a7f3d0;
+          display: flex;
+          justify-content: space-between;
+        }
+        .signature-block {
+          width: 45%;
+        }
+        .signature-line {
+          margin-top: 30px;
+          border-top: 1px solid #aaa;
+          padding-top: 3px;
+        }
+        .header-info {
+          text-align: right;
+          font-size: 10px;
+          margin-bottom: 10px;
+          color: #666;
+        }
+        @media print {
+          @page {
+            size: A5; /* Установка формата A5 для печати */
+            margin: 10mm;
+          }
+          body {
+            background-color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            height: 100%;
+          }
+          .no-print {
+            display: none;
+          }
+          .section {
+            border: 1px solid #eee;
+            box-shadow: none;
+          }
+          .header-info {
+            display: none; /* Скрываем ID и дату при печати */
+          }
+          button {
+            display: none;
+          }
+        }
+      </style>
+    `;
+
+    // HTML содержимое
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="ru">
+      <head>
+        <meta charset="utf-8">
+        <title>Формуляр книги #${reservation.id}</title>
+        ${styles}
+      </head>
+      <body>
+        <div class="header-info no-print">
+          <p>Дата формирования: ${new Date().toLocaleString("ru-RU")}</p>
+        </div>
+
+        <h1>Формуляр книги</h1>
+
+        <div class="section">
+          <h3>Информация о книге</h3>
+          <p><strong>Название:</strong> ${reservation.book?.title || "Не указано"}</p>
+          <p><strong>Автор:</strong> ${reservation.book?.authors || "Не указан"}</p>
+          ${reservation.book?.isbn ? `<p><strong>ISBN:</strong> ${reservation.book.isbn}</p>` : ''}
+          ${reservation.book?.publishYear ? `<p><strong>Год издания:</strong> ${reservation.book.publishYear}</p>` : ''}
+          ${reservation.book?.category ? `<p><strong>Категория:</strong> ${reservation.book.category}</p>` : ''}
+        </div>
+
+        <div class="section">
+          <h3>Информация о читателе</h3>
+          <p><strong>ФИО:</strong> ${user.fullName || "Не указано"}</p>
+          <p><strong>Email:</strong> ${user.email || "Не указано"}</p>
+          <p><strong>Телефон:</strong> ${user.phone || "Не указано"}</p>
+          ${user.address ? `<p><strong>Адрес:</strong> ${user.address}</p>` : ''}
+        </div>
+
+        <div class="section">
+          <h3>Детали выдачи</h3>
+          <p><strong>Дата выдачи:</strong> ${formatDate(reservation.reservationDate)}</p>
+          <p><strong>Дата возврата:</strong> ${formatDate(reservation.expirationDate)}</p>
+        </div>
+
+        <div class="section no-print">
+          <h3>Примечания</h3>
+          <p>${reservation.notes || "Нет дополнительных примечаний"}</p>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-block">
+            <p>Библиотекарь:</p>
+            <div class="signature-line"></div>
+            <p>______________________</p>
+          </div>
+          <div class="signature-block">
+            <p>Читатель:</p>
+            <div class="signature-line"></div>
+            <p>${user.fullName || "______________________"}</p>
+          </div>
+        </div>
+        
+        <div class="no-print" style="text-align: center; margin-top: 20px;">
+          <button onclick="window.print()" style="background-color: #059669; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+            Распечатать формуляр
+          </button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Создаем Blob с HTML содержимым
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    
+    // Создаем ссылку для скачивания
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Формуляр_книги_${reservation.id}.html`;
+    
+    // Имитируем клик для запуска скачивания
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="min-h-screen relative">
@@ -266,6 +523,16 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
                 </div>
 
                 <div className="flex gap-2">
+                  <motion.button
+                    onClick={generateFormular}
+                    className="bg-green-500/90 hover:bg-green-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                    whileHover={{ y: -3 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Печать формуляра</span>
+                  </motion.button>
+                  
                   {reservation.status !== "Выполнена" && (
                     <motion.button
                       onClick={() => handleStatusChange("Выполнена")}
@@ -297,7 +564,7 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
                 onValueChange={setActiveTab}
                 className="w-full mb-6"
               >
-                <TabsList className="bg-green/30 dark:bg-green-800/30 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md text-white">
+                <TabsList className="bg-transparent backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md text-white">
                   <AnimatedTabsTrigger
                     value="details"
                     icon={<Book className="w-4 h-4" />}
@@ -315,7 +582,7 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
                 <TabsContent value="details" className="pt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <h2 className="text-xl font-bold mb-4 text-white">{reservation.book?.title || "Книга не указана"}</h2>
+                      <h2 className="text-xl font-bold mb-2 text-white">{reservation.book?.title || "Книга не указана"}</h2>
                       <p className="text-white mb-4">{reservation.book?.authors || "Автор не указан"}</p>
 
                       <div className="grid grid-cols-1 gap-4">
@@ -334,14 +601,48 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
                           value={formatDate(reservation.expirationDate)}
                           icon={<Calendar className="h-4 w-4 text-emerald-300" />}
                         />
+                        {reservation.book?.isbn && (
+                          <InfoField
+                            label="ISBN"
+                            value={reservation.book.isbn}
+                            icon={<BookOpen className="h-4 w-4 text-emerald-300" />}
+                          />
+                        )}
+                        {reservation.book?.publishYear && (
+                          <InfoField
+                            label="Год издания"
+                            value={reservation.book.publishYear.toString()}
+                            icon={<Calendar className="h-4 w-4 text-emerald-300" />}
+                          />
+                        )}
+                        {reservation.book?.category && (
+                          <InfoField
+                            label="Категория"
+                            value={reservation.book.category}
+                            icon={<Book className="h-4 w-4 text-emerald-300" />}
+                          />
+                        )}
+                      </div>
+                      <div className="backdrop-blur-xl bg-green-500/10 rounded-xl p-4 border border-white/10 dark:border-gray-700/10 h-auto mt-4">
+                        <h3 className="text-lg font-medium mb-3 text-white">Примечания</h3>
+                        <p className="text-white text-sm">
+                          {reservation.notes || "Нет дополнительных примечаний"}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="backdrop-blur-xl bg-green-500/10 rounded-xl p-4 border border-white/10 dark:border-gray-700/10">
-                      <h3 className="text-lg font-medium mb-3 text-white">Примечания</h3>
-                      <p className="text-white">
-                        {reservation.notes || "Нет дополнительных примечаний"}
-                      </p>
+                    <div>
+                      {reservation.book?.cover && (
+                        <div className="mb-4 rounded-lg overflow-hidden shadow-lg relative" style={{ height: "34.5rem", width: "24.5rem" }}>
+                          <Image
+                            src={reservation.book.cover}
+                            alt={reservation.book.title || "Обложка книги"}
+                            fill
+                            style={{ objectFit: "cover" }}
+                            className="rounded-lg transition-all duration-300 hover:scale-105"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TabsContent>
@@ -357,16 +658,42 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
                         <InfoField
                           label="Email"
                           value={reservation.user.email}
-                          icon={<FileText className="h-4 w-4 text-emerald-300" />}
+                          icon={<Mail className="h-4 w-4 text-emerald-300" />}
                         />
                       )}
                       {reservation.user?.phone && (
                         <InfoField
                           label="Телефон"
                           value={reservation.user.phone}
+                          icon={<Phone className="h-4 w-4 text-emerald-300" />}
+                        />
+                      )}
+                      {reservation.user?.address && (
+                        <InfoField
+                          label="Адрес"
+                          value={reservation.user.address}
                           icon={<FileText className="h-4 w-4 text-emerald-300" />}
                         />
                       )}
+                      {reservation.user?.registrationDate && (
+                        <InfoField
+                          label="Дата регистрации"
+                          value={formatDate(reservation.user.registrationDate)}
+                          icon={<Calendar className="h-4 w-4 text-emerald-300" />}
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="mt-6">
+                      <motion.button
+                        onClick={() => router.push(`/admin/users/${reservation.userId}`)}
+                        className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                        whileHover={{ y: -3 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <User className="h-4 w-4" />
+                        <span>Перейти к профилю пользователя</span>
+                      </motion.button>
                     </div>
                   </div>
                 </TabsContent>

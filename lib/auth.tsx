@@ -71,11 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Сохраняем данные пользователя в localStorage для доступа в других компонентах
           localStorage.setItem("user", JSON.stringify(userInfo));
 
-          // Перенаправление на админку, если у пользователя есть роль "Администратор"
-          // Проверяйте точное название роли, которое приходит с бэкенда
-          if (roles.includes("Администратор")) { // Или "Администратор", зависит от Role Name в БД
-            router.push('/admin');
-          }
+          // Убираем автоматический редирект, позволяя пользователям оставаться на текущей странице
+          // Если нужен редирект для администратора, он будет обрабатываться через соответствующий layout
         } catch (parseError) {
           console.error("Ошибка при парсинге ответа /Auth/session:", parseError);
           localStorage.removeItem("token");

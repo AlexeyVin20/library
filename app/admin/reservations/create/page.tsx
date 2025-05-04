@@ -188,7 +188,7 @@ export default function CreateReservationPage() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl mx-auto">
                 <motion.div
-                  className="backdrop-blur-xl bg-green-600/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30 text-white"
+                  className="backdrop-blur-xl bg-green-500/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30 text-white"
                   whileHover={{
                     y: -5,
                     boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)",
@@ -314,7 +314,7 @@ export default function CreateReservationPage() {
             onClick={() => setShowUserModal(false)}
           >
             <motion.div
-              className="bg-green-600/95 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden border border-white/20 shadow-xl"
+              className="bg-green-500/20 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden border border-white/20 shadow-xl"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
@@ -396,7 +396,7 @@ export default function CreateReservationPage() {
             onClick={() => setShowBookModal(false)}
           >
             <motion.div
-              className="bg-green-600/95 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden border border-white/20 shadow-xl"
+              className="bg-green-500/20 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden border border-white/20 shadow-xl"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
