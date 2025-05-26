@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
-import Calendar from "@/components/admin/Calendar"
+import { Calendar as DayPickerCalendar } from "@/components/ui/calendar"
 import Link from "next/link"
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import {
@@ -20,9 +20,20 @@ import {
   Activity,
   Bookmark,
   PieChart,
+  Sparkles,
+  Clock,
+  X,
+  CheckCircle,
+  XCircle,
 } from "lucide-react"
 import React from "react"
-import { QuickActions } from "@/components/admin/quick-actions"
+import { FloatingActionPanelRoot, FloatingActionPanelTrigger, FloatingActionPanelContent, FloatingActionPanelButton } from "@/components/ui/floating-action-panel"
+import { PinContainer } from "@/components/ui/3d-pin"
+import { PixelCanvas } from "@/components/ui/pixel-canvas"
+import type { DateRange } from "react-day-picker"
+import { QuickActionsMenu } from "@/components/admin/QuickActionsMenu"
+import { ReservationsChart } from "@/components/admin/Chart_reservs"
+import { RecentActivitiesTable } from "@/components/admin/RecentActivitiesTable"
 
 // Определение типов
 interface User {
@@ -107,59 +118,6 @@ const FadeInView = ({
   )
 }
 
-// Компонент для карточки статистики
-const StatCard = ({
-  title,
-  value,
-  subtitle,
-  additionalInfo,
-  icon,
-  color,
-  delay = 0,
-}: {
-  title: string
-  value: number
-  subtitle: string
-  additionalInfo?: React.ReactNode
-  icon: React.ReactNode
-  color: string
-  delay?: number
-}) => {
-  return (
-    <FadeInView delay={delay}>
-      <motion.div
-        className={`backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-white/20 dark:border-gray-700/30 relative overflow-hidden`}
-      >
-        <div className={`absolute top-0 left-0 w-1.5 h-full ${color}`}></div>
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            {React.cloneElement(icon as React.ReactElement<any, any>, { className: "w-7 h-7 drop-shadow-lg" })}
-            {title}
-          </h3>
-          <div
-            className={`w-12 h-12 rounded-full ${color} bg-opacity-30 dark:bg-opacity-40 flex items-center justify-center shadow-inner`}
-          >
-            {React.cloneElement(icon as React.ReactElement<any, any>, { className: "w-7 h-7 drop-shadow-lg" })}
-          </div>
-        </div>
-        <div>
-          <p className={`text-4xl font-bold mb-2 text-white`}>
-            <CountUp end={value} />
-          </p>
-          <p className="text-sm text-white">{subtitle}</p>
-          {additionalInfo && <div className="mt-3 text-sm text-white">{additionalInfo}</div>}
-        </div>
-        <Link href="/admin/statistics" className="mt-4">
-          <span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center">
-            Подробная статистика
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </span>
-        </Link>
-      </motion.div>
-    </FadeInView>
-  )
-}
-
 // Компонент для карточки с графиком
 const ChartCard = ({
   title,
@@ -198,9 +156,10 @@ const BookCard = ({ book, index = 0 }: { book: Book; index?: number }) => {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.1 * index, duration: 0.3 }}
-      className="flex p-4 backdrop-blur-xl bg-green/20 dark:bg-gray-800/30 rounded-xl border border-white/20 dark:border-gray-700/30 mb-3 transition-all duration-300 hover:shadow-lg"
+      className="flex p-4 backdrop-blur-xl bg-green/20 dark:bg-gray-800/30 rounded-xl border border-white/20 dark:border-gray-700/30 mb-3 transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      <div className="flex items-center w-full">
+      <PixelCanvas colors={['#34d399', '#10b981', '#059669']} gap={2} speed={10} variant="icon" noFocus />
+      <div className="flex items-center w-full relative z-10">
         <div className="w-12 h-16 flex-shrink-0 bg-emerald-100/70 dark:bg-emerald-900/30 rounded-lg mr-4 overflow-hidden shadow-md">
           {book.cover ? (
             <img
@@ -250,15 +209,10 @@ const Section = ({
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-white">{title}</h2>
           {action && (
-            <Link href={action.href}>
-              <motion.span
-                className="text-white hover:text-emerald-300 transition-colors text-sm font-medium flex items-center"
-                whileHover={{ x: 3 }}
-              >
-                {action.label}
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </motion.span>
-            </Link>
+            <span className="text-white hover:text-emerald-300 transition-colors text-sm font-medium flex items-center cursor-pointer">
+              {action.label}
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </span>
           )}
         </div>
         <div className="flex-1">{children}</div>
@@ -369,7 +323,7 @@ const CornerCard = ({
       <div
         className={`absolute top-3 right-3 w-12 h-12 rounded-full ${color} bg-opacity-30 flex items-center justify-center`}
       >
-        {React.cloneElement(icon as React.ReactElement<any, any>, { className: "w-6 h-6 text-white" })}
+        {React.cloneElement(icon as React.ReactElement<any, any>, { /* className: "w-6 h-6 text-white" */ })}
       </div>
       <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
       <p className="text-3xl font-bold text-white mb-1">
@@ -379,6 +333,53 @@ const CornerCard = ({
     </motion.div>
   )
 }
+
+// Быстрые диапазоны дат на русском
+const quickRanges = [
+  { label: "Сегодня", getRange: () => {
+    const today = new Date();
+    return { from: today, to: today };
+  } },
+  { label: "Вчера", getRange: () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return { from: yesterday, to: yesterday };
+  } },
+  { label: "Последние 7 дней", getRange: () => {
+    const to = new Date();
+    const from = new Date();
+    from.setDate(to.getDate() - 6);
+    return { from, to };
+  } },
+  { label: "Последние 30 дней", getRange: () => {
+    const to = new Date();
+    const from = new Date();
+    from.setDate(to.getDate() - 29);
+    return { from, to };
+  } },
+  { label: "С начала месяца", getRange: () => {
+    const to = new Date();
+    const from = new Date(to.getFullYear(), to.getMonth(), 1);
+    return { from, to };
+  } },
+  { label: "Прошлый месяц", getRange: () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const to = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { from, to };
+  } },
+  { label: "С начала года", getRange: () => {
+    const to = new Date();
+    const from = new Date(to.getFullYear(), 0, 1);
+    return { from, to };
+  } },
+  { label: "Прошлый год", getRange: () => {
+    const year = new Date().getFullYear() - 1;
+    const from = new Date(year, 0, 1);
+    const to = new Date(year, 11, 31);
+    return { from, to };
+  } },
+];
 
 export default function DashboardPage() {
   const [users, setUsers] = useState<User[]>([])
@@ -391,6 +392,8 @@ export default function DashboardPage() {
   const [recentBorrowed, setRecentBorrowed] = useState<number>(5)
   const [monthlyBorrowedData, setMonthlyBorrowedData] = useState<MonthlyBorrowedData[]>([])
   const [recentBooks, setRecentBooks] = useState<Book[]>([])
+  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined)
+  const [showRangeModal, setShowRangeModal] = useState(false)
 
   // Ref для отслеживания скролла
   const containerRef = useRef<HTMLDivElement>(null)
@@ -499,16 +502,6 @@ export default function DashboardPage() {
     })
   }
 
-  // Определяем быстрые действия для компонента QuickActions
-  const quickActions = [
-    { href: "/admin/reservations", label: "Резервирования", icon: <CalendarIcon />, color: "emerald-light" as const },
-    { href: "/admin/books", label: "Все книги", icon: <Layers />, color: "emerald" as const },
-    { href: "/admin/users", label: "Пользователи", icon: <Users />, color: "emerald-light" as const },
-    { href: "/admin/roles", label: "Управление ролями", icon: <Shield />, color: "emerald" as const },
-    { href: "/admin/statistics", label: "Статистика", icon: <PieChart />, color: "emerald-light" as const },
-    { href: "/admin/shelfs", label: "Полки", icon: <Bookmark />, color: "emerald" as const },
-  ]
-
   const reservationEvents = useMemo(
     () =>
       reservations.map((reservation) => ({
@@ -524,6 +517,25 @@ export default function DashboardPage() {
       })),
     [reservations],
   )
+
+  const filteredEvents = useMemo(() => {
+    if (!selectedRange?.from || !selectedRange?.to) return []
+    const fromTime = selectedRange.from.getTime()
+    const toTime = selectedRange.to.getTime()
+    return reservationEvents.filter(ev => {
+      const date = new Date(ev.reservationDate).getTime()
+      return date >= fromTime && date <= toTime
+    })
+  }, [reservationEvents, selectedRange])
+
+  // Получить 3 ближайших события (по дате бронирования)
+  const upcomingEvents = useMemo(() => {
+    const now = new Date()
+    return [...reservationEvents]
+      .filter(ev => new Date(ev.reservationDate) >= now)
+      .sort((a, b) => new Date(a.reservationDate).getTime() - new Date(b.reservationDate).getTime())
+      .slice(0, 3)
+  }, [reservationEvents])
 
   // Добавляем стиль для анимации строк таблицы
   useEffect(() => {
@@ -581,133 +593,234 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto space-y-8 relative z-10 p-6">
         {/* Статистические карточки */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <StatCard
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-stretch">
+          <PinContainer
             title="Книги"
-            value={totalAvailableBooks}
-            subtitle="доступных ресурсов"
-            additionalInfo={
-              <p className="text-white flex items-center">
-                <span className="mr-1">+</span>
-                {recentBorrowed} <span className="ml-1">за последний месяц</span>
-              </p>
-            }
-            icon={<BookOpen className="text-emerald-500" />}
-            color="bg-emerald-500"
-            delay={0.1}
-          />
-          <StatCard
-            title="Пользователи"
-            value={activeUsersCount}
-            subtitle="взяли книги"
-            additionalInfo={
-              <p className="text-white">
-                {totalUsersCount ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0}% от общего числа
-              </p>
-            }
-            icon={<Users className="text-blue-500" />}
-            color="bg-blue-500"
-            delay={0.2}
-          />
-          <StatCard
-            title="Резервирования"
-            value={reservations.length}
-            subtitle="всего заявок"
-            additionalInfo={
-              <div className="flex items-center">
-                <span className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full bg-emerald-400">
-                  {pendingReservations}
-                </span>
-                <span className="ml-2">в обработке</span>
+            href="/admin/statistics"
+            containerClassName="h-full w-full"
+            className="h-full w-full"
+          >
+            <div className="flex flex-col justify-between h-full w-full">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <BookOpen className="text-emerald-500 w-7 h-7 drop-shadow-lg" />
+                  Книги
+                </h3>
+                <div className="w-12 h-12 rounded-full bg-emerald-500 bg-opacity-30 dark:bg-opacity-40 flex items-center justify-center shadow-inner">
+                  <BookOpen className="text-emerald-500 w-7 h-7 drop-shadow-lg" />
+                </div>
               </div>
-            }
-            icon={<CalendarIcon className="text-emerald-400" />}
-            color="bg-emerald-400"
-            delay={0.3}
-          />
+              <div>
+                <p className="text-4xl font-bold mb-2 text-white">
+                  <CountUp end={totalAvailableBooks} />
+                </p>
+                <p className="text-sm text-white">доступных ресурсов</p>
+                <div className="mt-3 text-sm text-white flex items-center">
+                  <span className="mr-1">+</span>
+                  {recentBorrowed} <span className="ml-1">за последний месяц</span>
+                </div>
+              </div>
+              <span className="mt-4 text-white hover:text-emerald-300 text-sm font-medium flex items-center cursor-pointer">
+                Подробная статистика
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </span>
+            </div>
+          </PinContainer>
+          <PinContainer
+            title="Пользователи"
+            href="/admin/statistics"
+            containerClassName="h-full w-full"
+            className="h-full w-full"
+          >
+            <div className="flex flex-col justify-between h-full w-full">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Users className="text-blue-500 w-7 h-7 drop-shadow-lg" />
+                  Пользователи
+                </h3>
+                <div className="w-12 h-12 rounded-full bg-blue-500 bg-opacity-30 dark:bg-opacity-40 flex items-center justify-center shadow-inner">
+                  <Users className="text-blue-500 w-7 h-7 drop-shadow-lg" />
+                </div>
+              </div>
+              <div>
+                <p className="text-4xl font-bold mb-2 text-white">
+                  <CountUp end={activeUsersCount} />
+                </p>
+                <p className="text-sm text-white">взяли книги</p>
+                <div className="mt-3 text-sm text-white">
+                  {totalUsersCount ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0}% от общего числа
+                </div>
+              </div>
+              <span className="mt-4 text-white hover:text-emerald-300 text-sm font-medium flex items-center cursor-pointer">
+                Подробная статистика
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </span>
+            </div>
+          </PinContainer>
+          <PinContainer
+            title="Резервирования"
+            href="/admin/statistics"
+            containerClassName="h-full w-full"
+            className="h-full w-full"
+          >
+            <div className="flex flex-col justify-between h-full w-full">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <CalendarIcon className="text-emerald-400 w-7 h-7 drop-shadow-lg" />
+                  Резервирования
+                </h3>
+                <div className="w-12 h-12 rounded-full bg-emerald-400 bg-opacity-30 dark:bg-opacity-40 flex items-center justify-center shadow-inner">
+                  <CalendarIcon className="text-emerald-400 w-7 h-7 drop-shadow-lg" />
+                </div>
+              </div>
+              <div>
+                <p className="text-4xl font-bold mb-2 text-white">
+                  <CountUp end={reservations.length} />
+                </p>
+                <p className="text-sm text-white">всего заявок</p>
+                <div className="mt-3 text-sm text-white flex items-center">
+                  <span className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full bg-emerald-400">
+                    {pendingReservations}
+                  </span>
+                  <span className="ml-2">в обработке</span>
+                </div>
+              </div>
+              <span className="mt-4 text-white hover:text-emerald-300 text-sm font-medium flex items-center cursor-pointer">
+                Подробная статистика
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </span>
+            </div>
+          </PinContainer>
         </div>
 
-        {/* Быстрые действия растянутые на всю ширину */}
-        <div className="grid grid-cols-1 gap-6">
-          <QuickActions actions={quickActions} />
-        </div>
+        {/* Быстрые действия в виде плавающей панели */}
+        <QuickActionsMenu />
 
-        {/* Календарь и последние книги */}
+        {/* Календарь и фильтр событий */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="flex-1 h-[700px]">
-            <Calendar initialEvents={reservationEvents} />
+          <div className="flex flex-col items-center min-h-[200px]">
+            {!showRangeModal ? (
+              <>
+                <div className="flex flex-col md:flex-row gap-2 mb-4 w-full max-w-2xl">
+                  <div className="flex flex-col gap-1 w-full md:w-56">
+                    {quickRanges.map((range, idx) => (
+                      <button
+                        key={range.label}
+                        onClick={() => setSelectedRange(range.getRange())}
+                        className="text-left px-3 py-2 rounded-lg hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-white font-medium transition-colors"
+                        style={{ width: '100%' }}
+                      >
+                        {range.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex-1 flex justify-center">
+                    <DayPickerCalendar
+                      mode="range"
+                      selected={selectedRange}
+                      onSelect={setSelectedRange}
+                      className="w-full h-[340px] max-w-xl min-w-[340px] text-white"
+                      style={{ fontSize: '1.08rem', color: '#fff' }}
+                      classNames={{
+                        day_selected: "bg-emerald-500 text-white hover:bg-emerald-600 focus:bg-emerald-600", // зелёный фон для выбранных дат
+                        day_range_start: "bg-emerald-500 text-white rounded-l-lg",
+                        day_range_end: "bg-emerald-500 text-white rounded-r-lg",
+                        day_range_middle: "bg-emerald-200 text-emerald-900", // светло-зелёный для промежуточных дат
+                      } as Record<string, string>}
+                    />
+                  </div>
+                </div>
+                {/* 3 ближайших события */}
+                <div className="w-full max-w-xl mb-4">
+                  {upcomingEvents.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-white text-lg font-semibold mb-2">Ближайшие события</h4>
+                      {upcomingEvents.map(ev => (
+                        <div key={ev.id} className="p-3 bg-green-600/40 dark:bg-green-900/40 backdrop-blur rounded-lg shadow text-white flex flex-col">
+                          <span className="text-sm font-bold">{formatDate(ev.reservationDate)}</span>
+                          <span className="text-base">{ev.bookTitle}</span>
+                          <span className="text-sm">{ev.userName}</span>
+                          <div className="mt-1">
+                            <StatusBadge status={ev.status} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  disabled={!selectedRange?.from || !selectedRange?.to}
+                  onClick={() => setShowRangeModal(true)}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-xl px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ marginTop: 0 }}
+                >
+                  Просмотр
+                </button>
+              </>
+            ) : (
+              <motion.div
+                className="w-full h-full max-w-xl min-w-[340px] bg-green-500/20 dark:bg-green-800/30 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 dark:border-gray-700/30 overflow-y-auto p-6 flex flex-col flex-1"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold text-white">
+                    События с {selectedRange?.from?.toLocaleDateString("ru-RU")} по {selectedRange?.to?.toLocaleDateString("ru-RU")}
+                  </h3>
+                  <motion.button
+                    whileHover={{ scale: 1.1, backgroundColor: "rgba(16, 185, 129, 0.1)" }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowRangeModal(false)}
+                    className="p-2 rounded-full hover:bg-emerald-50/70 dark:hover:bg-emerald-900/30 text-emerald-200 shadow-sm"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
+                <div className="space-y-3 flex-1 overflow-y-auto">
+                  {/* Ограничение высоты для 5 резервов, остальные с прокруткой */}
+                  <div className="flex flex-col space-y-3 max-h-[620px] overflow-y-auto">
+                    {filteredEvents.length > 0 ? (
+                      filteredEvents.map((event) => (
+                        <div key={event.id} className="p-3 bg-green-600/40 dark:bg-green-900/40 backdrop-blur rounded-lg shadow text-white">
+                          <Link href={`/admin/reservations/${event.id}`} className="block">
+                            <h4 className="font-medium text-white">{event.bookTitle}</h4>
+                            <p className="text-sm text-white/90">{event.userName}</p>
+                            <p className="text-xs mt-1 text-white/80">Дата брони: {formatDate(event.reservationDate)}</p>
+                            <div className="mt-2">
+                              <StatusBadge status={event.status} />
+                            </div>
+                          </Link>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-white/80">Нет событий за этот период</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </div>
-
           <div className="space-y-3 flex-1">
+            {/* Недавно добавленные книги */}
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-emerald-500" />
               Недавно добавленные книги
             </h3>
-            {recentBooks.length > 0 ? (
-              recentBooks.map((book, index) => <BookCard key={book.id} book={book} index={index} />)
-            ) : (
-              <p className="text-white">Нет доступных книг</p>
-            )}
+            <div className="relative">
+              {recentBooks.length > 0 ? (
+                recentBooks.map((book, index) => <BookCard key={book.id} book={book} index={index} />)
+              ) : (
+                <p className="text-white">Нет доступных книг</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Последние активности с виртуализацией через react-virtuoso */}
+        <ReservationsChart reservations={reservations} />
         <Section title="Последние активности" delay={1.0}>
-          <div className="flex-1 max-h-[400px] bg-green/20 dark:bg-gren/70 backdrop-blur-md rounded-xl overflow-hidden border border-white/30 dark:border-gray-700/30 w-full">
-            <div className="overflow-auto" style={{ height: 400, width: "100%" }}>
-              <table className="min-w-full" cellPadding={0} cellSpacing={0}>
-                <thead className="sticky top-0 bg-emerald-50/80 dark:bg-emerald-900/30 backdrop-blur-md w-full">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/5">
-                      Действие
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/5">
-                      Пользователь
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/5">
-                      Книга
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/5">
-                      Дата
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-large text-green-700 dark:text-gray-200 uppercase tracking-wider w-1/5">
-                      Статус
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentActivities.map((reservation, index) => (
-                    <tr
-                      key={reservation.id}
-                      className="border-b border-white/20 dark:border-gray-700/30 hover:bg-emerald-100/40 dark:hover:bg-emerald-900/20 cursor-pointer"
-                      style={{
-                        opacity: 0,
-                        transform: "translateX(-20px)",
-                        animation: `fadeIn 0.5s ease-out ${0.1 * index}s forwards`,
-                      }}
-                      onClick={() => (window.location.href = `/admin/reservations/${reservation.id}`)}
-                    >
-                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">
-                        Резервирование
-                      </td>
-                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">
-                        {reservation.user?.fullName || "Неизвестный пользователь"}
-                      </td>
-                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">
-                        {reservation.book?.title || "Неизвестная книга"}
-                      </td>
-                      <td className="px-6 py-4 text-lg font-large text-black-800 dark:text-black-100">
-                        {formatDate(reservation.reservationDate)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={reservation.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <RecentActivitiesTable data={recentActivities} />
         </Section>
       </main>
     </div>

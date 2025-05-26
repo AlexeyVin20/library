@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import ReaderNavigation from "@/components/reader-navigation"
 import { BookOpen, Users, Shield, ArrowRight } from "lucide-react"
 import { useAuth } from "@/lib/auth"
+import { PixelCanvas } from "@/components/ui/pixel-canvas"
+import { cn } from "@/lib/utils"
 
 // Предположим, что у вас есть тип для роли пользователя
 type UserRole = "Администратор" | "Пользователь" | null;
@@ -79,23 +81,37 @@ export default function Home() {
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30 flex flex-col h-full"
+            className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30 flex flex-col h-full relative overflow-hidden"
           >
-            <div className="mb-6 flex items-center justify-center">
+            <PixelCanvas colors={['#bbf7d0', '#4ade80', '#22c55e']} speed={50} gap={5} noFocus={true} />
+            <div className="mb-6 flex items-center justify-center relative z-10">
               <BookOpen className="w-16 h-16 text-emerald-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-4 text-center">Для читателей</h2>
-            <p className="text-white mb-6 flex-grow text-center">
+            <h2 className="text-2xl font-bold text-white mb-4 text-center relative z-10">Для читателей</h2>
+            <p className="text-white mb-6 flex-grow text-center relative z-10">
               Ищите книги, создавайте закладки и отслеживайте вашу историю чтения. Наша библиотека предлагает богатую коллекцию литературы для всех интересов.
             </p>
-            <Link href="/readers" className="mx-auto">
-              <motion.button 
+            <Link href="/readers" className="mx-auto relative z-10 group">
+              {/* Картинки над кнопкой */}
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-20 h-24 z-20 pointer-events-none">
+                <div className="absolute w-16 h-16 left-1/2 -translate-x-1/2 top-0 overflow-hidden transition-all rounded-full scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 group-hover:shadow-xl duration-500 delay-100">
+                  <Image
+                    alt="Reader Image 1"
+                    src="https://avatars.mds.yandex.net/i?id=8377ee3600c00d27a3c31b5700f27a5e_l-9212707-images-thumbs&n=13"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+              <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-emerald-500/90 hover:bg-emerald-600/90 text-white gap-2 text-base h-12 px-6 shadow-md backdrop-blur-md"
+                className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-emerald-500/90 hover:bg-emerald-600/90 text-white gap-2 text-base h-12 px-6 shadow-md backdrop-blur-md relative overflow-hidden"
               >
-                Войти как читатель
-                <ArrowRight className="w-5 h-5" />
+                <span className="relative z-10 flex items-center gap-2">
+                  Войти как читатель
+                  <ArrowRight className="w-5 h-5" />
+                </span>
               </motion.button>
             </Link>
           </motion.div>
@@ -106,23 +122,37 @@ export default function Home() {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30 flex flex-col h-full"
+              className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30 flex flex-col h-full relative overflow-hidden"
             >
-              <div className="mb-6 flex items-center justify-center">
+              <PixelCanvas colors={['#bbf7d0', '#4ade80', '#22c55e']} speed={50} gap={5} noFocus={true} />
+              <div className="mb-6 flex items-center justify-center relative z-10">
                 <Shield className="w-16 h-16 text-emerald-400" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-4 text-center">Для администраторов</h2>
-              <p className="text-white mb-6 flex-grow text-center">
+              <h2 className="text-2xl font-bold text-white mb-4 text-center relative z-10">Для администраторов</h2>
+              <p className="text-white mb-6 flex-grow text-center relative z-10">
                 Управляйте коллекцией библиотеки, отслеживайте резервирования и контролируйте пользователей. Полный контроль над библиотечной системой.
               </p>
-              <Link href="/admin" className="mx-auto">
-                <motion.button 
+              <Link href="/admin" className="mx-auto relative z-10 group">
+                {/* Картинки над кнопкой */}
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-16 h-16 z-20 pointer-events-none">
+                  <div className="absolute w-full h-full overflow-hidden transition-all rounded-full scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 group-hover:shadow-xl duration-200 delay-150 translate-x-2 translate-y-2 rotate-6">
+                    <Image
+                      alt="Admin Image 2"
+                      src="https://bymed.top/wp-content/uploads/2019/06/graph.jpg"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
+                <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="rounded-full border border-solid border-white/20 dark:border-white/[.145] transition-colors flex items-center justify-center bg-green-500/20 hover:bg-green-600/90 backdrop-blur-xl text-white text-base h-12 px-6 shadow-md"
+                  className="rounded-full border border-solid border-white/20 dark:border-white/[.145] transition-colors flex items-center justify-center bg-green-500/20 hover:bg-green-600/90 backdrop-blur-xl text-white text-base h-12 px-6 shadow-md relative overflow-hidden"
                 >
-                  Войти как администратор
-                  <ArrowRight className="w-5 h-5 ml-1" />
+                  <span className="relative z-10 flex items-center gap-1">
+                    Войти как администратор
+                    <ArrowRight className="w-5 h-5 ml-1" />
+                  </span>
                 </motion.button>
               </Link>
             </motion.div>

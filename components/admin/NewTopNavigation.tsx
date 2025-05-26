@@ -8,7 +8,7 @@ import { cn, getInitials } from "@/lib/utils"
 import { adminSideBarLinks } from "@/constants"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
-import { Bell, Search, Menu, Moon, Sun, UserIcon, Book, FileText, ExternalLink, Clock, LogOut, Settings, ChevronDown, X, BookOpen, Users, Calendar, BarChart2, Library, Bookmark, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Bell, Search, Menu as MenuIconLucide, Moon, Sun, UserIcon, Book, FileText, ExternalLink, Clock, LogOut, Settings, ChevronDown, X, BookOpen, Users, Calendar, BarChart2, Library, Bookmark, CheckCircle2, AlertCircle, PlusCircle, LayoutGrid, ScrollText, BookText, BookMarked } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +35,7 @@ import CatalogMenu from "./CatalogMenu"
 import type React from "react"
 import { useAuth, User } from "@/lib/auth"
 
-// Интерфейсы для результатов поиска
+// Интерфейсы для результатов поиска (из TopNavigation.tsx)
 interface SearchResult {
   id: string | number
   title: string
@@ -60,7 +60,44 @@ interface Notification {
   type: 'info' | 'warning' | 'success' | 'error';
 }
 
-const TopNavigation = ({ user }: { user: User | null }) => {
+// Интерфейсы для каталога (из CatalogMenu.tsx)
+interface ApiBook {
+  id: number;
+  title: string;
+  authors: string[];
+  publisher: string;
+  publicationYear: number;
+}
+
+interface ApiJournal {
+  id: number;
+  title: string;
+  issn?: string;
+  publisher?: string;
+  startYear?: number;
+  category?: string;
+}
+
+type JournalCategory = "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News" | "Другое";
+
+interface CatalogBookType {
+  id: number;
+  title: string;
+  authors: string[];
+}
+
+interface CatalogJournalType {
+  id: number;
+  title: string;
+  category: JournalCategory;
+}
+
+interface CategoryIcons {
+  [key: string]: React.ReactNode;
+}
+
+
+const NewTopNavigation = ({ user }: { user: User | null }) => {
   const { logout } = useAuth();
   const pathname = usePathname()
   const router = useRouter()
@@ -103,34 +140,102 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   ])
   const [unreadCount, setUnreadCount] = useState(0)
 
+  // Состояние для активного элемента меню navbar-menu
+  const [activeMenuItem, setActiveMenuItem] = useState<string | null>(null);
+
+  // Состояния для данных каталога (из CatalogMenu.tsx)
+  const [catalogBooks, setCatalogBooks] = useState<CatalogBookType[]>([]);
+  const [catalogJournals, setCatalogJournals] = useState<CatalogJournalType[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  // Загрузка данных каталога (из CatalogMenu.tsx)
+  useEffect(() => {
+    const fetchCatalogData = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+        const [booksResponse, journalsResponse] = await Promise.all([
+          fetch(`${baseUrl}/api/books`),
+          fetch(`${baseUrl}/api/journals`)
+        ]);
+        
+        if (!booksResponse.ok || !journalsResponse.ok) {
+          throw new Error('Ошибка при загрузке данных каталога');
+        }
+        
+        const booksData = await booksResponse.json();
+        const journalsData = await journalsResponse.json();
+        
+        const formattedBooks: CatalogBookType[] = booksData.map((book: ApiBook) => ({
+          id: book.id,
+          title: book.title,
+          authors: Array.isArray(book.authors) ? book.authors : [book.authors].filter(Boolean)
+        }));
+        
+        const formattedJournals: CatalogJournalType[] = journalsData.map((journal: ApiJournal) => {
+          const category = (journal as any).category as JournalCategory || 'Другое';
+          return {
+            id: journal.id,
+            title: journal.title,
+            category
+          };
+        });
+        
+        setCatalogBooks(formattedBooks);
+        setCatalogJournals(formattedJournals);
+      } catch (error) {
+        console.error("Ошибка при загрузке данных каталога:", error);
+      } finally {
+        setCatalogLoading(false);
+      }
+    };
+
+    fetchCatalogData();
+  }, []);
+  
+  // Группировка журналов по категориям (из CatalogMenu.tsx)
+  const categorizedJournals = catalogJournals.reduce((acc, journal) => {
+    const category = journal.category;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(journal);
+    return acc;
+  }, {} as Record<string, CatalogJournalType[]>);
+
+  // Иконки категорий (из CatalogMenu.tsx)
+  const catalogCategoryIcons: CategoryIcons = {
+    "Scientific": <ScrollText className="h-4 w-4 mr-2" />,
+    "Popular": <BookText className="h-4 w-4 mr-2" />,
+    "Entertainment": <BookOpen className="h-4 w-4 mr-2" />,
+    "Professional": <BookMarked className="h-4 w-4 mr-2" />,
+    "Educational": <Library className="h-4 w-4 mr-2" />,
+    "Literary": <Book className="h-4 w-4 mr-2" />,
+    "News": <ScrollText className="h-4 w-4 mr-2" />,
+    "Другое": <BookOpen className="h-4 w-4 mr-2" />
+  };
+
+
   // Theme toggle effect
   useEffect(() => {
-    // Определим текущую тему из системных настроек или localStorage
     const savedTheme = localStorage.getItem("theme") || "light"
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
     const initialTheme = savedTheme === "dark" || (savedTheme === "system" && prefersDark) ? "dark" : "light"
-
     setTheme(initialTheme as "light" | "dark")
-
     if (initialTheme === "dark") {
       document.documentElement.classList.add("dark")
     } else {
       document.documentElement.classList.remove("dark")
     }
-
-    // Загрузим недавние поиски из localStorage
     const savedSearches = localStorage.getItem("recentSearches")
     if (savedSearches) {
       setRecentSearches(JSON.parse(savedSearches))
     }
   }, [])
 
-  // Calculate unread notifications
   useEffect(() => {
     setUnreadCount(notifications.filter(n => !n.read).length);
   }, [notifications]);
 
-  // Scroll effect for header
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -139,14 +244,12 @@ const TopNavigation = ({ user }: { user: User | null }) => {
         setScrolled(false)
       }
     }
-
     window.addEventListener("scroll", handleScroll)
     return () => {
       window.removeEventListener("scroll", handleScroll)
     }
   }, [])
 
-  // Эффект для обработки клика вне поля поиска
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -158,19 +261,16 @@ const TopNavigation = ({ user }: { user: User | null }) => {
         setIsSearchOpen(false)
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside)
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])
 
-  // Переключение темы с анимацией
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark"
     setTheme(newTheme)
     localStorage.setItem("theme", newTheme)
-
     if (newTheme === "dark") {
       document.documentElement.classList.add("dark")
     } else {
@@ -178,7 +278,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     }
   }
 
-  // Mark notification as read
   const markAsRead = (id: string) => {
     setNotifications(prev => 
       prev.map(notification => 
@@ -189,57 +288,36 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     );
   };
 
-  // Mark all notifications as read
   const markAllAsRead = () => {
     setNotifications(prev => 
       prev.map(notification => ({ ...notification, read: true }))
     );
   };
 
-  // Функция для выполнения поиска
   const performSearch = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([])
       return
     }
-
     setIsSearching(true)
-
     try {
-      console.log("Выполняется поиск по запросу:", query)
-
       const categorizedResults: SearchResultCategory[] = []
-
-      // Получение базового URL API из переменных окружения
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
       if (!baseUrl) {
         console.error("NEXT_PUBLIC_BASE_URL не определен")
         return
       }
-
-      console.log("Используемый URL API:", baseUrl)
-
-      // Выполнение запросов к API для поиска
       try {
-        // Получаем всех пользователей и книг
         const [usersResponse, booksResponse] = await Promise.all([
           fetch(`${baseUrl}/api/User`),
           fetch(`${baseUrl}/api/Books`),
         ])
-
-        // Обработка результатов поиска пользователей
         if (usersResponse.ok) {
           const usersData = await usersResponse.json()
-          console.log("Получены все пользователи:", usersData)
-
-          // Фильтруем пользователей по поисковому запросу
           const filteredUsers = usersData.filter(
             (user: any) =>
               (user.username && user.username.toLowerCase().includes(query.toLowerCase())),
           )
-
-          console.log("Отфильтрованные пользователи:", filteredUsers)
-
           if (filteredUsers && filteredUsers.length > 0) {
             const userResults: SearchResult[] = filteredUsers.map((user: any) => ({
               id: user.id,
@@ -248,7 +326,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               url: `/admin/users/${user.id}`,
               icon: <UserIcon className="h-4 w-4 text-emerald-500" />,
             }))
-
             categorizedResults.push({
               title: "Пользователи",
               icon: <UserIcon className="h-4 w-4" />,
@@ -258,21 +335,13 @@ const TopNavigation = ({ user }: { user: User | null }) => {
         } else {
           console.error("Ошибка при получении пользователей:", usersResponse.status, await usersResponse.text())
         }
-
-        // Обработка результатов поиска книг
         if (booksResponse.ok) {
           const booksData = await booksResponse.json()
-          console.log("Получены все книги:", booksData)
-
-          // Фильтруем книги по поисковому запросу
           const filteredBooks = booksData.filter(
             (book: any) =>
               (book.title && book.title.toLowerCase().includes(query.toLowerCase())) ||
               (book.authors && book.authors.toLowerCase().includes(query.toLowerCase())),
           )
-
-          console.log("Отфильтрованные книги:", filteredBooks)
-
           if (filteredBooks && filteredBooks.length > 0) {
             const bookResults: SearchResult[] = filteredBooks.map((book: any) => ({
               id: book.id,
@@ -282,7 +351,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               url: `/admin/books/${book.id}`,
               icon: <Book className="h-4 w-4 text-amber-500" />,
             }))
-
             categorizedResults.push({
               title: "Книги",
               icon: <Book className="h-4 w-4" />,
@@ -295,53 +363,14 @@ const TopNavigation = ({ user }: { user: User | null }) => {
       } catch (fetchError) {
         console.error("Ошибка при выполнении запросов к API:", fetchError)
       }
-
-      // Добавляем поиск по страницам сайта (статический, всегда работает)
       const pageSearchResults = [
-        {
-          id: "dashboard",
-          title: "Панель управления",
-          type: "page" as const,
-          url: "/admin",
-          icon: <FileText className="h-4 w-4 text-purple-500" />,
-        },
-        {
-          id: "users",
-          title: "Управление пользователями",
-          type: "page" as const,
-          url: "/admin/users",
-          icon: <FileText className="h-4 w-4 text-purple-500" />,
-        },
-        {
-          id: "books",
-          title: "Каталог книг",
-          type: "page" as const,
-          url: "/admin/books",
-          icon: <FileText className="h-4 w-4 text-purple-500" />,
-        },
-        {
-          id: "journals",
-          title: "Журналы и подписки",
-          type: "page" as const,
-          url: "/admin/journals",
-          icon: <FileText className="h-4 w-4 text-purple-500" />,
-        },
-        {
-          id: "statistics",
-          title: "Статистика",
-          type: "page" as const,
-          url: "/admin/statistics",
-          icon: <FileText className="h-4 w-4 text-purple-500" />,
-        },
-        {
-          id: "Shelfs",
-          title: "Полки",
-          type: "page" as const,
-          url: "/admin/shelfs",
-          icon: <FileText className="h-4 w-4 text-purple-500" />,
-        },
+        { id: "dashboard", title: "Панель управления", type: "page" as const, url: "/admin", icon: <FileText className="h-4 w-4 text-purple-500" /> },
+        { id: "users", title: "Управление пользователями", type: "page" as const, url: "/admin/users", icon: <FileText className="h-4 w-4 text-purple-500" /> },
+        { id: "books", title: "Каталог книг", type: "page" as const, url: "/admin/books", icon: <FileText className="h-4 w-4 text-purple-500" /> },
+        { id: "journals", title: "Журналы и подписки", type: "page" as const, url: "/admin/journals", icon: <FileText className="h-4 w-4 text-purple-500" /> },
+        { id: "statistics", title: "Статистика", type: "page" as const, url: "/admin/statistics", icon: <FileText className="h-4 w-4 text-purple-500" /> },
+        { id: "Shelfs", title: "Полки", type: "page" as const, url: "/admin/shelfs", icon: <FileText className="h-4 w-4 text-purple-500" /> },
       ].filter((page) => page.title.toLowerCase().includes(query.toLowerCase()))
-
       if (pageSearchResults.length > 0) {
         categorizedResults.push({
           title: "Страницы",
@@ -349,8 +378,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           results: pageSearchResults,
         })
       }
-
-      console.log("Итоговые результаты поиска:", categorizedResults)
       setSearchResults(categorizedResults)
     } catch (error) {
       console.error("Ошибка при поиске:", error)
@@ -360,176 +387,81 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     }
   }
 
-  // Обработчик изменения поискового запроса
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value
-    console.log("Изменение поискового запроса:", query) // Отладка
     setSearchQuery(query)
-
-    // Гарантируем, что поле поиска открыто при вводе
     if (!isSearchOpen) {
       setIsSearchOpen(true)
     }
-
-    // Выполняем поиск если запрос не пустой
     performSearch(query)
   }
 
-  // Обработка перехода по результату поиска
   const handleSearchResultClick = (result: SearchResult) => {
-    // Сохраняем поисковый запрос в истории поиска
     if (searchQuery.trim()) {
       const newRecentSearches = [searchQuery, ...recentSearches.filter((s) => s !== searchQuery).slice(0, 4)]
       setRecentSearches(newRecentSearches)
       localStorage.setItem("recentSearches", JSON.stringify(newRecentSearches))
     }
-
-    // Закрываем поиск и переходим по URL
     setIsSearchOpen(false)
     setSearchQuery("")
     setSearchResults([])
     router.push(result.url)
   }
 
-  // Выбор недавнего поиска
   const selectRecentSearch = (query: string) => {
     setSearchQuery(query)
     performSearch(query)
   }
 
-  // Animation variants for nav items
   const navItemVariants = {
     hidden: { opacity: 0, y: -5 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: i * 0.05,
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    }),
-    hover: {
-      y: -2,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 10,
-      },
-    },
+    visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] } }),
+    hover: { y: -2, transition: { type: "spring", stiffness: 400, damping: 10 } },
   }
 
-  // Variants for search results animation
   const searchResultsVariants = {
     hidden: { opacity: 0, y: -10, scale: 0.95, transformOrigin: "center" },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transformOrigin: "center",
-      transition: {
-        duration: 0.2,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
-    exit: {
-      opacity: 0,
-      y: -10,
-      scale: 0.95,
-      transformOrigin: "center",
-      transition: { duration: 0.15 },
-    },
+    visible: { opacity: 1, y: 0, scale: 1, transformOrigin: "center", transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] } },
+    exit: { opacity: 0, y: -10, scale: 0.95, transformOrigin: "center", transition: { duration: 0.15 } },
   }
 
-  // Mobile menu animation variants
   const mobileMenuVariants = {
     hidden: { opacity: 0, height: 0 },
-    visible: {
-      opacity: 1,
-      height: "auto",
-      transition: {
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1],
-        staggerChildren: 0.05,
-        delayChildren: 0.1,
-      },
-    },
-    exit: {
-      opacity: 0,
-      height: 0,
-      transition: {
-        duration: 0.2,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
+    visible: { opacity: 1, height: "auto", transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.05, delayChildren: 0.1 } },
+    exit: { opacity: 0, height: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] } },
   }
 
   const mobileMenuItemVariants = {
     hidden: { opacity: 0, x: -10 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: { duration: 0.2 },
-    },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.2 } },
     exit: { opacity: 0, x: -10 },
   }
 
-  // Logo animation variants
   const logoVariants = {
     initial: { rotate: -90, opacity: 0 },
-    animate: {
-      rotate: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
-    hover: {
-      scale: 1.05,
-      rotate: 5,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 10,
-      },
-    },
+    animate: { rotate: 0, opacity: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+    hover: { scale: 1.05, rotate: 5, transition: { type: "spring", stiffness: 400, damping: 10 } },
   }
 
-  // Notification badge pulse animation
   const notificationBadgeVariants = {
     initial: { scale: 0 },
-    animate: {
-      scale: 1,
-      transition: {
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
-    pulse: {
-      scale: [1, 1.2, 1],
-      transition: {
-        duration: 1.5,
-        repeat: Number.POSITIVE_INFINITY,
-        repeatType: "loop" as const,
-      },
-    },
+    animate: { scale: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+    pulse: { scale: [1, 1.2, 1], transition: { duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatType: "loop" as const } },
   }
 
-  // Get notification icon based on type
   const getNotificationIcon = (type: string) => {
     switch(type) {
-      case 'success':
-        return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
-      case 'warning':
-        return <AlertCircle className="h-4 w-4 text-amber-500" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'info':
-      default:
-        return <Bell className="h-4 w-4 text-blue-500" />;
+      case 'success': return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+      case 'warning': return <AlertCircle className="h-4 w-4 text-amber-500" />;
+      case 'error': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'info': default: return <Bell className="h-4 w-4 text-blue-500" />;
     }
   };
+
+  // Стилизация для элементов navbar-menu (адаптировано из CatalogMenu)
+  const catalogMenuItemStyle = "flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium hover:bg-emerald-700/50 dark:hover:bg-emerald-800/50";
+  const catalogSubItemStyle = "flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-sm text-white hover:bg-emerald-700/50 dark:hover:bg-emerald-800/50";
+
 
   return (
     <header 
@@ -570,19 +502,13 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           <div className="hidden md:flex items-center space-x-1">
             <TooltipProvider>
               {adminSideBarLinks.map((link, index) => {
-                // Пропускаем ссылку на книги, так как будем использовать CatalogMenu вместо неё
+                // Используем CatalogMenu для раздела книг
                 if (link.route === "/admin/books") {
-                  return (
-                    <CatalogMenu key={link.route} />
-                  );
+                  return <CatalogMenu key={link.route} />;
                 }
-
                 const isSelected =
-                  (link.route !== "/admin" &&
-                    pathname.includes(link.route) &&
-                    link.route.length > 1) ||
+                  (link.route !== "/admin" && pathname.includes(link.route) && link.route.length > 1) ||
                   pathname === link.route;
-                
                 return (
                   <Tooltip key={link.route}>
                     <TooltipTrigger asChild>
@@ -597,8 +523,8 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                           <div
                             className={cn(
                               "relative px-4 py-2 rounded-lg text-base font-medium transition-all duration-300 group",
-                              isSelected 
-                                ? "text-green-600 dark:text-green-400" 
+                              isSelected
+                                ? "text-green-600 dark:text-green-400"
                                 : "text-white dark:text-white hover:text-green-600 dark:hover:text-green-400"
                             )}
                           >
@@ -606,18 +532,13 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                               <div className="relative w-5 h-5">
                                 <Image
                                   src={link.img || "/placeholder.svg"}
-                                  alt="icon"
+                                  alt={link.text}
                                   fill
-                                  className={cn(
-                                    "object-contain transition-all", 
-                                    isSelected && "text-emerald-600"
-                                  )}
+                                  className="object-contain"
                                 />
                               </div>
                               <span>{link.text}</span>
                             </div>
-                            
-                            {/* Animated underline effect */}
                             {isSelected && (
                               <motion.div
                                 layoutId="navIndicator"
@@ -640,7 +561,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
             </TooltipProvider>
           </div>
 
-          {/* Right side actions */}
+          {/* Right side actions (остаются без изменений) */}
           <div className="flex items-center gap-3">
             {/* Theme Toggler */}
             <TooltipProvider>
@@ -755,7 +676,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             isSearchOpen ? "bg-transparent" : ""
                           )}
                           onClick={() => {
-                            console.log("Клик по кнопке поиска"); // Отладка
                             setIsSearchOpen(!isSearchOpen);
                             if (!isSearchOpen) {
                               setTimeout(() => {
@@ -778,7 +698,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 </TooltipProvider>
               </motion.div>
 
-              {/* Search Results */}
               <AnimatePresence>
                 {isSearchOpen && (
                   <motion.div
@@ -796,7 +715,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                           <span className="text-sm text-gray-200">Поиск...</span>
                         </div>
                       ) : searchResults.length > 0 ? (
-                        // Результаты поиска, сгруппированные по категориям
                         <>
                           {searchResults.map((category, index) => (
                             <div key={index} className="mb-3">
@@ -809,32 +727,17 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                   <motion.div 
                                     key={`${result.type}-${result.id}`}
                                     initial={{ opacity: 0, y: 5 }}
-                                    animate={{ 
-                                      opacity: 1, 
-                                      y: 0,
-                                      transition: { delay: idx * 0.03 }
-                                    }}
-                                    whileHover={{ 
-                                      backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.15)",
-                                      x: 2,
-                                      transition: { duration: 0.2 }
-                                    }}
+                                    animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.03 } }}
+                                    whileHover={{ backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.15)", x: 2, transition: { duration: 0.2 } }}
                                     className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-700/50 dark:hover:bg-emerald-800/50 rounded-lg cursor-pointer"
                                     onClick={() => handleSearchResultClick(result)}
                                   >
-                                    <div className="flex-shrink-0">
-                                      {result.icon}
-                                    </div>
+                                    <div className="flex-shrink-0">{result.icon}</div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium truncate text-white">{result.title}</p>
-                                      {result.subtitle && (
-                                        <p className="text-xs text-emerald-200 truncate">{result.subtitle}</p>
-                                      )}
+                                      {result.subtitle && (<p className="text-xs text-emerald-200 truncate">{result.subtitle}</p>)}
                                     </div>
-                                    <motion.div 
-                                      whileHover={{ x: 2 }}
-                                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                                    >
+                                    <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
                                       <ExternalLink className="h-3.5 w-3.5 text-emerald-300 flex-shrink-0" />
                                     </motion.div>
                                   </motion.div>
@@ -844,20 +747,14 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                           ))}
                         </>
                       ) : searchQuery ? (
-                        // Ничего не найдено
                         <div className="text-center py-4 px-2">
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3 }}
-                          >
+                          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
                             <Search className="h-6 w-6 text-emerald-300 mx-auto mb-2" />
                             <p className="text-sm text-white mb-1">Ничего не найдено по запросу "{searchQuery}"</p>
                             <p className="text-xs text-emerald-200">Попробуйте изменить запрос или выбрать из истории поиска</p>
                           </motion.div>
                         </div>
                       ) : recentSearches.length > 0 ? (
-                        // История поиска
                         <div>
                           <div className="flex items-center justify-between px-3 py-1.5">
                             <div className="flex items-center gap-2 text-xs font-medium text-white uppercase">
@@ -881,16 +778,8 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                               <motion.div 
                                 key={idx} 
                                 initial={{ opacity: 0, x: -5 }}
-                                animate={{ 
-                                  opacity: 1, 
-                                  x: 0,
-                                  transition: { delay: idx * 0.05 }
-                                }}
-                                whileHover={{ 
-                                  backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.15)",
-                                  x: 2,
-                                  transition: { duration: 0.2 }
-                                }}
+                                animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.05 } }}
+                                whileHover={{ backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.15)", x: 2, transition: { duration: 0.2 } }}
                                 onClick={() => selectRecentSearch(query)}
                                 className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-700/50 dark:hover:bg-emerald-800/50 rounded-lg cursor-pointer"
                               >
@@ -901,20 +790,14 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                           </div>
                         </div>
                       ) : (
-                        // Пустой поиск, без истории
                         <div className="text-center py-4">
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3 }}
-                          >
+                          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
                             <Search className="h-6 w-6 text-emerald-300 mx-auto mb-2" />
                             <p className="text-sm text-white">Введите запрос для поиска</p>
                           </motion.div>
                         </div>
                       )}
                     </div>
-                    
                     {(searchQuery.trim() !== "") && (
                       <div className="p-2 border-t border-emerald-700 dark:border-emerald-800">
                         <Button 
@@ -960,23 +843,14 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                       </motion.div>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    Уведомления
-                  </TooltipContent>
+                  <TooltipContent side="bottom">Уведомления</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <DropdownMenuContent align="end" className="w-80 p-2 rounded-xl backdrop-blur-sm bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700"
-                sideOffset={5}
-              >
+              <DropdownMenuContent align="end" className="w-80 p-2 rounded-xl backdrop-blur-sm bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700" sideOffset={5}>
                 <div className="flex items-center justify-between mb-2">
                   <DropdownMenuLabel className="font-semibold text-sm text-gray-700 dark:text-gray-300">Уведомления</DropdownMenuLabel>
                   {unreadCount > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                      onClick={markAllAsRead}
-                    >
+                    <Button variant="ghost" size="sm" className="h-8 text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" onClick={markAllAsRead}>
                       Отметить все как прочитанные
                     </Button>
                   )}
@@ -985,24 +859,10 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 <div className="max-h-[300px] overflow-auto py-1">
                   {notifications.length > 0 ? (
                     notifications.map((notification, index) => (
-                      <motion.div
-                        key={notification.id}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={cn(
-                          "mb-1 last:mb-0",
-                          !notification.read && "bg-emerald-50/50 dark:bg-emerald-900/10"
-                        )}
-                      >
-                        <DropdownMenuItem 
-                          className="py-3 px-3 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-default"
-                          onSelect={() => markAsRead(notification.id)}
-                        >
+                      <motion.div key={notification.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className={cn("mb-1 last:mb-0",!notification.read && "bg-emerald-50/50 dark:bg-emerald-900/10")}>
+                        <DropdownMenuItem className="py-3 px-3 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-default" onSelect={() => markAsRead(notification.id)}>
                           <div className="flex gap-3">
-                            <div className="flex-shrink-0 mt-1">
-                              {getNotificationIcon(notification.type)}
-                            </div>
+                            <div className="flex-shrink-0 mt-1">{getNotificationIcon(notification.type)}</div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="font-medium text-sm">{notification.title}</span>
@@ -1027,7 +887,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
           
             {/* User Profile */}
             <DropdownMenu>
@@ -1035,37 +894,23 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                      <motion.button 
-                        whileHover={{ scale: 1.05 }} 
-                        whileTap={{ scale: 0.95 }}
-                        className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
-                      >
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
                         <Avatar className="h-8 w-8 transition-transform border-2 border-emerald-200 dark:border-emerald-800">
-                          <AvatarFallback className="bg-emerald-100 text-emerald-800 text-sm font-medium">
-                            {getInitials(user?.username || "U")}
-                          </AvatarFallback>
+                          <AvatarFallback className="bg-emerald-100 text-emerald-800 text-sm font-medium">{getInitials(user?.username || "U")}</AvatarFallback>
                         </Avatar>
-                        <span className="hidden lg:inline text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {user?.username}
-                        </span>
+                        <span className="hidden lg:inline text-sm font-medium text-gray-700 dark:text-gray-300">{user?.username}</span>
                         <ChevronDown className="h-4 w-4 text-gray-500 hidden lg:block" />
                       </motion.button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    Профиль пользователя
-                  </TooltipContent>
+                  <TooltipContent side="bottom">Профиль пользователя</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <DropdownMenuContent align="end" className="min-w-[220px] p-2 rounded-xl backdrop-blur-sm bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700"
-                sideOffset={5}
-              >
+              <DropdownMenuContent align="end" className="min-w-[220px] p-2 rounded-xl backdrop-blur-sm bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700" sideOffset={5}>
                 <div className="px-3 py-2 mb-2">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border-2 border-emerald-200 dark:border-emerald-800">
-                      <AvatarFallback className="bg-emerald-100 text-emerald-800 text-sm font-medium">
-                        {getInitials(user?.username || "U")}
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-emerald-100 text-emerald-800 text-sm font-medium">{getInitials(user?.username || "U")}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm text-gray-800 dark:text-gray-200">{user?.username}</p>
@@ -1077,32 +922,25 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                   <Link href="/profile" className="w-full">
                     <motion.div whileHover={{ x: 2 }}>
                       <DropdownMenuItem className="py-2 px-3 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer text-sm">
-                        <UserIcon className="h-4 w-4 mr-2 text-emerald-500" />
-                        Профиль
+                        <UserIcon className="h-4 w-4 mr-2 text-emerald-500" />Профиль
                       </DropdownMenuItem>
                     </motion.div>
                   </Link>
                   <motion.div whileHover={{ x: 2 }}>
                     <DropdownMenuItem className="py-2 px-3 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer text-sm">
-                      <Settings className="h-4 w-4 mr-2 text-emerald-500" />
-                      Настройки
+                      <Settings className="h-4 w-4 mr-2 text-emerald-500" />Настройки
                     </DropdownMenuItem>
                   </motion.div>
                   <motion.div whileHover={{ x: 2 }}>
                     <DropdownMenuItem className="py-2 px-3 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer text-sm">
-                      <BookOpen className="h-4 w-4 mr-2 text-emerald-500" />
-                      Мои книги
+                      <BookOpen className="h-4 w-4 mr-2 text-emerald-500" />Мои книги
                     </DropdownMenuItem>
                   </motion.div>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
                 <motion.div whileHover={{ x: 2 }}>
-                  <DropdownMenuItem 
-                    className="py-2 px-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer text-sm text-red-500 dark:text-red-400"
-                    onClick={logout}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Выйти
+                  <DropdownMenuItem className="py-2 px-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer text-sm text-red-500 dark:text-red-400" onClick={logout}>
+                    <LogOut className="h-4 w-4 mr-2" />Выйти
                   </DropdownMenuItem>
                 </motion.div>
               </DropdownMenuContent>
@@ -1110,19 +948,14 @@ const TopNavigation = ({ user }: { user: User | null }) => {
 
             {/* Mobile menu button */}
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 md:hidden text-gray-700 dark:text-gray-300"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                <Menu size={20} />
+              <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden text-gray-700 dark:text-gray-300" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                <MenuIconLucide size={20} />
               </Button>
             </motion.div>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation (остается без изменений) */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
@@ -1134,36 +967,16 @@ const TopNavigation = ({ user }: { user: User | null }) => {
             >
               <nav className="flex flex-col gap-1.5">
                 {adminSideBarLinks.map((link, index) => {
-                  const isSelected =
-                    (link.route !== "/admin" &&
-                      pathname.includes(link.route) &&
-                      link.route.length > 1) ||
-                    pathname === link.route;
-                  
+                  const isSelected = (link.route !== "/admin" && pathname.includes(link.route) && link.route.length > 1) || pathname === link.route;
                   return (
-                    <motion.div
-                      key={link.route}
-                      variants={mobileMenuItemVariants}
-                      custom={index}
-                      whileHover={{ x: 5 }}
-                    >
+                    <motion.div key={link.route} variants={mobileMenuItemVariants} custom={index} whileHover={{ x: 5 }}>
                       <Link href={link.route}>
                         <div
-                          className={cn(
-                            "flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200",
-                            isSelected
-                              ? "bg-emerald-50/80 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-                              : "hover:bg-emerald-50/80 dark:hover:bg-emerald-900/30 text-white dark:text-white"
-                          )}
+                          className={cn("flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200", isSelected ? "bg-emerald-50/80 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" : "hover:bg-emerald-50/80 dark:hover:bg-emerald-900/30 text-white dark:text-white")}
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           <div className="relative w-5 h-5">
-                            <Image
-                              src={link.img || "/placeholder.svg"}
-                              alt="icon"
-                              fill
-                              className="object-contain"
-                            />
+                            <Image src={link.img || "/placeholder.svg"} alt="icon" fill className="object-contain"/>
                           </div>
                           <span className="font-medium text-sm">{link.text}</span>
                         </div>
@@ -1180,4 +993,4 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   );
 }
 
-export default TopNavigation;
+export default NewTopNavigation; 
