@@ -317,13 +317,13 @@ const ViewModeMenu = ({ viewMode, setViewMode }: ViewModeMenuProps) => {
     <NavigationMenu>
       <NavigationMenuList>
         <NavigationMenuItem>
-          <NavigationMenuTrigger className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 text-white border border-white/20 dark:border-gray-700/30">
+          <NavigationMenuTrigger className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 text-white border border-white/20 dark:border-gray-700/30">
             {viewMode === "cards" && <CreditCard className="mr-2 h-4 w-4" />}
             {viewMode === "3d" && <Box className="mr-2 h-4 w-4" />}
             {viewMode === "list" && <List className="mr-2 h-4 w-4" />}
             Вид
           </NavigationMenuTrigger>
-          <NavigationMenuContent className="backdrop-blur-xl bg-green/30 dark:bg-gray-800/20 p-2 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-lg">
+          <NavigationMenuContent className="backdrop-blur-xl bg-green/50 dark:bg-gray-800/50 p-2 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-lg">
             <div className="grid gap-2 p-1 min-w-40">
               <motion.button 
                 onClick={() => setViewMode("cards")} 

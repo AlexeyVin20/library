@@ -22,6 +22,7 @@ import {
   PieChart,
 } from "lucide-react"
 import React from "react"
+import { QuickActions } from "@/components/admin/quick-actions"
 
 // Определение типов
 interface User {
@@ -343,7 +344,7 @@ const LoadingSpinner = () => {
   )
 }
 
-// Новый компонент для угловой карточки
+// Компонент для угловой карточки
 const CornerCard = ({
   title,
   value,
@@ -375,73 +376,6 @@ const CornerCard = ({
         <CountUp end={value} />
       </p>
       <p className="text-sm text-white/80">{subtitle}</p>
-    </motion.div>
-  )
-}
-
-// Новый компонент для коллапсируемых быстрых действий
-const CollapsibleActions = ({
-  actions,
-}: {
-  actions: Array<{ href: string; label: string; icon: React.ReactNode; color: "emerald" | "emerald-light" | "gray" }>
-}) => {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-
-  return (
-    <motion.div
-      className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-5 shadow-lg border border-white/20 dark:border-gray-700/30"
-      layout
-    >
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
-          <Activity className="w-5 h-5" />
-          Быстрые действия
-        </h2>
-        <motion.button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-white hover:text-emerald-300 transition-colors"
-          whileTap={{ scale: 0.95 }}
-        >
-          {isCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-        </motion.button>
-      </div>
-
-      <AnimatePresence>
-        {!isCollapsed && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-3 overflow-hidden"
-          >
-            {actions.map((action, index) => (
-              <ActionButton
-                key={index}
-                href={action.href}
-                label={action.label}
-                color={action.color}
-                icon={action.icon}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {isCollapsed && (
-        <div className="flex flex-wrap gap-2">
-          {actions.map((action, index) => (
-            <Link key={index} href={action.href}>
-              <motion.div
-                className="bg-green-500/20 hover:bg-green-600/90 backdrop-blur-xl text-white rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 border border-white/10"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {React.cloneElement(action.icon as React.ReactElement<any, any>, { className: "w-5 h-5" })}
-              </motion.div>
-            </Link>
-          ))}
-        </div>
-      )}
     </motion.div>
   )
 }
@@ -565,12 +499,12 @@ export default function DashboardPage() {
     })
   }
 
-  // Определяем быстрые действия для коллапсируемого компонента
+  // Определяем быстрые действия для компонента QuickActions
   const quickActions = [
     { href: "/admin/reservations", label: "Резервирования", icon: <CalendarIcon />, color: "emerald-light" as const },
     { href: "/admin/books", label: "Все книги", icon: <Layers />, color: "emerald" as const },
     { href: "/admin/users", label: "Пользователи", icon: <Users />, color: "emerald-light" as const },
-    { href: "/admin/roles", label: "Роли", icon: <Shield />, color: "emerald" as const },
+    { href: "/admin/roles", label: "Управление ролями", icon: <Shield />, color: "emerald" as const },
     { href: "/admin/statistics", label: "Статистика", icon: <PieChart />, color: "emerald-light" as const },
     { href: "/admin/shelfs", label: "Полки", icon: <Bookmark />, color: "emerald" as const },
   ]
@@ -646,43 +580,56 @@ export default function DashboardPage() {
       <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
 
       <main className="max-w-7xl mx-auto space-y-8 relative z-10 p-6">
-        {/* Верхняя секция с быстрыми действиями и статистическими карточками */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Быстрые действия */}
-          <div className="lg:col-span-2 lg:row-span-2">
-            <CollapsibleActions actions={quickActions} />
-          </div>
+        {/* Статистические карточки */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <StatCard
+            title="Книги"
+            value={totalAvailableBooks}
+            subtitle="доступных ресурсов"
+            additionalInfo={
+              <p className="text-white flex items-center">
+                <span className="mr-1">+</span>
+                {recentBorrowed} <span className="ml-1">за последний месяц</span>
+              </p>
+            }
+            icon={<BookOpen className="text-emerald-500" />}
+            color="bg-emerald-500"
+            delay={0.1}
+          />
+          <StatCard
+            title="Пользователи"
+            value={activeUsersCount}
+            subtitle="взяли книги"
+            additionalInfo={
+              <p className="text-white">
+                {totalUsersCount ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0}% от общего числа
+              </p>
+            }
+            icon={<Users className="text-blue-500" />}
+            color="bg-blue-500"
+            delay={0.2}
+          />
+          <StatCard
+            title="Резервирования"
+            value={reservations.length}
+            subtitle="всего заявок"
+            additionalInfo={
+              <div className="flex items-center">
+                <span className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full bg-emerald-400">
+                  {pendingReservations}
+                </span>
+                <span className="ml-2">в обработке</span>
+              </div>
+            }
+            icon={<CalendarIcon className="text-emerald-400" />}
+            color="bg-emerald-400"
+            delay={0.3}
+          />
+        </div>
 
-          {/* Статистические карточки */}
-          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <StatCard
-              title="Книги"
-              value={totalAvailableBooks}
-              subtitle="доступных ресурсов"
-              additionalInfo={
-                <p className="text-white flex items-center">
-                  <span className="mr-1">+</span>
-                  {recentBorrowed} <span className="ml-1">за последний месяц</span>
-                </p>
-              }
-              icon={<BookOpen className="text-emerald-500" />}
-              color="bg-emerald-500"
-              delay={0.1}
-            />
-            <StatCard
-              title="Пользователи"
-              value={activeUsersCount}
-              subtitle="взяли книги"
-              additionalInfo={
-                <p className="text-white">
-                  {totalUsersCount ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0}% от общего числа
-                </p>
-              }
-              icon={<Users className="text-blue-500" />}
-              color="bg-blue-500"
-              delay={0.2}
-            />
-          </div>
+        {/* Быстрые действия растянутые на всю ширину */}
+        <div className="grid grid-cols-1 gap-6">
+          <QuickActions actions={quickActions} />
         </div>
 
         {/* Календарь и последние книги */}

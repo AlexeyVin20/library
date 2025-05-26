@@ -136,7 +136,7 @@ const StatCard = ({
   return (
     <FadeInView delay={delay}>
       <motion.div 
-        className={`backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-white/20 dark:border-gray-700/30 relative overflow-hidden`}
+        className={`xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-white/20 dark:border-gray-700/30 relative overflow-hidden`}
         whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)" }}
       >
         <div className={`absolute top-0 left-0 w-1.5 h-full ${color}`}></div>
@@ -195,7 +195,7 @@ const ChartCard = ({
   return (
     <FadeInView delay={delay}>
       <motion.div 
-        className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30"
+        className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30"
       >
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -237,7 +237,7 @@ const ChartCard = ({
           )}
         </div>
         
-        <div className="flex-1 bg-emerald-500/10 dark:bg-emerald-900/20 backdrop-blur-md rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30">
+        <div className="flex-1 bg-emerald-500/10 dark:bg-emerald-900/20 md rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30">
           {children}
         </div>
       </motion.div>
@@ -488,38 +488,48 @@ export default function StatisticsPage() {
       };
       
       const requestBody = {
-        model: "qwen/qwen3-30b-a3b:free",
+        model: "deepseek/deepseek-prover-v2:free",
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Отвечать по-русски. Ты - ИИ-аналитик библиотеки. Проанализируй данные библиотеки и составь подробный аналитический отчет с выводами и рекомендациями для пользователя currentUserFullName. Выделяй главы и подразделы пропуском строки. Жирным шрифтом выделяй только цифры. Структура отчета должна быть СТРОГО следующей:
+                text: `Отвечать по-русски. Ты - ИИ-аналитик библиотеки. Проанализируй данные библиотеки и составь подробный аналитический отчет с выводами и рекомендациями. Выделяй главы и подразделы пропуском строки. Жирным шрифтом выделяй ТОЛЬКО цифры и ключевые показатели. Структура отчета должна быть СТРОГО следующей:
 
 ## Аналитический отчет о состоянии библиотеки
 
 **Подготовлено:** ИИ-аналитик библиотеки
 
 ### 1. Общее состояние библиотеки
-[Здесь опиши общее количество книг, пользователей, резерваций, их статусов и т.д. Используй **жирный шрифт** для выделения ключевых цифр]
+[Опиши общее количество книг, пользователей, резерваций, их статусов и т.д. Используй **жирный шрифт** для выделения ключевых цифр. Добавь информацию о динамике показателей за последние месяцы.]
 
 ### 2. Анализ коллекции
-[Анализ категорий книг, наиболее популярных жанров, рекомендации по расширению коллекции]
+[Детальный анализ категорий книг, наиболее популярных жанров, рекомендации по расширению коллекции. Укажи процентное соотношение категорий, выдели цифрами.]
 
 ### 3. Анализ пользователей
-[Активность пользователей, топ-пользователи, пользователи с задолженностями]
+[Активность пользователей, топ-пользователи, пользователи с задолженностями. Добавь информацию о процентном соотношении активных пользователей к общему числу.]
 
 ### 4. Анализ резерваций
-[Эффективность обработки резерваций, тенденции, проблемные моменты]
+[Эффективность обработки резерваций, тенденции, проблемные моменты. Включи анализ скорости обработки резерваций и рекомендации по улучшению.]
 
 ### 5. Финансовый анализ
-[Анализ штрафов, динамика по месяцам, эффективность финансовой политики]
+[Детальный анализ штрафов, динамика по месяцам, эффективность финансовой политики. Добавь расчеты среднемесячных поступлений от штрафов.]
 
-### 6. Конкретные рекомендации по улучшению работы библиотеки
-[3-5 конкретных рекомендаций с обоснованием]
+### 6. Показатели эффективности работы библиотеки
+[Опиши основные KPI библиотеки. Включи сравнение текущих показателей с оптимальными значениями.]
 
-ВАЖНО: В каждом разделе ОБЯЗАТЕЛЬНО используй **жирный шрифт** для выделения ключевых цифр и важных фактов. Применяй маркированные списки, где это уместно. Сохраняй профессиональный стиль изложения. Не отклоняйся от указанной структуры.
+### 7. Конкретные рекомендации по улучшению работы библиотеки
+[5-7 конкретных рекомендаций с детальным обоснованием и ожидаемым эффектом от внедрения]
+
+ВАЖНО: 
+1. В каждом разделе ОБЯЗАТЕЛЬНО используй **жирный шрифт** для выделения ТОЛЬКО ключевых цифр и важных фактов. Выделяй по минимуму. 
+2. Применяй маркированные списки для повышения читабельности текста. 
+3. Сохраняй профессиональный стиль изложения. 
+4. Соблюдай единообразие форматирования во всех разделах.
+5. Включай подробную аналитику в каждый раздел, а не просто перечисление фактов.
+6. Не отклоняйся от указанной структуры отчета.
+7. Каждый раздел отделяй от предыдущего пустой строкой для лучшей читаемости.
 
 Вот данные библиотеки: ${JSON.stringify(libraryData)}`
               }
@@ -617,7 +627,7 @@ export default function StatisticsPage() {
       animate={{ opacity: 1 }}
       className="flex flex-col items-center justify-center h-screen p-6"
     >
-      <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-xl text-red-600 dark:text-red-400 p-6 rounded-xl border border-white/20 dark:border-gray-700/30 max-w-md w-full text-center shadow-lg">
+      <div className="bg-green/70 dark:bg-green-800/70 xl text-red-600 dark:text-red-400 p-6 rounded-xl border border-white/20 dark:border-gray-700/30 max-w-md w-full text-center shadow-lg">
         <AlertTriangle className="w-12 h-12 mx-auto mb-4" />
         <h2 className="text-xl font-bold mb-2">Произошла ошибка</h2>
         <p>{error}</p>
@@ -625,7 +635,7 @@ export default function StatisticsPage() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => window.location.reload()}
-          className="mt-4 bg-emerald-500/90 hover:bg-emerald-600/90 text-white px-4 py-2 rounded-lg font-medium shadow-md backdrop-blur-md"
+          className="mt-4 bg-emerald-500/90 hover:bg-emerald-600/90 text-white px-4 py-2 rounded-lg font-medium shadow-md md"
         >
           Попробовать снова
         </motion.button>
@@ -734,7 +744,7 @@ export default function StatisticsPage() {
           className="space-y-8"
           onValueChange={setActiveTab}
         >
-          <TabsList className="bg-green/30 dark:bg-green-800/30 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md">
+          <TabsList className="bg-green/30 dark:bg-green-800/30 md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md">
             <AnimatedTabsTrigger 
               value="overview" 
               icon={<TrendingUp className="w-5 h-5 text-emerald-500" />} 
@@ -1011,7 +1021,7 @@ export default function StatisticsPage() {
             
             <FadeInView delay={0.5}>
               <motion.div 
-                className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+                className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
               >
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1021,7 +1031,7 @@ export default function StatisticsPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Популярные категории</h4>
                     <p className="text-sm text-white">
                       Наиболее популярные категории книг: {bookCategoriesData.sort((a, b) => b.value - a.value).slice(0, 2).map(cat => cat.name).join(', ')}.
@@ -1038,7 +1048,7 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Доступность книг</h4>
                     <p className="text-sm text-white">
                       {totalBorrowedBooks > totalAvailableBooks ? 
@@ -1142,7 +1152,7 @@ export default function StatisticsPage() {
             
             <FadeInView delay={0.5}>
               <motion.div 
-                className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+                className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
               >
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1152,7 +1162,7 @@ export default function StatisticsPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Активные пользователи</h4>
                     <p className="text-sm text-white">
                       {activeUsersCount > totalUsersCount / 2 ? 
@@ -1170,7 +1180,7 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Топ читатели</h4>
                     <p className="text-sm text-white">
                       Самые активные читатели: {topUsersData.slice(0, 3).map(user => user.name).join(', ')}.
@@ -1278,7 +1288,7 @@ export default function StatisticsPage() {
             
             <FadeInView delay={0.5}>
               <motion.div 
-                className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+                className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
               >
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1288,7 +1298,7 @@ export default function StatisticsPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Эффективность обработки</h4>
                     <p className="text-sm text-white">
                       {completedReservations > canceledReservations * 2 ? 
@@ -1306,7 +1316,7 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Текущие заявки</h4>
                     <p className="text-sm text-white">
                       В настоящее время в обработке находится {pendingReservations} заявок.
@@ -1420,7 +1430,7 @@ export default function StatisticsPage() {
             
             <FadeInView delay={0.5}>
               <motion.div 
-                className="backdrop-blur-xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
+                className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30"
               >
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1430,7 +1440,7 @@ export default function StatisticsPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Общая сумма штрафов</h4>
                     <p className="text-sm text-white">
                       Общая сумма штрафов составляет {totalFines.toFixed(2)} ₽.
@@ -1449,7 +1459,7 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
                     <h4 className="font-medium text-white mb-2">Рекомендации</h4>
                     <p className="text-sm text-white">
                       {users.filter(u => (u.fineAmount || 0) > 0).length > totalUsersCount * 0.1 ? 
@@ -1475,7 +1485,7 @@ export default function StatisticsPage() {
 
       {/* Модальное окно для отображения сводки */}
       <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <DialogContent className="bg-green/90 dark:bg-green-800/90 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-green/90 dark:bg-green-800/90 xl border border-white/20 dark:border-gray-700/30 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex justify-between items-center">
               <DialogTitle className="text-xl font-bold flex items-center gap-2">

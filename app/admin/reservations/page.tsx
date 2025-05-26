@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter } from 'lucide-react';
+import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 
@@ -76,11 +76,43 @@ const AnimatedTabsTrigger = ({
   );
 };
 
+const StatusBadge = ({ status }: { status: string }) => {
+  const color =
+    status === "Выполнена" || status === "Выдана" || status === "Возвращена"
+      ? "bg-emerald-500"
+      : status === "Обрабатывается"
+      ? "bg-emerald-400"
+      : status === "Истекла"
+      ? "bg-yellow-500"
+      : status === "Отклонена" || status === "Отменена" // Добавим "Отменена" для полноты, если используется
+      ? "bg-red-500" 
+      : "bg-gray-500";
+  const label =
+    status === "Выполнена"
+      ? "Одобрено"
+      : status === "Обрабатывается"
+      ? "В обработке"
+      : status === "Отклонена" || status === "Отменена"
+      ? "Отклонено"
+      : status === "Истекла"
+      ? "Истекла"
+      : status === "Выдана"
+      ? "Выдана"
+      : status === "Возвращена"
+      ? "Возвращена"
+      : "Неизвестно";
+  return (
+    <span className={`inline-block px-2 py-1 text-xs font-semibold text-white rounded-full ${color} backdrop-blur-sm shadow`}>
+      {label}
+    </span>
+  );
+};
+
 export default function ReservationsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("Обрабатывается");
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   useEffect(() => {
@@ -122,19 +154,26 @@ export default function ReservationsPage() {
             }
           } catch (err) {
             console.error(`Ошибка при дозагрузке данных для резервирования ${reservation.id}:`, err);
-            // Не прерываем процесс из-за ошибки одного запроса, но логируем ее
           }
 
           return {
             ...reservation,
-            // Добавляем или перезаписываем данные книги и пользователя
             book: bookDetails ? { ...reservation.book, ...bookDetails } : reservation.book,
             user: userDetails ? { ...reservation.user, ...userDetails } : reservation.user,
           };
         })
       );
+      
+      // Применяем логику "Истекла" статуса для отображения
+      const displayedReservations = enrichedReservations.map(r => {
+        if (new Date(r.expirationDate) < new Date() && 
+            (r.status === 'Обрабатывается' || r.status === 'Выполнена' || r.status === 'Выдана')) {
+          return {...r, status: 'Истекла'};
+        }
+        return r;
+      });
 
-      setReservations(enrichedReservations);
+      setReservations(displayedReservations);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке резервирований");
@@ -173,6 +212,20 @@ export default function ReservationsPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Ошибка при удалении резервирования");
+      setReservations(reservations.filter(r => r.id !== id));
+      alert("Резервирование успешно удалено");
+    } catch (err) {
+      console.error("Ошибка при удалении резервирования:", err);
+      alert(err instanceof Error ? err.message : "Ошибка при удалении резервирования");
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ru-RU", {
       day: "2-digit",
@@ -188,6 +241,9 @@ export default function ReservationsPage() {
       case "Выполнена": return <CheckCircle className="w-5 h-5 text-emerald-500" />;
       case "Отменена": return <XCircle className="w-5 h-5 text-red-500" />;
       case "Обрабатывается": return <Clock className="w-5 h-5 text-amber-500" />;
+      case "Выдана": return <ArrowRight className="w-5 h-5 text-blue-500" />;
+      case "Возвращена": return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case "Истекла": return <Clock className="w-5 h-5 text-yellow-600" />;
       default: return <Clock className="w-5 h-5 text-gray-500" />;
     }
   };
@@ -197,6 +253,9 @@ export default function ReservationsPage() {
       case "Выполнена": return "border-l-4 border-emerald-500";
       case "Отменена": return "border-l-4 border-red-500";
       case "Обрабатывается": return "border-l-4 border-amber-500";
+      case "Выдана": return "border-l-4 border-blue-500";
+      case "Возвращена": return "border-l-4 border-green-600";
+      case "Истекла": return "border-l-4 border-yellow-600";
       default: return "border-l-4 border-gray-500";
     }
   };
@@ -286,8 +345,26 @@ export default function ReservationsPage() {
               <AnimatedTabsTrigger
                 value="Выполнена"
                 icon={<CheckCircle className="w-4 h-4" />}
-                label="Выполнены"
+                label="Одобрены"
                 isActive={activeTab === "Выполнена"}
+              />
+              <AnimatedTabsTrigger
+                value="Выдана"
+                icon={<ArrowRight className="w-4 h-4" />}
+                label="Выданы"
+                isActive={activeTab === "Выдана"}
+              />
+              <AnimatedTabsTrigger
+                value="Возвращена"
+                icon={<CheckCircle className="w-4 h-4" />}
+                label="Возвращены"
+                isActive={activeTab === "Возвращена"}
+              />
+              <AnimatedTabsTrigger
+                value="Истекла"
+                icon={<Clock className="w-4 h-4" />}
+                label="Истекшие"
+                isActive={activeTab === "Истекла"}
               />
               <AnimatedTabsTrigger
                 value="Отменена"
@@ -333,7 +410,7 @@ export default function ReservationsPage() {
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex items-center gap-2">
                             {getStatusIcon(reservation.status)}
-                            <span className="font-medium text-white">{reservation.status}</span>
+                            <StatusBadge status={reservation.status} />
                           </div>
                           <span className="text-sm text-white">
                             {reservation.id.split('-')[0].toUpperCase()}
@@ -400,6 +477,14 @@ export default function ReservationsPage() {
                                 <XCircle className="w-4 h-4" />
                               </motion.button>
                             )}
+                            <motion.button
+                              onClick={() => handleDelete(reservation.id)}
+                              className="bg-red-600/90 hover:bg-red-700/90 text-white p-2 rounded-md"
+                              whileHover={{ y: -2 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </motion.button>
                           </div>
                           <Link href={`/admin/reservations/${reservation.id}`}>
                             <motion.button

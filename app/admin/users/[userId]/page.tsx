@@ -21,6 +21,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
+import Image from "next/image";
 
 interface UserDetail {
   id: string;
@@ -47,6 +48,13 @@ interface Book {
   title: string;
   author: string;
   returnDate: string;
+  cover?: string;
+  isbn?: string;
+  genre?: string;
+  publicationYear?: number;
+  publisher?: string;
+  isFromReservation?: boolean;
+  userId?: string;
 }
 
 interface Reservation {
@@ -57,7 +65,12 @@ interface Reservation {
   expirationDate: string;
   status: string;
   notes?: string;
-  book?: { id: string; title: string };
+  book?: {
+    id: string;
+    title: string;
+    authors?: string;
+    cover?: string;
+  };
 }
 
 interface Role {
@@ -104,8 +117,28 @@ const Section = ({
 );
 
 const StatusBadge = ({ status }: { status: string }) => {
-  const color = status === "Выполнена" ? "bg-emerald-500" : status === "Обрабатывается" ? "bg-emerald-400" : "bg-gray-500";
-  const label = status === "Выполнена" ? "Одобрено" : status === "Обрабатывается" ? "В обработке" : "Отклонено";
+  const color =
+    status === "Выполнена" || status === "Выдана" || status === "Возвращена"
+      ? "bg-emerald-500"
+      : status === "Обрабатывается"
+      ? "bg-emerald-400"
+      : status === "Истекла"
+      ? "bg-yellow-500"
+      : "bg-gray-500";
+  const label =
+    status === "Выполнена"
+      ? "Одобрено"
+      : status === "Обрабатывается"
+      ? "В обработке"
+      : status === "Отклонена" || status === "Отменена"
+      ? "Отклонено"
+      : status === "Истекла"
+      ? "Истекла"
+      : status === "Выдана"
+      ? "Выдана"
+      : status === "Возвращена"
+      ? "Возвращена"
+      : "Неизвестно";
   return (
     <span className={`inline-block px-3 py-1 text-whitexs font-medium text-white rounded-full ${color} backdrop-blur-md shadow-sm`}>
       {label}
@@ -150,7 +183,7 @@ export default function UserDetailPage() {
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
-      const [userResponse, booksResponse, reservationsResponse, userRolesResponse, rolesResponse] = await Promise.all([
+      const [userResponse, borrowedBooksResponse, reservationsResponse, userRolesResponse, rolesResponse] = await Promise.all([
         fetch(`${baseUrl}/api/User/${userId}`),
         fetch(`${baseUrl}/api/Books/user/${userId}`),
         fetch(`${baseUrl}/api/Reservation?userId=${userId}`),
@@ -162,8 +195,135 @@ export default function UserDetailPage() {
       const userData = await userResponse.json();
       setUser(userData);
 
-      if (booksResponse.ok) setBorrowedBooks(await booksResponse.json());
-      if (reservationsResponse.ok) setReservations(await reservationsResponse.json());
+      let currentBorrowedBooks: Book[] = [];
+      if (borrowedBooksResponse.ok) {
+        const initiallyBorrowedBooks: Book[] = await borrowedBooksResponse.json();
+        
+        currentBorrowedBooks = await Promise.all(
+          initiallyBorrowedBooks
+            .filter(book => book.userId === userId)
+            .map(async (book: Book) => {
+            let bookToUpdate = { ...book, isFromReservation: false };
+            if (bookToUpdate.id) { 
+              try {
+                const bookDetailsRes = await fetch(`${baseUrl}/api/books/${bookToUpdate.id}`);
+                if (bookDetailsRes.ok) {
+                  const detailedBookData = await bookDetailsRes.json();
+                  const coverUrl = 
+                    detailedBookData.cover || 
+                    detailedBookData.coverImage || 
+                    detailedBookData.coverImageUrl || 
+                    detailedBookData.image || 
+                    detailedBookData.coverUrl || 
+                    detailedBookData.imageUrl || 
+                    bookToUpdate.cover ||
+                    "";
+                    
+                  bookToUpdate.cover = coverUrl;
+                  bookToUpdate.title = detailedBookData.title || bookToUpdate.title;
+                  if (detailedBookData.authors) {
+                    bookToUpdate.author = Array.isArray(detailedBookData.authors) 
+                                          ? detailedBookData.authors.join(', ') 
+                                          : detailedBookData.authors;
+                  }
+                  if (detailedBookData.isbn) bookToUpdate.isbn = detailedBookData.isbn;
+                  if (detailedBookData.genre) bookToUpdate.genre = detailedBookData.genre;
+                  if (detailedBookData.publicationYear) bookToUpdate.publicationYear = detailedBookData.publicationYear;
+                  if (detailedBookData.publisher) bookToUpdate.publisher = detailedBookData.publisher;
+                }
+              } catch (bookErr) {
+                console.warn(`Не удалось загрузить полные детали для книги ${bookToUpdate.id}`);
+              }
+            }
+            return bookToUpdate;
+          })
+        );
+      }
+      
+      let userReservations: Reservation[] = [];
+      if (reservationsResponse.ok) {
+        const rawReservations = await reservationsResponse.json();
+        userReservations = await Promise.all(rawReservations.map(async (res: Reservation) => {
+          let enrichedBookDetails = res.book;
+          if (res.bookId) {
+            try {
+              const bookDetailsRes = await fetch(`${baseUrl}/api/books/${res.bookId}`);
+              if (bookDetailsRes.ok) {
+                const detailedBookData = await bookDetailsRes.json();
+                const coverUrl = 
+                  detailedBookData.cover || 
+                  detailedBookData.coverImage || 
+                  detailedBookData.coverImageUrl || 
+                  detailedBookData.image || 
+                  detailedBookData.coverUrl || 
+                  detailedBookData.imageUrl || 
+                  "";
+                  
+                enrichedBookDetails = { 
+                  id: detailedBookData.id, 
+                  title: detailedBookData.title,
+                  authors: detailedBookData.authors,
+                  cover: coverUrl,
+                };
+              }
+            } catch (bookErr) {
+              console.warn(`Не удалось загрузить детали для книги ${res.bookId} в резервации ${res.id}`);
+            }
+          }
+          let displayStatus = res.status;
+          if (new Date(res.expirationDate) < new Date() &&
+              (res.status === 'Обрабатывается' || res.status === 'Выполнена' || res.status === 'Выдана')) {
+            displayStatus = 'Истекла';
+          }
+          return { ...res, book: enrichedBookDetails, status: displayStatus };
+        }));
+        setReservations(userReservations);
+      }
+
+      const booksFromIssuedReservations: Book[] = userReservations
+        .filter(r => r.status === 'Выдана' && r.book && new Date(r.expirationDate) >= new Date() && r.userId === userId)
+        .map(r => ({
+          id: r.book!.id,
+          title: r.book!.title,
+          author: r.book!.authors || 'Автор не указан',
+          returnDate: r.expirationDate,
+          cover: r.book!.cover,
+          isFromReservation: true,
+          userId: r.userId
+        }));
+        
+      const allBooksOnHold = [...currentBorrowedBooks, ...booksFromIssuedReservations].filter(
+        (book, index, self) => index === self.findIndex((b) => b.id === book.id)
+      );
+      setBorrowedBooks(allBooksOnHold);
+      
+      // Обновляем счетчик книг на руках в БД, если он отличается от фактического
+      if (userData.borrowedBooksCount !== allBooksOnHold.length) {
+        try {
+          const updateResponse = await fetch(`${baseUrl}/api/User/${userId}/update-borrowed-count`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              borrowedBooksCount: allBooksOnHold.length
+            }),
+          });
+          
+          if (updateResponse.ok) {
+            console.log(`Счетчик книг обновлен: ${allBooksOnHold.length}`);
+            // Обновляем локальное состояние пользователя
+            setUser({
+              ...userData,
+              borrowedBooksCount: allBooksOnHold.length
+            });
+          } else {
+            console.warn("Не удалось обновить счетчик книг на руках");
+          }
+        } catch (updateErr) {
+          console.error("Ошибка при обновлении счетчика книг:", updateErr);
+        }
+      }
       
       if (userRolesResponse.ok) {
         const userRolesData = await userRolesResponse.json();
@@ -216,7 +376,6 @@ export default function UserDetailPage() {
 
       if (!response.ok) throw new Error("Ошибка при назначении роли");
 
-      // Обновляем данные о ролях пользователя
       fetchUserData();
       setSelectedRoleId("");
       setIsAssigningRole(false);
@@ -242,7 +401,6 @@ export default function UserDetailPage() {
 
       if (!response.ok) throw new Error("Ошибка при удалении роли у пользователя");
 
-      // Обновляем данные о ролях пользователя
       fetchUserData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при удалении роли");
@@ -251,12 +409,10 @@ export default function UserDetailPage() {
 
   const formatDate = (dateString: string) => dateString ? new Date(dateString).toLocaleDateString("ru-RU") : "Не указано";
 
-  // Фильтруем доступные роли, исключая те, которые уже назначены пользователю
   const filteredAvailableRoles = availableRoles.filter(
     (role) => !userRoles.includes(role.id)
   );
 
-  // Получаем данные о ролях пользователя
   const userRolesWithDetails = userRoles
     .map(roleId => availableRoles.find(role => role.id === roleId))
     .filter(role => role !== undefined) as Role[];
@@ -326,198 +482,224 @@ export default function UserDetailPage() {
         </FadeInView>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Section title="Информация о пользователе" delay={0.2}>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-whitexl font-bold text-white dark:text-white flex items-center gap-2">
-                  <User className="w-5 h-5 text-white-500" />
-                  {user.fullName}
-                </h3>
-                <StatusBadge status={user.isActive ? "Выполнена" : "Отменена"} />
-              </div>
-              <p className="text-white text-white dark:text-white flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                {user.email}
-              </p>
-              {user.phone && (
+          <div className="md:col-span-2">
+            <Section title="Информация о пользователе" delay={0.2}>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-whitexl font-bold text-white dark:text-white flex items-center gap-2">
+                    <User className="w-5 h-5 text-white-500" />
+                    {user.fullName}
+                  </h3>
+                  <StatusBadge status={user.isActive ? "Выполнена" : "Отменена"} />
+                </div>
                 <p className="text-white text-white dark:text-white flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  {user.phone}
+                  <Mail className="w-4 h-4" />
+                  {user.email}
                 </p>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-white font-semibold dark:text-white mb-2">Основная информация</h4>
-                  <ul className="space-y-2 text-white">
-                    <li><span className="font-medium">Логин:</span> {user.username}</li>
-                    <li><span className="font-medium">Дата рождения:</span> {formatDate(user.dateOfBirth)}</li>
-                    <li><span className="font-medium">Адрес:</span> {user.address || "Не указан"}</li>
-                    <li><span className="font-medium">Дата регистрации:</span> {formatDate(user.dateRegistered)}</li>
-                    <li><span className="font-medium">Последний вход:</span> {formatDate(user.lastLoginDate)}</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold text-white dark:text-white mb-2">Библиотечная информация</h4>
-                  <ul className="space-y-2 text-white">
-                    <li><span className="font-medium">Книг на руках:</span> {user.borrowedBooksCount}/{user.maxBooksAllowed}</li>
-                    <li><span className="font-medium">Срок выдачи:</span> {user.loanPeriodDays || 14} дней</li>
-                    <li><span className="font-medium">Штраф:</span> <span className={user.fineAmount > 0 ? "text-whitered-500" : ""}>{user.fineAmount.toFixed(2)} руб.</span></li>
-                  </ul>
-                </div>
-              </div>
-              {user.passportNumber && (
-                <div>
-                  <h4 className="text-white font-semibold text-white dark:text-white mb-2">Паспортные данные</h4>
-                  <ul className="space-y-2 text-white">
-                    <li><span className="font-medium">Номер паспорта:</span> {user.passportNumber}</li>
-                    {user.passportIssuedBy && <li><span className="font-medium">Кем выдан:</span> {user.passportIssuedBy}</li>}
-                    {user.passportIssuedDate && <li><span className="font-medium">Дата выдачи:</span> {formatDate(user.passportIssuedDate)}</li>}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </Section>
-
-          <Section title="Использование библиотеки" delay={0.3}>
-            <div className="h-[300px] bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-              <UserBorrowingChart data={chartData} />
-            </div>
-          </Section>
-
-          <Section title="Роли пользователя" delay={0.3}>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-white font-semibold flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-emerald-400" />
-                  Назначенные роли
-                </h3>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsAssigningRole(!isAssigningRole)}
-                  className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white text-sm font-medium rounded-lg px-3 py-1 flex items-center gap-1 shadow-md backdrop-blur-md"
-                >
-                  <Plus className="w-3 h-3" />
-                  Добавить роль
-                </motion.button>
-              </div>
-
-              {isAssigningRole && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="p-3 bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30"
-                >
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block mb-1 text-white text-sm">Выберите роль:</label>
-                      <select 
-                        value={selectedRoleId}
-                        onChange={(e) => setSelectedRoleId(Number(e.target.value) || "")}
-                        className="w-full p-2 rounded-lg bg-green/20 dark:bg-green-800/40 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                      >
-                        <option value="">Выберите роль</option>
-                        {filteredAvailableRoles.map((role) => (
-                          <option key={role.id} value={role.id}>
-                            {role.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <motion.button
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setIsAssigningRole(false)}
-                        className="bg-gray-500/90 hover:bg-gray-600/90 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md"
-                      >
-                        Отмена
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleAssignRole}
-                        className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md"
-                      >
-                        Назначить
-                      </motion.button>
-                    </div>
+                {user.phone && (
+                  <p className="text-white text-white dark:text-white flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    {user.phone}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-white font-semibold dark:text-white mb-2">Основная информация</h4>
+                    <ul className="space-y-2 text-white">
+                      <li><span className="font-medium">Логин:</span> {user.username}</li>
+                      <li><span className="font-medium">Дата рождения:</span> {formatDate(user.dateOfBirth)}</li>
+                      <li><span className="font-medium">Адрес:</span> {user.address || "Не указан"}</li>
+                      <li><span className="font-medium">Дата регистрации:</span> {formatDate(user.dateRegistered)}</li>
+                      <li><span className="font-medium">Последний вход:</span> {formatDate(user.lastLoginDate)}</li>
+                    </ul>
                   </div>
-                </motion.div>
-              )}
-
-              <div className="space-y-2">
-                {userRolesWithDetails.length > 0 ? (
-                  userRolesWithDetails.map((role) => (
-                    <motion.div
-                      key={role.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="p-3 bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30 flex justify-between items-center"
-                    >
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <div>
-                          <p className="font-medium text-white">{role.name}</p>
-                          <p className="text-white text-sm">{role.description}</p>
-                        </div>
-                      </div>
-                      <motion.button
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleRemoveRole(role.id)}
-                        className="bg-red-500/90 hover:bg-red-600/90 text-white p-1 rounded-lg shadow-md backdrop-blur-md"
-                        title="Удалить роль"
-                      >
-                        <UserMinus className="w-4 h-4" />
-                      </motion.button>
-                    </motion.div>
-                  ))
-                ) : (
-                  <p className="text-white text-center py-2">У пользователя нет ролей</p>
+                  <div>
+                    <h4 className="text-white font-semibold text-white dark:text-white mb-2">Библиотечная информация</h4>
+                    <ul className="space-y-2 text-white">
+                      <li><span className="font-medium">Книг на руках:</span> {user.borrowedBooksCount}/{user.maxBooksAllowed}</li>
+                      <li><span className="font-medium">Срок выдачи:</span> {user.loanPeriodDays || 14} дней</li>
+                      <li><span className="font-medium">Штраф:</span> <span className={user.fineAmount > 0 ? "text-whitered-500" : ""}>{user.fineAmount.toFixed(2)} руб.</span></li>
+                    </ul>
+                  </div>
+                </div>
+                {user.passportNumber && (
+                  <div>
+                    <h4 className="text-white font-semibold text-white dark:text-white mb-2">Паспортные данные</h4>
+                    <ul className="space-y-2 text-white">
+                      <li><span className="font-medium">Номер паспорта:</span> {user.passportNumber}</li>
+                      {user.passportIssuedBy && <li><span className="font-medium">Кем выдан:</span> {user.passportIssuedBy}</li>}
+                      {user.passportIssuedDate && <li><span className="font-medium">Дата выдачи:</span> {formatDate(user.passportIssuedDate)}</li>}
+                    </ul>
+                  </div>
                 )}
               </div>
+            </Section>
+          </div>
+
+          <div className="md:col-span-1">
+            <Section title="Роли пользователя" delay={0.3}>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-emerald-400" />
+                    Назначенные роли
+                  </h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsAssigningRole(!isAssigningRole)}
+                    className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white text-sm font-medium rounded-lg px-3 py-1 flex items-center gap-1 shadow-md backdrop-blur-md"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Добавить роль
+                  </motion.button>
+                </div>
+
+                {isAssigningRole && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="p-3 bg-emerald-500/20 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30"
+                  >
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block mb-1 text-white text-sm">Выберите роль:</label>
+                        <select 
+                          value={selectedRoleId}
+                          onChange={(e) => setSelectedRoleId(Number(e.target.value) || "")}
+                          className="w-full p-2 rounded-lg bg-green-500 dark:bg-green-600 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        >
+                          <option value="">Выберите роль</option>
+                          {filteredAvailableRoles.map((role) => (
+                            <option key={role.id} value={role.id}>
+                              {role.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <motion.button
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setIsAssigningRole(false)}
+                          className="bg-green-500/30 hover:bg-green-600/30 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md"
+                        >
+                          Отмена
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleAssignRole}
+                          className="bg-emerald-500/30 hover:bg-emerald-600/30 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md"
+                        >
+                          Назначить
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                <div className="space-y-2">
+                  {userRolesWithDetails.length > 0 ? (
+                    userRolesWithDetails.map((role) => (
+                      <motion.div
+                        key={role.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="p-3 bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30 flex justify-between items-center"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          <div>
+                            <p className="font-medium text-white">{role.name}</p>
+                            <p className="text-white text-sm">{role.description}</p>
+                          </div>
+                        </div>
+                        <motion.button
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleRemoveRole(role.id)}
+                          className="bg-red-500/90 hover:bg-red-600/90 text-white p-1 rounded-lg shadow-md backdrop-blur-md"
+                          title="Удалить роль"
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </motion.button>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <p className="text-white text-center py-2">У пользователя нет ролей</p>
+                  )}
+                </div>
               
-              <Link href="/admin/roles">
-                <motion.button
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full mt-2 bg-emerald-500/40 hover:bg-emerald-500/60 text-white text-sm font-medium rounded-lg px-3 py-2 flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
-                >
-                  <Shield className="w-4 h-4" />
-                  Управление ролями
-                </motion.button>
-              </Link>
-            </div>
-          </Section>
+                <Link href="/admin/roles">
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full mt-2 bg-emerald-500/40 hover:bg-emerald-500/60 text-white text-sm font-medium rounded-lg px-3 py-2 flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Управление ролями
+                  </motion.button>
+                </Link>
+              </div>
+            </Section>
+          </div>
         </div>
 
         <Section title="Книги на руках" delay={0.4}>
-          {borrowedBooks.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {borrowedBooks.map((book, index) => (
+          {borrowedBooks.filter(book => !book.userId || book.userId === userId).length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {borrowedBooks.filter(book => !book.userId || book.userId === userId).map((book, index) => (
                 <motion.div
-                  key={book.id}
+                  key={`${book.id}-${index}`}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * index }}
-                  className="p-4 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30"
+                  className="p-3 max-w-xs bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30 flex items-start gap-3 mx-auto"
                 >
-                  <h4 className="font-semibold text-white dark:text-white">{book.title}</h4>
-                  <p className="text-white text-white dark:text-white">Автор: {book.author}</p>
-                  <p className="text-white text-white dark:text-white">Дата возврата: {formatDate(book.returnDate)}</p>
+                  {book.cover && (
+                    <div className="w-14 h-20 relative flex-shrink-0 rounded-md overflow-hidden shadow-lg">
+                      <Image
+                        src={book.cover}
+                        alt={book.title || "Книга"}
+                        fill
+                        style={{ objectFit: "cover" }}
+                        className="rounded-md"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-grow">
+                    <h4 className="font-semibold text-white dark:text-white mb-1 line-clamp-2">{book.title}</h4>
+                    <p className="text-sm text-white dark:text-white mb-1 line-clamp-1">Автор: {book.author}</p>
+                    <p className="text-sm text-white dark:text-white">
+                      Дата возврата: {formatDate(book.returnDate)}
+                    </p>
+                    {book.isFromReservation && (
+                      <span className="text-xs text-emerald-400 mt-1 inline-block"></span>
+                    )}
+                  </div>
                 </motion.div>
               ))}
             </div>
           ) : (
-            <p className="text-white dark:text-white">Пользователь не брал книги</p>
+            <p className="text-white dark:text-white text-center py-4">Пользователь не имеет книг на руках</p>
           )}
         </Section>
 
         <Section title="Резервации пользователя" delay={0.5}>
           {reservations.filter(r => r.userId === userId).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {reservations.filter(r => r.userId === userId).map((reservation, index) => (
+              {reservations
+                .filter(r => r.userId === userId)
+                .sort((a, b) => {
+                  const activeStatuses = ['Обрабатывается', 'Выдана'];
+                  const aIsActive = activeStatuses.includes(a.status);
+                  const bIsActive = activeStatuses.includes(b.status);
+                  if (aIsActive && !bIsActive) return -1;
+                  if (!aIsActive && bIsActive) return 1;
+                  return new Date(b.reservationDate).getTime() - new Date(a.reservationDate).getTime();
+                })
+                .map((reservation, index) => (
                 <motion.div
                   key={reservation.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -525,20 +707,29 @@ export default function UserDetailPage() {
                   transition={{ delay: 0.1 * index }}
                   className="p-4 bg-green/20 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30"
                 >
-                  <h4 className="font-semibold text-white dark:text-white">{reservation.book?.title || "Неизвестная книга"}</h4>
-                  <p className="text-white text-white dark:text-white">Срок до: {formatDate(reservation.expirationDate)}</p>
-                  <div className="flex items-center mt-1">
-                    <span className="text-white mr-1 text-white dark:text-white">Статус:</span>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-white dark:text-white line-clamp-2">{reservation.book?.title || "Неизвестная книга"}</h4>
                     <StatusBadge status={reservation.status} />
                   </div>
+                  <p className="text-sm text-white dark:text-white">Авторы: {reservation.book?.authors || "Не указаны"}</p>
+                  <p className="text-sm text-white dark:text-white">Зарезервировано до: {formatDate(reservation.expirationDate)}</p>
+                  <p className="text-sm text-white dark:text-white">Дата резервации: {formatDate(reservation.reservationDate)}</p>
                   {reservation.notes && (
-                    <p className="text-white italic mt-2 text-white dark:text-white">Примечание: {reservation.notes}</p>
+                    <p className="text-xs italic mt-2 text-white dark:text-white">Примечание: {reservation.notes}</p>
                   )}
+                   <Link href={`/admin/reservations/${reservation.id}`}>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      className="mt-3 w-full bg-emerald-500/80 hover:bg-emerald-600/80 text-white text-sm font-medium rounded-lg py-1.5 shadow-md backdrop-blur-md"
+                    >
+                      К резервации
+                    </motion.button>
+                  </Link>
                 </motion.div>
               ))}
             </div>
           ) : (
-            <p className="text-white dark:text-white">У пользователя нет активных резерваций</p>
+            <p className="text-white dark:text-white text-center py-4">У пользователя нет резерваций</p>
           )}
         </Section>
       </main>

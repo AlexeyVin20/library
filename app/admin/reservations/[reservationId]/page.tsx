@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText, Printer, Mail, Phone, BookOpen, Download } from "lucide-react"
+import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText, Printer, Mail, Phone, BookOpen, Download, ArrowRight } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 
@@ -224,6 +224,12 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
         return <XCircle className="w-5 h-5 text-red-500" />
       case "Обрабатывается":
         return <Clock className="w-5 h-5 text-amber-500" />
+      case "Выдана":
+        return <ArrowRight className="w-5 h-5 text-blue-500" />
+      case "Возвращена":
+        return <CheckCircle className="w-5 h-5 text-green-600" />
+      case "Истекла":
+        return <Clock className="w-5 h-5 text-yellow-600" />
       default:
         return <Clock className="w-5 h-5 text-gray-500" />
     }
@@ -237,6 +243,12 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
         return "bg-red-500/90 hover:bg-red-600/90"
       case "Обрабатывается":
         return "bg-amber-500/90 hover:bg-amber-600/90"
+      case "Выдана":
+        return "bg-blue-500/90 hover:bg-blue-600/90"
+      case "Возвращена":
+        return "bg-green-600/90 hover:bg-green-700/90"
+      case "Истекла":
+        return "bg-yellow-600/90 hover:bg-yellow-700/90"
       default:
         return "bg-gray-500/90 hover:bg-gray-600/90"
     }
@@ -443,7 +455,20 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    // Автоматическое изменение статуса на "Выдана" после печати, если текущий статус "Выполнена"
+    if (reservation.status === "Выполнена") {
+      handleStatusChange("Выдана");
+    }
   };
+
+  // Отображаемый статус с учетом логики "Истекла"
+  let displayStatus = reservation?.status;
+  if (reservation && 
+      new Date(reservation.expirationDate) < new Date() && 
+      (reservation.status === 'Обрабатывается' || reservation.status === 'Выполнена' || reservation.status === 'Выдана')) {
+    displayStatus = 'Истекла';
+  }
 
   return (
     <div className="min-h-screen relative">
@@ -515,10 +540,10 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
               <div className="flex justify-between items-start mb-8">
                 <div className="flex items-center gap-3">
                   <motion.div
-                    className={`${getStatusColor(reservation.status)} text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md`}
+                    className={`${getStatusColor(displayStatus || reservation.status)} text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md`}
                   >
-                    {getStatusIcon(reservation.status)}
-                    <span>{reservation.status}</span>
+                    {getStatusIcon(displayStatus || reservation.status)}
+                    <span>{displayStatus || reservation.status}</span>
                   </motion.div>
                 </div>
 
@@ -533,7 +558,31 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
                     <span>Печать формуляра</span>
                   </motion.button>
                   
-                  {reservation.status !== "Выполнена" && (
+                  {reservation.status === "Выполнена" && (
+                    <motion.button
+                      onClick={() => handleStatusChange("Выдана")}
+                      className="bg-blue-500/90 hover:bg-blue-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                      whileHover={{ y: -3 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                      <span>Выдать книгу</span>
+                    </motion.button>
+                  )}
+
+                  {reservation.status === "Выдана" && (
+                    <motion.button
+                      onClick={() => handleStatusChange("Возвращена")}
+                      className="bg-green-600/90 hover:bg-green-700/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                      whileHover={{ y: -3 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Принять возврат</span>
+                    </motion.button>
+                  )}
+
+                  {reservation.status !== "Выполнена" && reservation.status !== "Выдана" && reservation.status !== "Возвращена" && reservation.status !== "Истекла" && (
                     <motion.button
                       onClick={() => handleStatusChange("Выполнена")}
                       className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
@@ -544,7 +593,7 @@ export default function ReservationDetailsPage({ params }: { params: Promise<{ r
                       <span>Выполнить</span>
                     </motion.button>
                   )}
-                  {reservation.status !== "Отменена" && (
+                  {reservation.status !== "Отменена" && reservation.status !== "Возвращена" && reservation.status !== "Истекла" && (
                     <motion.button
                       onClick={() => handleStatusChange("Отменена")}
                       className="bg-red-500/90 hover:bg-red-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"

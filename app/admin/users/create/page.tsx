@@ -209,7 +209,7 @@ export default function CreateUserPage() {
                 { label: "Штраф (руб.)", name: "fineAmount", type: "number", min: 0, step: 0.01 },
               ].map((field, index) => (
                 <div key={field.name}>
-                  <label htmlFor={field.name} className="block text-sm font-medium text-black-600 dark:text-black-300 mb-1">
+                  <label htmlFor={field.name} className="block text-sm font-medium text-white dark:text-white mb-1">
                     {field.label}
                   </label>
                   <motion.input
@@ -221,46 +221,11 @@ export default function CreateUserPage() {
                     required={field.required}
                     min={field.min}
                     step={field.step}
-                    className="w-full p-3 rounded-lg bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-black-800 dark:text-black-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full p-3 rounded-lg bg-green/10 dark:bg-green-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     whileFocus={{ scale: 1.02 }}
                   />
                 </div>
               ))}
-              <div>
-                <label className="block text-sm font-medium text-black-600 dark:text-black-300 mb-1">Роли пользователя</label>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      name="userRoles"
-                      value="1"
-                      checked={formData.userRoles?.some((r) => r.roleId === 1)}
-                      onChange={handleChange}
-                    />
-                    Администратор
-                  </label>
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      name="userRoles"
-                      value="2"
-                      checked={formData.userRoles?.some((r) => r.roleId === 2)}
-                      onChange={handleChange}
-                    />
-                    Библиотекарь
-                  </label>
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      name="userRoles"
-                      value="3"
-                      checked={formData.userRoles?.some((r) => r.roleId === 3)}
-                      onChange={handleChange}
-                    />
-                    Читатель
-                  </label>
-                </div>
-              </div>
             </div>
           </motion.div>
           <div className="flex justify-end gap-4">

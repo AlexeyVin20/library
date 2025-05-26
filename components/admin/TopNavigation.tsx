@@ -424,12 +424,12 @@ const TopNavigation = ({ user }: { user: User | null }) => {
 
   // Variants for search results animation
   const searchResultsVariants = {
-    hidden: { opacity: 0, y: -10, scale: 0.95, transformOrigin: "top right" },
+    hidden: { opacity: 0, y: -10, scale: 0.95, transformOrigin: "center" },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      transformOrigin: "top right",
+      transformOrigin: "center",
       transition: {
         duration: 0.2,
         ease: [0.22, 1, 0.36, 1],
@@ -439,7 +439,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
       opacity: 0,
       y: -10,
       scale: 0.95,
-      transformOrigin: "top right",
+      transformOrigin: "center",
       transition: { duration: 0.15 },
     },
   }
@@ -790,21 +790,20 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     animate="visible"
                     exit="exit"
                     variants={searchResultsVariants}
-                    className="absolute right-0 mt-2 w-80 max-h-[70vh] overflow-hidden rounded-xl bg-green-50 dark:bg-green-900 backdrop-blur-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50"
-                    style={{ transformOrigin: "top right" }}
+                    className="absolute right-0 mt-2 w-80 max-h-[70vh] overflow-hidden rounded-xl bg-emerald-800/90 dark:bg-emerald-900/95 backdrop-blur-xl shadow-lg border border-emerald-700 dark:border-emerald-800 z-50"
                   >
                     <div className="overflow-y-auto max-h-[70vh] p-2">
                       {isSearching ? (
                         <div className="flex items-center justify-center py-4">
-                          <div className="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full mr-2"></div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">Поиск...</span>
+                          <div className="animate-spin w-5 h-5 border-2 border-emerald-300 border-t-transparent rounded-full mr-2"></div>
+                          <span className="text-sm text-gray-200">Поиск...</span>
                         </div>
                       ) : searchResults.length > 0 ? (
                         // Результаты поиска, сгруппированные по категориям
                         <>
                           {searchResults.map((category, index) => (
                             <div key={index} className="mb-3">
-                              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-200 uppercase">
                                 {category.icon}
                                 <span>{category.title}</span>
                               </div>
@@ -819,27 +818,27 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                       transition: { delay: idx * 0.03 }
                                     }}
                                     whileHover={{ 
-                                      backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.05)",
+                                      backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.15)",
                                       x: 2,
                                       transition: { duration: 0.2 }
                                     }}
-                                    className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 rounded-lg cursor-pointer"
+                                    className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-700/50 dark:hover:bg-emerald-800/50 rounded-lg cursor-pointer"
                                     onClick={() => handleSearchResultClick(result)}
                                   >
                                     <div className="flex-shrink-0">
                                       {result.icon}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium truncate text-white dark:text-white">{result.title}</p>
+                                      <p className="text-sm font-medium truncate text-white">{result.title}</p>
                                       {result.subtitle && (
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{result.subtitle}</p>
+                                        <p className="text-xs text-emerald-200 truncate">{result.subtitle}</p>
                                       )}
                                     </div>
                                     <motion.div 
                                       whileHover={{ x: 2 }}
                                       transition={{ type: "spring", stiffness: 400, damping: 10 }}
                                     >
-                                      <ExternalLink className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                                      <ExternalLink className="h-3.5 w-3.5 text-emerald-300 flex-shrink-0" />
                                     </motion.div>
                                   </motion.div>
                                 ))}
@@ -855,16 +854,16 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.3 }}
                           >
-                            <Search className="h-6 w-6 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Ничего не найдено по запросу "{searchQuery}"</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500">Попробуйте изменить запрос или выбрать из истории поиска</p>
+                            <Search className="h-6 w-6 text-emerald-300 mx-auto mb-2" />
+                            <p className="text-sm text-white mb-1">Ничего не найдено по запросу "{searchQuery}"</p>
+                            <p className="text-xs text-emerald-200">Попробуйте изменить запрос или выбрать из истории поиска</p>
                           </motion.div>
                         </div>
                       ) : recentSearches.length > 0 ? (
                         // История поиска
                         <div>
                           <div className="flex items-center justify-between px-3 py-1.5">
-                            <div className="flex items-center gap-2 text-xs font-medium text-white dark:text-white uppercase">
+                            <div className="flex items-center gap-2 text-xs font-medium text-white uppercase">
                               <Clock className="h-4 w-4" />
                               <span>Недавние поиски</span>
                             </div>
@@ -875,7 +874,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                 setRecentSearches([]);
                                 localStorage.setItem("recentSearches", JSON.stringify([]));
                               }}
-                              className="text-xs text-white dark:text-white hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                              className="text-xs text-white hover:text-red-300 transition-colors"
                             >
                               Очистить
                             </motion.button>
@@ -891,15 +890,15 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                   transition: { delay: idx * 0.05 }
                                 }}
                                 whileHover={{ 
-                                  backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.05)",
+                                  backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.15)",
                                   x: 2,
                                   transition: { duration: 0.2 }
                                 }}
                                 onClick={() => selectRecentSearch(query)}
-                                className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 rounded-lg cursor-pointer"
+                                className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-700/50 dark:hover:bg-emerald-800/50 rounded-lg cursor-pointer"
                               >
-                                <Clock className="h-4 w-4 text-emerald-400" />
-                                <span className="text-sm text-white dark:text-white">{query}</span>
+                                <Clock className="h-4 w-4 text-emerald-300" />
+                                <span className="text-sm text-white">{query}</span>
                               </motion.div>
                             ))}
                           </div>
@@ -912,18 +911,18 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.3 }}
                           >
-                            <Search className="h-6 w-6 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Введите запрос для поиска</p>
+                            <Search className="h-6 w-6 text-emerald-300 mx-auto mb-2" />
+                            <p className="text-sm text-white">Введите запрос для поиска</p>
                           </motion.div>
                         </div>
                       )}
                     </div>
                     
                     {(searchQuery.trim() !== "") && (
-                      <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+                      <div className="p-2 border-t border-emerald-700 dark:border-emerald-800">
                         <Button 
                           variant="ghost" 
-                          className="w-full text-sm text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                          className="w-full text-sm text-emerald-200 hover:bg-emerald-700/50 dark:hover:bg-emerald-800/50"
                           onClick={() => {
                             router.push(`/admin/search?q=${encodeURIComponent(searchQuery)}`);
                             setIsSearchOpen(false);

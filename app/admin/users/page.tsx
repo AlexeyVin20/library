@@ -414,13 +414,13 @@ export default function AllUsersPage() {
             value={totalFines}
             subtitle="общая сумма"
             icon={<Users className="w-5 h-5 text-white" />}
-            color="bg-gray-500"
+            color="bg-emerald-500"
             delay={0.3}
           />
         </div>
 
         
-        <Section title="Список пользователей" action={{ label: "Все пользователи", href: "/admin/users" }} delay={0.7}>
+        <Section title="Список пользователей" delay={0.7}>
           <motion.input
             type="text"
             placeholder="Поиск по имени или email..."

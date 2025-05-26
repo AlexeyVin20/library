@@ -74,7 +74,7 @@ const FadeInView = ({
 const InfoField = ({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) => {
   return (
     <motion.div
-      className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-xl p-3 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm"
+      className="backdrop-blur-xl bg-green/30 dark:bg-green-900/40 rounded-xl p-3 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm"
       whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
       transition={{ duration: 0.2 }}
     >
@@ -187,7 +187,7 @@ export default function BookDetails({ book }: BookDetailsProps) {
 
                 {/* Book status indicators */}
                 <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2 text-white bg-emerald-100/50 dark:bg-emerald-800/30 p-2 rounded-lg">
+                  <div className="flex items-center gap-2 text-white bg-emerald-400/20 dark:bg-emerald-800/30 p-2 rounded-lg">
                     <BookCopy className="w-5 h-5" />
                     <span>
                       Доступно копий: <strong>{book.availableCopies}</strong>
@@ -223,7 +223,7 @@ export default function BookDetails({ book }: BookDetailsProps) {
 
                 {/* Description preview */}
                 <motion.div
-                  className="mt-4 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm"
+                  className="mt-4 backdrop-blur-xl bg-emerald-500/20 dark:bg-emerald-900/30 rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm"
                   whileHover={{
                     y: -3,
                     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
@@ -237,15 +237,6 @@ export default function BookDetails({ book }: BookDetailsProps) {
                   <p className="text-white line-clamp-3">
                     {book.description || "Описание отсутствует"}
                   </p>
-                  {book.description && book.description.length > 180 && (
-                    <button
-                      onClick={() => setActiveTab("details")}
-                      className="mt-2 text-white hover:text-white text-sm font-medium flex items-center gap-1"
-                    >
-                      Читать полностью
-                      <ChevronLeft className="w-4 h-4 rotate-270" />
-                    </button>
-                  )}
                 </motion.div>
               </div>
             </div>

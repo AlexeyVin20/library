@@ -55,6 +55,7 @@ export default function CreateReservationPage() {
     notes: "",
   })
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
+  const [nextAvailableDates, setNextAvailableDates] = useState<{[key: string]: string}>({})
 
   const [showUserModal, setShowUserModal] = useState(false)
   const [showBookModal, setShowBookModal] = useState(false)
@@ -68,6 +69,102 @@ export default function CreateReservationPage() {
   useEffect(() => {
     fetchData()
   }, [])
+
+  // Обновленный useEffect для управления датами и примечаниями на основе selectedBook
+  useEffect(() => {
+    if (!selectedBook) {
+      return
+    }
+
+    const originalNotes = formData.notes;
+    let newNotes = originalNotes;
+
+    // Сначала удаляем любые существующие заметки об очереди
+    const queueNotePattern = /\s*\(В очереди, доступна после: [0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}\)\s*/g;
+    newNotes = newNotes.replace(queueNotePattern, " ").trim();
+
+    if (selectedBook.availableCopies === 0) {
+      // Используем новый метод API для получения даты
+      fetchBookReservations(selectedBook.id);
+    } else {
+      // Книга доступна
+      let resetDates = false;
+      if (originalNotes !== newNotes && selectedBook.availableCopies > 0) {
+        // Заметка об очереди была удалена, и книга теперь доступна => сбрасываем даты
+        resetDates = true;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        bookId: selectedBook.id,
+        notes: newNotes, // newNotes это очищенная версия
+        reservationDate: resetDates ? new Date().toISOString().split("T")[0] : prev.reservationDate,
+        expirationDate: resetDates ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] : prev.expirationDate,
+      }));
+    }
+  }, [selectedBook]); // formData.notes удален из зависимостей
+
+  // Новый метод для получения резерваций книги по ID
+  const fetchBookReservations = async (bookId: string) => {
+    try {
+      const response = await fetch(`${baseUrl}/api/Reservation/book/${bookId}`);
+      if (!response.ok) throw new Error("Ошибка при загрузке резерваций книги");
+      
+      const reservationsData = await response.json();
+      
+      if (reservationsData.length > 0) {
+        // Находим самую раннюю дату возврата
+        const earliestReturn = reservationsData.reduce((earliest: any, current: any) => {
+          const earliestDate = new Date(earliest.expirationDate);
+          const currentDate = new Date(current.expirationDate);
+          return currentDate < earliestDate ? current : earliest;
+        });
+        
+        const nextAvailableDateString = earliestReturn.expirationDate.split('T')[0];
+        const startDate = new Date(nextAvailableDateString);
+        const newExpirationDateObj = new Date(startDate);
+        newExpirationDateObj.setDate(startDate.getDate() + 14);
+        const newExpirationDate = newExpirationDateObj.toISOString().split("T")[0];
+        
+        // Устанавливаем дату следующей доступности
+        const updatedAvailableDates = { ...nextAvailableDates };
+        updatedAvailableDates[bookId] = nextAvailableDateString;
+        setNextAvailableDates(updatedAvailableDates);
+        
+        // Обновляем примечания и даты
+        const formattedAvailableDate = new Date(nextAvailableDateString).toLocaleDateString();
+        const bookSpecificQueueNote = `(В очереди, доступна после: ${formattedAvailableDate})`;
+        
+        let newNotes = formData.notes;
+        // Сначала удаляем любые существующие заметки об очереди
+        const queueNotePattern = /\s*\(В очереди, доступна после: [0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}\)\s*/g;
+        newNotes = newNotes.replace(queueNotePattern, " ").trim();
+        newNotes = (newNotes ? newNotes + " " : "") + bookSpecificQueueNote;
+        newNotes = newNotes.trim();
+        
+        setFormData(prev => ({
+          ...prev,
+          bookId: bookId,
+          reservationDate: nextAvailableDateString,
+          expirationDate: newExpirationDate,
+          notes: newNotes,
+        }));
+      } else {
+        // Если нет резерваций, просто обновляем ID книги
+        setFormData(prev => ({
+          ...prev,
+          bookId: bookId
+        }));
+      }
+    } catch (error) {
+      console.error("Ошибка при получении резерваций книги:", error);
+      // При ошибке просто обновляем ID книги
+      setFormData(prev => ({
+        ...prev,
+        bookId: bookId
+      }));
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -83,7 +180,7 @@ export default function CreateReservationPage() {
       const [usersData, booksData] = await Promise.all([usersResponse.json(), booksResponse.json()])
 
       setUsers(usersData)
-      setBooks(booksData.filter((book: BookType) => book.availableCopies > 0))
+      setBooks(booksData)
 
       // Add this inside the useEffect after setting users and books
       if (formData.userId) {
@@ -108,6 +205,14 @@ export default function CreateReservationPage() {
       const reservationDate = new Date(formData.reservationDate).toISOString();
       const expirationDate = new Date(formData.expirationDate).toISOString();
       
+      // Определяем статус резервации
+      let status = "Обрабатывается";
+      
+      // Если книга в очереди, явно указываем статус "Обрабатывается"
+      if (selectedBook && selectedBook.availableCopies === 0 && formData.notes.includes("В очереди")) {
+        status = "Обрабатывается";
+      }
+      
       const response = await fetch(`${baseUrl}/api/Reservation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,7 +220,7 @@ export default function CreateReservationPage() {
           ...formData,
           reservationDate,
           expirationDate,
-          status: "Обрабатывается",
+          status,
         }),
       })
 
@@ -130,6 +235,12 @@ export default function CreateReservationPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  // Обновленная обработка выбора книги с учетом очереди
+  const handleBookSelect = (book: BookType) => {
+    setSelectedBook(book); // Это вызовет useEffect для обновления formData
+    setShowBookModal(false);
   }
 
   return (
@@ -245,7 +356,8 @@ export default function CreateReservationPage() {
                           value={formData.reservationDate}
                           onChange={handleChange}
                           required
-                          className="w-full backdrop-blur-xl bg-green-500/30 border border-white/20 dark:border-gray-700/30 focus:border-emerald-300 focus:ring-1 focus:ring-emerald-300 rounded-lg px-4 py-2 text-white shadow-sm"
+                          className="w-full backdrop-blur-xl bg-green-500/30 border border-white/20 dark:border-gray-700/30 focus:border-emerald-300 focus:ring-1 focus:ring-emerald-300 rounded-lg px-4 py-2 text-white shadow-sm cursor-pointer appearance-none"
+                          style={{ colorScheme: 'dark' }}
                         />
                       </div>
 
@@ -261,7 +373,8 @@ export default function CreateReservationPage() {
                           value={formData.expirationDate}
                           onChange={handleChange}
                           required
-                          className="w-full backdrop-blur-xl bg-green-500/30 border border-white/20 dark:border-gray-700/30 focus:border-emerald-300 focus:ring-1 focus:ring-emerald-300 rounded-lg px-4 py-2 text-white shadow-sm"
+                          className="w-full backdrop-blur-xl bg-green-500/30 border border-white/20 dark:border-gray-700/30 focus:border-emerald-300 focus:ring-1 focus:ring-emerald-300 rounded-lg px-4 py-2 text-white shadow-sm cursor-pointer appearance-none"
+                          style={{ colorScheme: 'dark' }}
                         />
                       </div>
                     </div>
@@ -444,15 +557,13 @@ export default function CreateReservationPage() {
                         className={`p-3 rounded-lg backdrop-blur-xl ${
                           formData.bookId === book.id
                             ? "bg-emerald-600/80 border-white/40"
-                            : "bg-green-500/30 hover:bg-green-500/50"
+                            : book.availableCopies === 0
+                              ? "bg-amber-500/30 hover:bg-amber-500/50"
+                              : "bg-green-500/30 hover:bg-green-500/50"
                         } border border-white/20 cursor-pointer transition-colors`}
-                        whileHover={{ y: -2, backgroundColor: "rgba(16, 185, 129, 0.5)" }}
+                        whileHover={{ y: -2, backgroundColor: book.availableCopies === 0 ? "rgba(251, 191, 36, 0.5)" : "rgba(16, 185, 129, 0.5)" }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          setFormData((prev) => ({ ...prev, bookId: book.id }))
-                          setSelectedBook(book)
-                          setShowBookModal(false)
-                        }}
+                        onClick={() => handleBookSelect(book)}
                       >
                         <div className="flex gap-4">
                           {book.cover && (
@@ -474,10 +585,19 @@ export default function CreateReservationPage() {
                             </div>
                             
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-emerald-300">
-                                <BookOpen className="h-4 w-4 inline mr-1" />
-                                {book.availableCopies} {book.availableCopies === 1 ? "доступная копия" : "доступные копии"}
-                              </span>
+                              {book.availableCopies > 0 ? (
+                                <span className="text-sm text-emerald-300">
+                                  <BookOpen className="h-4 w-4 inline mr-1" />
+                                  {book.availableCopies} {book.availableCopies === 1 ? "доступная копия" : "доступные копии"}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-amber-300">
+                                  <Calendar className="h-4 w-4 inline mr-1" />
+                                  {nextAvailableDates[book.id] 
+                                    ? `Доступна после: ${new Date(nextAvailableDates[book.id]).toLocaleDateString()}`
+                                    : "Нет доступных копий"}
+                                </span>
+                              )}
                               {formData.bookId === book.id && <Check className="h-5 w-5 text-emerald-300" />}
                             </div>
                           </div>

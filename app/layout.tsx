@@ -4,6 +4,8 @@ import "@/styles/admin.css";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
+import { cn } from "@/lib/utils";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,15 +28,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru">
+    <html lang="ru" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased floating-shapes white-text`}
+        className={cn(
+          `${geistSans.variable} ${geistMono.variable} antialiased floating-shapes`,
+          "min-h-screen bg-[url('/images/bg2.jpg')] bg-cover bg-center bg-fixed bg-no-repeat"
+        )}
       >
-        <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl"></div>
-        <AuthProvider>
-          {children}
-          <Toaster />
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AuthProvider>
+            <div className="flex flex-col min-h-screen">
+              <main className="flex-1">{children}</main>
+            </div>
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

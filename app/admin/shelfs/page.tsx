@@ -396,38 +396,97 @@ export default function ShelfsPage() {
   }
 
   const handleDragEnd = async () => {
-    if (!draggedShelf) return
-
-    const draggedShelfNew = shelves.find((s) => s.id === draggedShelf.id)
-    if (draggedShelfNew) {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-        if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined")
-
-        await fetch(`${baseUrl}/api/shelf/${draggedShelfNew.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(draggedShelfNew),
-        })
-      } catch (error) {
-        console.error("Ошибка при обновлении позиции полки:", error)
-        toast({
-          title: "Ошибка",
-          description: "Не удалось сохранить позицию полки",
-          variant: "destructive",
-        })
-      }
-    }
-
+    // The API call to update the shelf position is moved to toggleEditMode
+    // when the edit mode is turned off.
     setDraggedShelf(null)
   }
 
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode)
-    toast({
-      title: isEditMode ? "Режим редактирования выключен" : "Режим редактирования включен",
-      description: isEditMode ? "Полки заблокированы от перемещения" : "Теперь вы можете перемещать полки",
-    })
+  const toggleEditMode = async () => {
+    const newIsEditMode = !isEditMode
+
+    if (isEditMode) {
+      // Turning OFF edit mode (current isEditMode is true)
+      setIsEditMode(false) // Visually lock shelves immediately
+      setLoading(true)
+      toast({
+        title: "Режим редактирования выключен",
+        description: "Сохранение измененных позиций полок...",
+      })
+
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+      if (!baseUrl) {
+        toast({
+          title: "Ошибка конфигурации",
+          description: "NEXT_PUBLIC_BASE_URL не определен. Сохранение невозможно.",
+          variant: "destructive",
+        })
+        setError("NEXT_PUBLIC_BASE_URL is not defined")
+        setLoading(false)
+        return
+      }
+
+      if (shelves.length > 0) {
+        const updatePromises = shelves.map((shelf) =>
+          fetch(`${baseUrl}/api/shelf/${shelf.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: shelf.id,
+              category: shelf.category,
+              capacity: shelf.capacity,
+              shelfNumber: shelf.shelfNumber,
+              posX: shelf.posX,
+              posY: shelf.posY,
+            }),
+          }).then(async (response) => {
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}))
+              return Promise.reject({
+                shelfId: shelf.id,
+                status: response.status,
+                message: errorData.message || `Ошибка API: ${response.status}`,
+              })
+            }
+            return response.json()
+          }),
+        )
+
+        const results = await Promise.allSettled(updatePromises)
+        const failedUpdates = results.filter((result) => result.status === "rejected")
+
+        if (failedUpdates.length > 0) {
+          const errorMessages = (failedUpdates as PromiseRejectedResult[]).map((f) => `Полка #${f.reason.shelfId}: ${f.reason.message}`).join("; ")
+          toast({
+            title: "Ошибка сохранения позиций",
+            description: `Не удалось обновить ${failedUpdates.length} из ${shelves.length} полок. ${errorMessages}`,
+            variant: "destructive",
+            duration: 7000,
+          })
+          setError(`Не удалось сохранить позиции для ${failedUpdates.length} полок.`)
+        } else {
+          toast({
+            title: "Позиции сохранены",
+            description: "Все изменения позиций полок успешно сохранены на сервере.",
+          })
+          setError(null) // Clear error on successful save
+        }
+      } else {
+        // No shelves to save, consider it a success in terms of saving operation
+        toast({
+            title: "Позиции сохранены",
+            description: "Нет полок для сохранения позиций.",
+        });
+        setError(null);
+      }
+      setLoading(false)
+    } else {
+      // Turning ON edit mode
+      setIsEditMode(true)
+      toast({
+        title: "Режим редактирования включен",
+        description: "Теперь вы можете перемещать полки.",
+      })
+    }
   }
 
   const handleEmptySlotClick = (shelfId: number, position: number) => {
@@ -519,29 +578,42 @@ export default function ShelfsPage() {
   }
 
   const removeItemFromShelf = async (shelfId: number, position: number, isJournal: boolean) => {
-    if (!contextMenuData) return
+    if (!contextMenuData && !selectedItem) {
+      // Если нет данных ни из контекстного меню, ни из выбранного элемента, выходим.
+      // Это важно, так как selectedItem используется, если contextMenuData отсутствует (например, при удалении из BookInfoModal)
+      console.error("removeItemFromShelf: Нет данных для удаления элемента.")
+      return
+    }
+
+    // Определяем itemId и isJournal приоритетно из contextMenuData, если оно есть,
+    // иначе используем selectedItem (для удаления из BookInfoModal).
+    const currentItem = contextMenuData?.item || selectedItem
+    const currentIsJournal = contextMenuData ? contextMenuData.isJournal : selectedItemIsJournal
+
+    if (!currentItem) {
+      console.error("removeItemFromShelf: Не удалось определить элемент для удаления.")
+      return
+    }
+    const itemId = currentItem.id
 
     try {
       setLoading(true)
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined")
 
-      const itemId = contextMenuData.item?.id
-      const endpoint = isJournal ? "journals" : "books"
+      const apiResource = currentIsJournal ? "Journals" : "Books" // Используем заглавные буквы для ресурса
 
-      const response = await fetch(`${baseUrl}/api/${endpoint}/${itemId}/position`, {
-        method: "DELETE",
+      // Используем новый эндпоинт и метод PUT
+      const response = await fetch(`${baseUrl}/api/${apiResource}/${itemId}/shelf/remove`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shelfId,
-          position,
-        }),
+        // Тело запроса больше не нужно
       })
 
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`)
 
       // Обновляем данные
-      if (isJournal) {
+      if (currentIsJournal) {
         await fetchJournals()
       } else {
         await fetchBooks()
@@ -549,10 +621,15 @@ export default function ShelfsPage() {
 
       setShowContextMenu(false)
       setContextMenuData(null)
+      // Также закрываем BookInfoModal, если удаление было инициировано оттуда
+      if (selectedItem && selectedItem.id === itemId) {
+        setShowBookInfoModal(false)
+        setSelectedItem(null)
+      }
 
       toast({
         title: "Успех",
-        description: isJournal ? "Журнал успешно удален с полки" : "Книга успешно удалена с полки",
+        description: currentIsJournal ? "Журнал успешно удален с полки" : "Книга успешно удалена с полки",
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при удалении с полки")

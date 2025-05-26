@@ -10,6 +10,7 @@ interface Role {
   name: string
   description: string
   userRoles: any[]
+  usersCount: number
 }
 
 const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
@@ -129,7 +130,7 @@ export default function RolesPage() {
     }
 
     try {
-      const response = await fetch(`${baseUrl}/api/User/update-role`, {
+      const response = await fetch(`${baseUrl}/api/User/roles/${editingRole.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -377,7 +378,7 @@ export default function RolesPage() {
                     </div>
                     <p className="text-white mt-2">{role.description}</p>
                     <p className="text-white text-sm mt-2">
-                      Пользователей с этой ролью: {role.userRoles.length}
+                      Пользователей с этой ролью: {role.usersCount}
                     </p>
                   </motion.div>
                 ))}

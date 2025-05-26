@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import type { Book, Journal } from "@/lib/types"
 
 interface Position {
   x: number
@@ -118,7 +119,7 @@ const FormSection = ({
   children: React.ReactNode
 }) => {
   return (
-    <div className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 rounded-xl p-5 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm">
+    <div className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 rounded-xl p-5 border border-emerald-500/20 dark:border-emerald-700/40 shadow-sm">
       <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
         {icon}
         {title}
@@ -161,10 +162,9 @@ interface BookFormProps {
   onSubmit: (data: BookInput) => Promise<void>
   isSubmitting: boolean
   mode: "create" | "update"
-  shelves?: Array<{ id: number; category: string; shelfNumber: number; capacity: number; posX: number; posY: number }>
 }
 
-const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: BookFormProps) => {
+const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) => {
   const router = useRouter()
   const [showManualCoverInput, setShowManualCoverInput] = useState(false)
   const [manualCoverUrl, setManualCoverUrl] = useState("")
@@ -174,15 +174,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.cover || null)
   const [geminiImage, setGeminiImage] = useState<string | null>(null)
   const [geminiLoading, setGeminiLoading] = useState(false)
-  const [showShelvesModal, setShowShelvesModal] = useState(false)
-  const [selectedShelf, setSelectedShelf] = useState<number | undefined>(
-    initialData?.shelfId !== undefined ? Number(initialData.shelfId) : undefined,
-  )
-  const [selectedPosition, setSelectedPosition] = useState<number | undefined>(
-    initialData?.position !== undefined ? Number(initialData.position) : undefined,
-  )
-  const [draggedShelf, setDraggedShelf] = useState<any>(null)
-  const [mousePosition, setMousePosition] = useState<Position>({ x: 0, y: 0 })
   const [formError, setFormError] = useState<string | null>(null)
   const [formSuccess, setFormSuccess] = useState<string | null>(null)
 
@@ -212,8 +203,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
       bbk: initialData?.bbk || "",
       summary: initialData?.summary || "",
       availableCopies: initialData?.availableCopies || 1,
-      shelfId: initialData?.shelfId || undefined,
-      position: initialData?.position || undefined,
       edition: initialData?.edition || "",
       price: initialData?.price || 0,
       format: initialData?.format || "",
@@ -231,12 +220,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
   useEffect(() => {
     if (initialData) {
       setIsbn(initialData.isbn || "")
-      if (initialData.shelfId !== undefined) {
-        setSelectedShelf(Number(initialData.shelfId))
-      }
-      if (initialData.position !== undefined) {
-        setSelectedPosition(Number(initialData.position))
-      }
       if (initialData?.cover) setPreviewUrl(initialData.cover)
     }
   }, [initialData])
@@ -461,8 +444,8 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
       <motion.div
         className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer backdrop-blur-xl transition-all ${
           dragActive
-            ? "bg-emerald-500/20 border-emerald-500/50 dark:bg-emerald-500/30 dark:border-emerald-500/50"
-            : "bg-emerald-500/5 dark:bg-emerald-900/10 border-emerald-500/30 dark:border-emerald-700/30 hover:bg-emerald-500/10 dark:hover:bg-emerald-900/20"
+            ? "bg-emerald-500/20 border-emerald-500/50 dark:bg-emerald-500/40 dark:border-emerald-500/50"
+            : "bg-emerald-500/5 dark:bg-emerald-900/10 border-emerald-500/40 dark:border-emerald-700/40 hover:bg-emerald-500/10 dark:hover:bg-emerald-900/20"
         }`}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
@@ -514,7 +497,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
             content: [
               {
                 type: "text",
-                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число). Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото.",
+                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число) - shelfId всегда оставляй null. Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото.",
               },
               {
                 type: "image_url",
@@ -682,14 +665,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
     if (data.originalLanguage) setValue("originalLanguage", data.originalLanguage)
     if (data.isEbook !== undefined) setValue("isEbook", data.isEbook)
     if (data.condition) setValue("condition", data.condition)
-    if (data.shelfId) {
-      setValue("shelfId", data.shelfId)
-      setSelectedShelf(Number(data.shelfId))
-    }
-    if (data.position !== undefined) {
-      setValue("position", data.position)
-      setSelectedPosition(Number(data.position))
-    }
   }
 
   const fillFormFromJson = (data: any) => {
@@ -722,14 +697,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
       if (data.OriginalLanguage) setValue("originalLanguage", data.OriginalLanguage)
       if (data.IsEbook !== undefined) setValue("isEbook", data.IsEbook)
       if (data.Condition) setValue("condition", data.Condition)
-      if (data.ShelfId) {
-        setValue("shelfId", Number(data.ShelfId))
-        setSelectedShelf(Number(data.ShelfId))
-      }
-      if (data.Position !== undefined) {
-        setValue("position", Number(data.Position))
-        setSelectedPosition(Number(data.Position))
-      }
 
       setFormSuccess("Информация из JSON успешно импортирована")
       toast({
@@ -750,43 +717,10 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
     }
   }
 
-  const handleDragStart = (e: React.MouseEvent, shelf: any) => {
-    const container = document.getElementById("shelf-editor")
-    if (!container) return
-    const rect = container.getBoundingClientRect()
-    setMousePosition({
-      x: e.clientX - rect.left - shelf.posX,
-      y: e.clientY - rect.top - shelf.posY,
-    })
-    setDraggedShelf(shelf)
-    e.preventDefault()
-  }
 
-  const handleDragMove = (e: React.MouseEvent) => {
-    if (!draggedShelf) return
-    const container = document.getElementById("shelf-editor")
-    if (!container) return
-    const rect = container.getBoundingClientRect()
-    const x = e.clientX - rect.left - mousePosition.x
-    const y = e.clientY - rect.top - mousePosition.y
-    // Ограничиваем перемещение в пределах контейнера
-    const newX = Math.max(0, Math.min(rect.width - 250, x))
-    const newY = Math.max(0, Math.min(rect.height - 150, y))
-    setDraggedShelf({ ...draggedShelf, posX: newX, posY: newY })
-  }
 
-  const handleDragEnd = () => {
-    setDraggedShelf(null)
-  }
+  
 
-  const handleEmptySlotClick = (shelfId: number, position: number) => {
-    setSelectedShelf(shelfId)
-    setSelectedPosition(position)
-    setValue("shelfId", shelfId)
-    setValue("position", position)
-    setShowShelvesModal(false)
-    setFormSuccess(`Выбрана полка #${shelfId}, позиция ${position + 1}`)
-  }
 
   const onFormSubmit = async (values: z.infer<typeof bookSchema>) => {
     setFormError(null)
@@ -798,8 +732,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
         // Сбрасываем форму после успешного создания
         reset()
         setPreviewUrl(null)
-        setSelectedShelf(undefined)
-        setSelectedPosition(undefined)
       }
     } catch (error) {
       console.error("Ошибка при отправке формы:", error)
@@ -812,115 +744,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
     }
   }
 
-  const ShelvesModal = () => {
-    return (
-      <Dialog open={showShelvesModal} onOpenChange={setShowShelvesModal}>
-        <DialogContent className="max-w-4xl backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border border-emerald-500/20 dark:border-emerald-700/30 shadow-lg">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-white">
-              Выберите полку и позицию
-            </DialogTitle>
-            <DialogDescription className="text-white">
-              Нажмите на полку, затем выберите позицию для книги
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-lg font-semibold mb-2 text-white">Доступные полки</h4>
-              <div className="space-y-2 max-h-80 overflow-y-auto p-2">
-                {shelves && shelves.length > 0 ? (
-                  shelves.map((shelf) => (
-                    <motion.div
-                      key={shelf.id}
-                      className={`p-3 rounded-lg cursor-pointer transition-all backdrop-blur-xl border ${
-                        selectedShelf === shelf.id
-                          ? "bg-emerald-500/20 border-emerald-500/50 dark:bg-emerald-500/30 dark:border-emerald-500/50"
-                          : "bg-emerald-500/5 dark:bg-emerald-900/10 border-emerald-500/20 dark:border-emerald-700/30 hover:bg-emerald-500/10 dark:hover:bg-emerald-900/20"
-                      }`}
-                      onClick={() => setSelectedShelf(shelf.id)}
-                      whileHover={{ x: 3 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <h5 className="font-medium text-white">{shelf.category}</h5>
-                      <p className="text-sm text-white">Мест: {shelf.capacity}</p>
-                      <p className="text-sm text-white">
-                        Номер полки: #{shelf.shelfNumber}
-                      </p>
-                    </motion.div>
-                  ))
-                ) : (
-                  <p className="text-white">Нет доступных полок</p>
-                )}
-              </div>
-            </div>
-            {selectedShelf && (
-              <div>
-                <h4 className="text-lg font-semibold mb-2 text-white">
-                  Выберите позицию на полке {shelves.find((s) => s.id === selectedShelf)?.category || "N/A"}
-                </h4>
-                <div className="grid grid-cols-5 gap-2 max-h-80 overflow-y-auto p-2">
-                  {Array.from({ length: shelves.find((s) => s.id === selectedShelf)?.capacity || 0 }).map((_, i) => {
-                    // Проверяем занятость позиции
-                    const isOccupied = false // По умолчанию считаем позицию свободной
-                    // Проверяем, является ли это текущей редактируемой книгой
-                    const isCurrentBook = initialData?.shelfId === selectedShelf && initialData?.position === i
 
-                    return (
-                      <motion.div
-                        key={i}
-                        className={`aspect-square border rounded-lg flex items-center justify-center p-2 cursor-pointer transition-all ${
-                          selectedPosition === i
-                            ? "bg-emerald-500/20 border-emerald-500/50 dark:bg-emerald-500/30 dark:border-emerald-500/50"
-                            : isOccupied && !isCurrentBook
-                              ? "bg-gray-300/30 border-gray-400/30 cursor-not-allowed"
-                              : "bg-emerald-500/5 dark:bg-emerald-900/10 border-emerald-500/20 dark:border-emerald-700/30 hover:bg-emerald-500/10 dark:hover:bg-emerald-900/20"
-                        }`}
-                        onClick={() => {
-                          if (!isOccupied || isCurrentBook) {
-                            setSelectedPosition(i)
-                          }
-                        }}
-                        whileHover={!isOccupied || isCurrentBook ? { scale: 1.05 } : {}}
-                        whileTap={!isOccupied || isCurrentBook ? { scale: 0.95 } : {}}
-                      >
-                        {i + 1}
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter className="flex justify-between">
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowShelvesModal(false)}
-              className="bg-gray-500/90 hover:bg-gray-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
-            >
-              Отмена
-            </motion.button>
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (selectedShelf !== undefined && selectedPosition !== undefined) {
-                  setValue("shelfId", selectedShelf)
-                  setValue("position", selectedPosition)
-                  setShowShelvesModal(false)
-                  setFormSuccess(`Выбрана полка #${selectedShelf}, позиция ${selectedPosition + 1}`)
-                }
-              }}
-              disabled={selectedShelf === undefined || selectedPosition === undefined}
-              className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md disabled:opacity-50"
-            >
-              Выбрать
-            </motion.button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    )
-  }
 
   // Функция для импорта данных полки из JSON
   const importShelfFromJson = async (data: any) => {
@@ -1084,7 +908,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
         {/* Header */}
         <FadeInView>
           <motion.div
-            className="sticky top-0 z-10 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border-b border-emerald-500/20 dark:border-emerald-700/30 p-4 rounded-xl shadow-lg mb-6"
+            className="sticky top-0 z-10 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border-b border-emerald-500/20 dark:border-emerald-700/40 p-4 rounded-xl shadow-lg mb-6"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -1136,7 +960,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
         {/* Main Content */}
         <FadeInView delay={0.2}>
           <motion.div
-            className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-2xl p-6 shadow-lg border border-emerald-500/20 dark:border-emerald-700/30"
+            className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-2xl p-6 shadow-lg border border-emerald-500/20 dark:border-emerald-700/40"
             whileHover={{
               y: -5,
               boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)",
@@ -1161,7 +985,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                 {geminiImage && !geminiLoading && (
                   <motion.button
                     onClick={handleGeminiUpload}
-                    className="mt-2 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border border-emerald-500/20 dark:border-emerald-700/30 text-white rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
+                    className="mt-2 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border border-emerald-500/20 dark:border-emerald-700/40 text-white rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -1174,7 +998,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
             {/* Form */}
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-8 mt-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-green/30 dark:bg-green-800/30 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md">
+                <TabsList className="bg-green/40 dark:bg-green-800/40 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/40 shadow-md">
                   <AnimatedTabsTrigger
                     value="basic-info"
                     icon={<BookmarkIcon className="w-4 h-4" />}
@@ -1197,14 +1021,14 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
 
                 {/* Основная информация */}
                 <TabsContent value="basic-info" className="space-y-6 mt-6">
-                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30">
+                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40">
                     <CardContent className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField label="Название книги" error={errors.title?.message} required>
                           <Input
                             placeholder="Введите название книги"
                             {...register("title")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1212,7 +1036,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите имена авторов через запятую"
                             {...register("authors")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1222,7 +1046,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                               id="isbn"
                               placeholder="000-0000000000"
                               className={cn(
-                                "backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg pr-16 px-4 py-2 text-white shadow-sm w-full",
+                                "backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg pr-16 px-4 text-white shadow-sm w-full h-12 placeholder:text-white",
                                 errors.isbn && "focus-visible:ring-red-500",
                               )}
                               value={isbn}
@@ -1237,7 +1061,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                               type="button"
                               onClick={handleFetchByISBN}
                               disabled={isSearchLoading}
-                              className="absolute right-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-white rounded-md px-3 py-1 flex items-center gap-1 transition-all"
+                              className="absolute right-2 bg-emerald-500/20 hover:bg-emerald-500/40 text-white rounded-md px-3 py-1 flex items-center gap-1 transition-all"
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -1255,7 +1079,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите жанр книги"
                             {...register("genre")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1266,7 +1090,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                             min={1000}
                             max={new Date().getFullYear()}
                             {...register("publicationYear", { valueAsNumber: true })}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1274,7 +1098,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите название издательства"
                             {...register("publisher")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1303,7 +1127,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                                 placeholder="Введите количество доступных экземпляров"
                                 min={0}
                                 {...register("availableCopies", { valueAsNumber: true })}
-                                className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                                className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                               />
                             </FormField>
 
@@ -1312,10 +1136,10 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                                 onValueChange={(value) => setValue("condition", value)}
                                 defaultValue={initialData?.condition || ""}
                               >
-                                <SelectTrigger className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm">
+                                <SelectTrigger className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12">
                                   <SelectValue placeholder="Выберите состояние" />
                                 </SelectTrigger>
-                                <SelectContent className="backdrop-blur-xl bg-emerald-100/90 dark:bg-emerald-900/90 border border-emerald-500/20 dark:border-emerald-700/30">
+                                <SelectContent className="backdrop-blur-xl bg-emerald-100/90 dark:bg-emerald-900/90 border border-emerald-500/20 dark:border-emerald-700/40">
                                   <SelectItem value="Новое">Новое</SelectItem>
                                   <SelectItem value="Б/У">Б/У</SelectItem>
                                   <SelectItem value="Не определено">Не определено</SelectItem>
@@ -1323,49 +1147,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                               </Select>
                             </FormField>
 
-                            <div className="md:col-span-2">
-                              <FormField
-                                label="Расположение на полке"
-                                error={errors.shelfId?.message || errors.position?.message}
-                              >
-                                <div className="flex flex-col gap-2">
-                                  <div className="flex items-center gap-4">
-                                    <div className="flex-1">
-                                      <motion.button
-                                        type="button"
-                                        onClick={() => setShowShelvesModal(true)}
-                                        className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-4 py-2 w-full flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
-                                        whileHover={{ y: -2 }}
-                                        whileTap={{ scale: 0.98 }}
-                                      >
-                                        <BookCopy className="h-4 w-4" />
-                                        {selectedShelf && selectedPosition !== undefined
-                                          ? `Полка: ${shelves.find((s) => s.id === selectedShelf)?.category || "N/A"} #${shelves.find((s) => s.id === selectedShelf)?.shelfNumber || "N/A"}, Позиция: ${selectedPosition + 1}`
-                                          : "Выбрать расположение"}
-                                      </motion.button>
-                                    </div>
-                                    {selectedShelf && selectedPosition !== undefined && (
-                                      <motion.button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedShelf(undefined)
-                                          setSelectedPosition(undefined)
-                                          setValue("shelfId", undefined)
-                                          setValue("position", undefined)
-                                        }}
-                                        className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border border-emerald-500/20 dark:border-emerald-700/30 text-emerald-700 dark:text-emerald-300 rounded-lg p-2"
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                      >
-                                        <X size={16} />
-                                      </motion.button>
-                                    )}
-                                  </div>
-                                  <input type="hidden" {...register("shelfId")} />
-                                  <input type="hidden" {...register("position")} />
-                                </div>
-                              </FormField>
-                            </div>
+                            
                           </>
                         )}
 
@@ -1399,7 +1181,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                                 </motion.div>
                               ) : (
                                 <motion.div
-                                  className="w-48 h-64 mb-4 flex items-center justify-center backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 rounded-xl border border-emerald-500/20 dark:border-emerald-700/30 shadow-md text-white"
+                                  className="w-48 h-64 mb-4 flex items-center justify-center backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 rounded-xl border border-emerald-500/20 dark:border-emerald-700/40 shadow-md text-white"
                                   whileHover={{ scale: 1.02 }}
                                 >
                                   <BookOpen className="h-12 w-12" />
@@ -1440,8 +1222,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                                         variant: "destructive",
                                       })
                                     }
-                                  }}
-                                  className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                                  }}                                  className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
                                   whileHover={{ y: -2 }}
                                   whileTap={{ scale: 0.98 }}
                                 >
@@ -1471,7 +1252,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                                       setValue("cover", e.target.value)
                                       setPreviewUrl(e.target.value)
                                     }}
-                                    className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm text-xs h-8"
+                                    className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm text-xs h-12 placeholder:text-white"
                                   />
                                 </div>
                               </div>
@@ -1485,7 +1266,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
 
                 {/* Детальная информация */}
                 <TabsContent value="details" className="space-y-6 mt-6">
-                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30">
+                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40">
                     <CardContent className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="md:col-span-2">
@@ -1494,7 +1275,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                               placeholder="Введите описание книги"
                               {...register("description")}
                               rows={7}
-                              className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm resize-none"
+                              className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-3 text-white shadow-sm resize-none placeholder:text-white"
                             />
                           </FormField>
                         </div>
@@ -1505,7 +1286,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                             placeholder="Введите количество страниц"
                             min={1}
                             {...register("pageCount", { valueAsNumber: true })}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1513,7 +1294,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите язык книги"
                             {...register("language")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1522,10 +1303,10 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                             onValueChange={(value) => setValue("format", value)}
                             defaultValue={initialData?.format || ""}
                           >
-                            <SelectTrigger className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm">
+                            <SelectTrigger className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12">
                               <SelectValue placeholder="Выберите формат" />
                             </SelectTrigger>
-                            <SelectContent className="backdrop-blur-xl bg-emerald-100/90 dark:bg-emerald-900/90 border border-emerald-500/20 dark:border-emerald-700/30">
+                            <SelectContent className="backdrop-blur-xl bg-emerald-100/90 dark:bg-emerald-900/90 border border-emerald-500/20 dark:border-emerald-700/40">
                               <SelectItem value="Твердый переплет">Твердый переплет</SelectItem>
                               <SelectItem value="Мягкий переплет">Мягкий переплет</SelectItem>
                               <SelectItem value="Электронный">Электронный</SelectItem>
@@ -1538,10 +1319,10 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             type="number"
                             placeholder="Введите цену книги"
-                            min={0}
+                            min={0.00}
                             step="0.01"
                             {...register("price", { valueAsNumber: true })}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1549,7 +1330,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите категоризацию"
                             {...register("categorization")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1557,7 +1338,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите УДК"
                             {...register("udk")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1565,7 +1346,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите ББК"
                             {...register("bbk")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
                       </div>
@@ -1575,14 +1356,14 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
 
                 {/* Дополнительные поля */}
                 <TabsContent value="rare-fields" className="space-y-6 mt-6">
-                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30">
+                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40">
                     <CardContent className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField label="Оригинальное название" error={errors.originalTitle?.message}>
                           <Input
                             placeholder="Введите оригинальное название книги"
                             {...register("originalTitle")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1590,7 +1371,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите оригинальный язык книги"
                             {...register("originalLanguage")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1598,7 +1379,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                           <Input
                             placeholder="Введите информацию об издании"
                             {...register("edition")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
                           />
                         </FormField>
 
@@ -1607,7 +1388,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                             placeholder="Введите резюме книги"
                             {...register("summary")}
                             rows={5}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white shadow-sm resize-none"
+                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-3 text-white shadow-sm resize-none placeholder:text-white"
                           />
                         </FormField>
                       </div>
@@ -1616,7 +1397,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
                 </TabsContent>
               </Tabs>
 
-              <div className="pt-4 border-t border-emerald-500/20 dark:border-emerald-700/30 flex flex-col md:flex-row gap-4">
+              <div className="pt-4 border-t border-emerald-500/20 dark:border-emerald-700/40 flex flex-col md:flex-row gap-4">
                 <motion.button
                   type="button"
                   onClick={handleImportFromClipboard}
@@ -1664,8 +1445,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves = [] }: B
         </FadeInView>
       </div>
 
-      {/* Модальное окно для выбора полки */}
-      <ShelvesModal />
     </div>
   )
 }
