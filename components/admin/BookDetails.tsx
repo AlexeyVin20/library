@@ -19,6 +19,7 @@ import {
   BookCopy,
   Bookmark,
 } from "lucide-react"
+import { Book } from "@/components/ui/book"
 
 interface Book {
   id: string
@@ -161,30 +162,22 @@ export default function BookDetails({ book }: BookDetailsProps) {
             <div className="flex flex-col md:flex-row gap-8">
               {/* Cover Image */}
               <div className="flex-shrink-0">
-                {book.cover ? (
-                  <motion.div
-                    whileHover={{ scale: 1.05, rotate: 1 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                    className="relative w-[250px] h-[400px] rounded-xl shadow-lg overflow-hidden border-4 border-white dark:border-emerald-900/50"
-                  >
+                <Book color="#012B48" width={250} depth={5}>
+                  {book.cover ? (
                     <Image
-                      src={book.cover || "/placeholder.svg"}
+                      src={book.cover}
                       alt={book.title}
-                      fill
-                      className="object-cover rounded-lg"
+                      width={250}
+                      height={400}
+                      className="object-cover w-full h-full rounded"
                       priority
                     />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    whileHover={{ scale: 1.05, rotate: 1 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                    className="w-[250px] h-[400px] flex items-center justify-center backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-xl border border-emerald-500/20 dark:border-emerald-700/30 shadow-lg"
-                  >
-                    <BookOpen className="w-16 h-16 text-white" />
-                  </motion.div>
-                )}
-
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <BookOpen className="w-16 h-16 text-white" />
+                    </div>
+                  )}
+                </Book>
                 {/* Book status indicators */}
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center gap-2 text-white bg-emerald-400/20 dark:bg-emerald-800/30 p-2 rounded-lg">

@@ -46,6 +46,12 @@ export function Cursor({
   );
   const cursorRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(!attachToParent);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     if (typeof x === 'number' && typeof y === 'number') {
@@ -101,7 +107,9 @@ export function Cursor({
         }
       }
     };
-  }, [attachToParent]);
+  }, [attachToParent, mounted]);
+
+  if (!mounted) return null;
 
   return (
     <motion.div
@@ -110,8 +118,6 @@ export function Cursor({
       style={{
         x: cursorXSpring,
         y: cursorYSpring,
-        translateX: '-50%',
-        translateY: '-50%',
       }}
     >
       <AnimatePresence>

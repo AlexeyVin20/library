@@ -23,7 +23,7 @@
     --color-brand: #2563eb; /* brand */
     --color-accent: #6366f1; /* accent */
     --color-neutral: #6b7280; /* neutral */
-    
+
     /* Настройки интерфейса */
     --border-radius: 0.75rem; /* playful */
     --transition-speed: 300ms;
@@ -34,7 +34,6 @@
     --color-accent: #4f46e5;
     --color-neutral: #374151;
 }
-
 
   .hide-scrollbar::-webkit-scrollbar {
     width: 0px;
@@ -53,6 +52,10 @@
 
   .hide-scrollbar::-webkit-scrollbar-thumb:hover {
     background: transparent;
+  }
+  .theme {
+    --animate-accordion-down: accordion-down 0.2s ease-out;
+    --animate-accordion-up: accordion-up 0.2s ease-out;
   }
 }
 
@@ -654,11 +657,11 @@
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .charts-container {
     grid-template-columns: 1fr;
   }
-  
+
   .content-grid {
     grid-template-columns: 1fr;
   }
@@ -668,7 +671,7 @@
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .books-grid {
     grid-template-columns: 1fr;
   }
@@ -738,4 +741,64 @@
 
 .delay-4 {
   animation-delay: 0.4s;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@theme inline {
+  @keyframes accordion-down {
+  from {
+    height: 0;
+    }
+  to {
+    height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+    }
+  to {
+    height: 0;
+    }
+  }
+  @keyframes accordion-down {
+  from {
+    height: 0;
+    }
+  to {
+    height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+    }
+  to {
+    height: 0;
+    }
+  }
+  @keyframes accordion-down {
+  from {
+    height: 0;
+    }
+  to {
+    height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+    }
+  to {
+    height: 0;
+    }
+  }
 }

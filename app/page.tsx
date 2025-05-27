@@ -7,8 +7,10 @@ import { motion, AnimatePresence } from "framer-motion"
 import ReaderNavigation from "@/components/reader-navigation"
 import { BookOpen, Users, Shield, ArrowRight } from "lucide-react"
 import { useAuth } from "@/lib/auth"
-import { PixelCanvas } from "@/components/ui/pixel-canvas"
+import dynamic from "next/dynamic"
 import { cn } from "@/lib/utils"
+
+const PixelCanvas = dynamic(() => import("@/components/ui/pixel-canvas").then(mod => mod.PixelCanvas), { ssr: false })
 
 // Предположим, что у вас есть тип для роли пользователя
 type UserRole = "Администратор" | "Пользователь" | null;
@@ -92,17 +94,6 @@ export default function Home() {
               Ищите книги, создавайте закладки и отслеживайте вашу историю чтения. Наша библиотека предлагает богатую коллекцию литературы для всех интересов.
             </p>
             <Link href="/readers" className="mx-auto relative z-10 group">
-              {/* Картинки над кнопкой */}
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-20 h-24 z-20 pointer-events-none">
-                <div className="absolute w-16 h-16 left-1/2 -translate-x-1/2 top-0 overflow-hidden transition-all rounded-full scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 group-hover:shadow-xl duration-500 delay-100">
-                  <Image
-                    alt="Reader Image 1"
-                    src="https://avatars.mds.yandex.net/i?id=8377ee3600c00d27a3c31b5700f27a5e_l-9212707-images-thumbs&n=13"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              </div>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -133,17 +124,6 @@ export default function Home() {
                 Управляйте коллекцией библиотеки, отслеживайте резервирования и контролируйте пользователей. Полный контроль над библиотечной системой.
               </p>
               <Link href="/admin" className="mx-auto relative z-10 group">
-                {/* Картинки над кнопкой */}
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-16 h-16 z-20 pointer-events-none">
-                  <div className="absolute w-full h-full overflow-hidden transition-all rounded-full scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 group-hover:shadow-xl duration-200 delay-150 translate-x-2 translate-y-2 rotate-6">
-                    <Image
-                      alt="Admin Image 2"
-                      src="https://bymed.top/wp-content/uploads/2019/06/graph.jpg"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                </div>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

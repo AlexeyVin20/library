@@ -9,7 +9,7 @@ import {
   type Row,
   type HeaderGroup,
 } from "@tanstack/react-table"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Cursor } from "@/components/ui/cursor";
 import BookCover from "@/components/BookCover";
 
@@ -78,6 +78,18 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
   const [bookCoversCache, setBookCoversCache] = useState<Record<string, string | null>>({})
   const [loadingCover, setLoadingCover] = useState<string | null>(null)
   const [hoveredBookId, setHoveredBookId] = useState<string | null>(null)
+  const [cursorVisible, setCursorVisible] = useState(false)
+
+  // Эффект для очистки состояния при размонтировании компонента
+  useEffect(() => {
+    return () => {
+      // Очистка состояний при размонтировании
+      setHoveredCover(null)
+      setCursorPos(null)
+      setHoveredBookId(null)
+      setCursorVisible(false)
+    };
+  }, []);
 
   // Функция для поиска по всем полям
   function fuzzyFilter(row: Row<RecentActivity>, columnId: string, value: string) {
@@ -119,8 +131,9 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
             const reservationId = info.row.original.id
             if (!reservationId) return
           
-            setHoveredBookId(reservationId) // Используем reservationId как ключ для состояния
+            setHoveredBookId(reservationId)
             setCursorPos({ x: event.clientX, y: event.clientY })
+            setCursorVisible(true)
           
             // Проверяем кэш по reservationId
             if (bookCoversCache[reservationId]) {
@@ -147,7 +160,6 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
               }
           
               const reservationData = await reservationResponse.json()
-              console.log("Reservation data response:", reservationData)
               
               const bookId = reservationData.bookId
               if (!bookId) {
@@ -161,7 +173,6 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
               
               if (bookResponse.ok) {
                 const bookData = await bookResponse.json()
-                console.log("Book data response:", bookData)
                 
                 if (bookData) {
                   const coverUrl = 
@@ -196,8 +207,9 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
           
           const handleMouseMove = (event: React.MouseEvent) => {
             const reservationId = info.row.original.id
-            if (reservationId && (bookCoversCache[reservationId] || loadingCover === reservationId)) {
-              setCursorPos({ x: event.clientX, y: event.clientY })
+            if (reservationId && hoveredBookId === reservationId) {
+              const newPos = { x: event.clientX, y: event.clientY };
+              setCursorPos(newPos);
             }
           }
           
@@ -205,6 +217,7 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
             setHoveredCover(null)
             setHoveredBookId(null)
             setCursorPos(null)
+            setCursorVisible(false)
           }
           
           return (
@@ -258,15 +271,16 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
     globalFilterFn: fuzzyFilter,
   })
 
+  console.log('Table: Rendering, cursorPos:', cursorPos, 'hoveredBookId:', hoveredBookId, 'hoveredCover:', hoveredCover);
   return (
     <div className="p-2">
       {/* Кастомный курсор с обложкой */}
-      {cursorPos && hoveredBookId && (
+      {cursorPos && hoveredBookId && cursorVisible && (
         <Cursor
           className="pointer-events-none"
           springConfig={{ stiffness: 300, damping: 30 }}
           attachToParent={false}
-          x={cursorPos.x + 20}
+          x={cursorPos.x}
           y={cursorPos.y - 80}
           variants={{
             initial: { opacity: 0, scale: 0.9 },
@@ -275,7 +289,7 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
           }}
           transition={{ duration: 0.15 }}
         >
-          <div style={{ width: 120, height: 180, pointerEvents: "none", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 120, height: 180, pointerEvents: "none", display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translate(-50%, -50%)' }}>
             {loadingCover === hoveredBookId && (
               <div className="animate-pulse text-white text-xs">Загрузка...</div>
             )}
@@ -293,7 +307,7 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
               />
             )}
             {hoveredBookId && bookCoversCache[hoveredBookId] === null && !loadingCover && !hoveredCover && (
-              // Временная заглушка обложки; удалить при необходимости
+              // Временная заглушка обложки
               <div style={{ width: 120, height: 180, backgroundColor: '#ccc', borderRadius: 8 }} />
             )}
           </div>

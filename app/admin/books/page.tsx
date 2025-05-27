@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/navigation-menu";
 import { CreditCard, Box, BookOpen, List, Plus, Search, ArrowUpDown, Edit, Trash2, BookMarked } from 'lucide-react';
 import BookCover from "@/components/BookCover";
+import { Book } from "@/components/ui/book";
+import ColorThief from "colorthief";
 
 /**
  * Interface for book item
@@ -157,6 +159,31 @@ const CardsView = ({ books, onDelete }: ViewProps) => {
  * ThreeDBookView with DashboardPage-style 3D effects
  */
 const ThreeDBookView = ({ books, onDelete }: ViewProps) => {
+  const [spineColors, setSpineColors] = useState<{ [id: string]: string }>({});
+  const imgRefs = useRef<{ [id: string]: HTMLImageElement | null }>({});
+
+  useEffect(() => {
+    books.forEach((book) => {
+      if (book.cover && !spineColors[book.id]) {
+        const img = new window.Image();
+        img.crossOrigin = "Anonymous";
+        img.src = book.cover;
+        img.onload = () => {
+          try {
+            const colorThief = new ColorThief();
+            const color = colorThief.getColor(img);
+            const rgb = `rgb(${color[0]},${color[1]},${color[2]})`;
+            setSpineColors((prev) => ({ ...prev, [book.id]: rgb }));
+          } catch (e) {
+            // fallback
+            setSpineColors((prev) => ({ ...prev, [book.id]: undefined }));
+          }
+        };
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [books]);
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-6 p-6">
       {books.map((book, index) => (
@@ -164,17 +191,26 @@ const ThreeDBookView = ({ books, onDelete }: ViewProps) => {
           <div className="group text-white">
             <div className="relative w-full h-96 overflow-visible" style={{ perspective: "1000px" }}>
               <motion.div 
-                className="absolute inset-0 transform-gpu transition-all duration-500 preserve-3d"
+                className="absolute inset-0 transform-gpu transition-all duration-500 preserve-3d flex items-center justify-center"
                 initial={{ rotateY: 15 }}
-                whileHover={{ rotateY: 0, scale: 1.05 }}
               >
                 <Link href={`/admin/books/${book.id}`}>
-                  <BookCover
-                    coverColor="rgba(0, 39, 5, 0.56)"
-                    coverImage={book.cover || ""}
-                    variant="medium"
-                    className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 rounded-2xl shadow-lg w-full h-full"
-                  />
+                  <Book color="rgba(0, 39, 5, 0.56)" width={192} depth={5} spineColor={spineColors[book.id]}>
+                    {book.cover ? (
+                      <Image
+                        src={book.cover}
+                        alt={book.title}
+                        width={192}
+                        height={256}
+                        className="object-cover w-full h-full rounded"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <BookOpen className="w-16 h-16 text-white" />
+                      </div>
+                    )}
+                  </Book>
                 </Link>
               </motion.div>
             </div>
@@ -571,3 +607,5 @@ export default function BooksPage() {
     </div>
   );
 }
+
+declare module 'colorthief-browser';

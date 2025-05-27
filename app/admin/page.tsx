@@ -530,9 +530,17 @@ export default function DashboardPage() {
 
   // Получить 3 ближайших события (по дате бронирования)
   const upcomingEvents = useMemo(() => {
-    const now = new Date()
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Установить время на начало дня для корректного сравнения дат
+
     return [...reservationEvents]
-      .filter(ev => new Date(ev.reservationDate) >= now)
+      .filter(ev => {
+        const eventDate = new Date(ev.reservationDate);
+        // При сравнении дат важно убедиться, что мы не отбрасываем события сегодняшнего дня
+        // Преобразуем дату события к началу дня в локальном часовом поясе для сравнения
+        const localEventDate = new Date(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate());
+        return localEventDate >= today;
+      })
       .sort((a, b) => new Date(a.reservationDate).getTime() - new Date(b.reservationDate).getTime())
       .slice(0, 3)
   }, [reservationEvents])
@@ -732,10 +740,10 @@ export default function DashboardPage() {
                 </div>
                 {/* 3 ближайших события */}
                 <div className="w-full max-w-xl mb-4">
-                  {upcomingEvents.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-white text-lg font-semibold mb-2">Ближайшие события</h4>
-                      {upcomingEvents.map(ev => (
+                  <div className="space-y-2">
+                    <h4 className="text-white text-lg font-semibold mb-2">Ближайшие события</h4>
+                    {upcomingEvents.length > 0 ? (
+                      upcomingEvents.map(ev => (
                         <div key={ev.id} className="p-3 bg-green-600/40 dark:bg-green-900/40 backdrop-blur rounded-lg shadow text-white flex flex-col">
                           <span className="text-sm font-bold">{formatDate(ev.reservationDate)}</span>
                           <span className="text-base">{ev.bookTitle}</span>
@@ -744,9 +752,11 @@ export default function DashboardPage() {
                             <StatusBadge status={ev.status} />
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ))
+                    ) : (
+                      <p className="text-center text-white/80">Нет ближайших событий</p>
+                    )}
+                  </div>
                 </div>
                 <button
                   disabled={!selectedRange?.from || !selectedRange?.to}

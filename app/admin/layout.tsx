@@ -8,7 +8,7 @@ import { ReactNode, useEffect, useState } from "react";
 import "@/styles/admin.css";
 import { useAuth, User } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import NewTopNavigation from "@/components/admin/NewTopNavigation";
+import NewTopNavigation from "@/components/admin/New-top-navigation";
 
 type AdminLayoutProps = {
   children: ReactNode;
