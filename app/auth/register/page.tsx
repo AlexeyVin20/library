@@ -133,7 +133,7 @@ export default function RegisterPage() {
             const errorData = await response.json();
             errorMessage = errorData.message || errorMessage;
           } else {
-            errorMessage = await response.text() || errorMessage;
+            errorMessage = (await response.text()) || errorMessage;
           }
         } catch (parseError) {
           console.error("Ошибка при парсинге ответа:", parseError);

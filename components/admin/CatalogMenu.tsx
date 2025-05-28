@@ -5,19 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuGroup,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
 import { Book, BookOpen, ChevronDown, Library, Bookmark, PlusCircle, ScrollText, BookText, LayoutGrid, BookMarked } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -49,7 +37,6 @@ interface BookType {
   title: string;
   authors: string[];
 }
-
 interface JournalType {
   id: number;
   title: string;
@@ -60,7 +47,6 @@ interface JournalType {
 interface CategoryIcons {
   [key: string]: React.ReactNode;
 }
-
 export default function CatalogMenu() {
   const pathname = usePathname();
   const [books, setBooks] = useState<BookType[]>([]);
@@ -73,27 +59,22 @@ export default function CatalogMenu() {
     const fetchData = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-        
+
         // Параллельная загрузка книг и журналов через fetch
-        const [booksResponse, journalsResponse] = await Promise.all([
-          fetch(`${baseUrl}/api/books`),
-          fetch(`${baseUrl}/api/journals`)
-        ]);
-        
+        const [booksResponse, journalsResponse] = await Promise.all([fetch(`${baseUrl}/api/books`), fetch(`${baseUrl}/api/journals`)]);
         if (!booksResponse.ok || !journalsResponse.ok) {
           throw new Error('Ошибка при загрузке данных');
         }
-        
         const booksData = await booksResponse.json();
         const journalsData = await journalsResponse.json();
-        
+
         // Преобразование данных из API в нужный формат
         const formattedBooks: BookType[] = booksData.map((book: ApiBook) => ({
           id: book.id,
           title: book.title,
           authors: Array.isArray(book.authors) ? book.authors : [book.authors].filter(Boolean)
         }));
-        
+
         // Преобразуем данные о журналах с учетом возможного отсутствия категории в API
         const formattedJournals: JournalType[] = journalsData.map((journal: ApiJournal) => {
           const category = (journal as any).category as JournalCategory || 'Другое';
@@ -103,7 +84,6 @@ export default function CatalogMenu() {
             category
           };
         });
-        
         setBooks(formattedBooks);
         setJournals(formattedJournals);
       } catch (error) {
@@ -112,7 +92,6 @@ export default function CatalogMenu() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
@@ -140,7 +119,10 @@ export default function CatalogMenu() {
 
   // Animation variants
   const menuItemVariants = {
-    hidden: { opacity: 0, y: -5 },
+    hidden: {
+      opacity: 0,
+      y: -5
+    },
     visible: (i: number) => ({
       opacity: 1,
       y: 0,
@@ -166,38 +148,47 @@ export default function CatalogMenu() {
       }
     }
   };
-
   const dropdownVariants = {
-    hidden: { opacity: 0, y: -10, scale: 0.95, transformOrigin: "top center" },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
+    hidden: {
+      opacity: 0,
+      y: -10,
+      scale: 0.95,
+      transformOrigin: "top center"
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
       scale: 1,
       transformOrigin: "top center",
-      transition: { 
+      transition: {
         duration: 0.25,
         ease: [0.22, 1, 0.36, 1],
         staggerChildren: 0.05,
         delayChildren: 0.05
       }
     },
-    exit: { 
-      opacity: 0, 
-      y: -10, 
+    exit: {
+      opacity: 0,
+      y: -10,
       scale: 0.95,
       transformOrigin: "top center",
-      transition: { 
+      transition: {
         duration: 0.2,
         ease: [0.22, 1, 0.36, 1]
       }
     }
   };
-
   const iconVariants = {
-    hidden: { rotate: 0 },
-    visible: { rotate: 180, transition: { duration: 0.3 } }
+    hidden: {
+      rotate: 0
+    },
+    visible: {
+      rotate: 180,
+      transition: {
+        duration: 0.3
+      }
+    }
   };
-
   const loadingVariants = {
     animate: {
       rotate: 360,
@@ -208,91 +199,62 @@ export default function CatalogMenu() {
       }
     }
   };
-
-  return (
-    <DropdownMenu onOpenChange={setIsOpen}>
+  return <DropdownMenu onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <motion.div
-          whileHover={{ 
-            backgroundColor: "rgba(16, 185, 129, 0.05)",
-            y: -2,
-            transition: { duration: 0.2 }
-          }}
-          whileTap={{ scale: 0.98 }}
-          className={cn(
-            "relative px-4 py-2 rounded-lg text-white font-medium transition-all duration-300 group cursor-pointer",
-            pathname.includes("/admin/books") 
-              ? "text-emerald-600 dark:text-emerald-400" 
-              : "text-white dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
-        >
+        <motion.div whileHover={{
+        backgroundColor: "rgba(16, 185, 129, 0.05)",
+        y: -2,
+        transition: {
+          duration: 0.2
+        }
+      }} whileTap={{
+        scale: 0.98
+      }} className={cn("relative px-4 py-2 rounded-lg text-white font-medium transition-all duration-300 group cursor-pointer", pathname.includes("/admin/books") ? "text-emerald-600 dark:text-emerald-400" : "text-white dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400")}>
           <div className="flex items-center gap-2">
             <Library className="h-5 w-5" /> 
             <span>Каталог</span>
-            <motion.div
-              variants={iconVariants}
-              initial="hidden"
-              animate={isOpen ? "visible" : "hidden"}
-            >
+            <motion.div variants={iconVariants} initial="hidden" animate={isOpen ? "visible" : "hidden"}>
               <ChevronDown className="w-4 h-4" />
             </motion.div>
           </div>
           
           {/* Background hover effect */}
-          <motion.div 
-            className="absolute inset-0 -z-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            layoutId={`navBg-/admin/books`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: pathname.includes("/admin/books") ? 1 : 0 }}
-          />
+          <motion.div className="absolute inset-0 -z-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" layoutId={`navBg-/admin/books`} initial={{
+          opacity: 0
+        }} animate={{
+          opacity: pathname.includes("/admin/books") ? 1 : 0
+        }} />
           
           {/* Animated underline effect */}
-          {pathname.includes("/admin/books") && (
-            <motion.div
-              layoutId="navIndicator"
-              className="absolute bottom-0 left-0 h-0.5 w-full bg-emerald-600 dark:bg-emerald-400"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
+          {pathname.includes("/admin/books") && <motion.div layoutId="navIndicator" className="absolute bottom-0 left-0 h-0.5 w-full bg-emerald-600 dark:bg-emerald-400" initial={{
+          opacity: 0
+        }} animate={{
+          opacity: 1
+        }} transition={{
+          duration: 0.3
+        }} />}
         </motion.div>
       </DropdownMenuTrigger>
-      
       <AnimatePresence>
-        {isOpen && (
-          <DropdownMenuContent 
-            asChild
-            forceMount
-            className="w-96 max-h-[80vh] overflow-auto p-4 rounded-xl backdrop-blur-xl bg-green-900/30 dark:bg-emerald-900/70 border border-emerald-200/50 dark:border-emerald-700/50 shadow-xl"
-            align="center"
-            sideOffset={12}
-          >
-            <motion.div
-              variants={dropdownVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              style={{ transformOrigin: "top center" }}
-            >
-              {loading ? (
-                <div className="p-6 text-center">
-                  <motion.div
-                    variants={loadingVariants}
-                    animate="animate"
-                    className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full mx-auto mb-3"
-                  ></motion.div>
+        {isOpen && <DropdownMenuContent asChild forceMount className="w-96 max-h-[80vh] overflow-auto p-4 rounded-xl backdrop-blur-xl bg-green-900/30 dark:bg-emerald-900/70 border border-emerald-200/50 dark:border-emerald-700/50 shadow-xl" align="center" sideOffset={12}>
+            <motion.div variants={dropdownVariants} initial="hidden" animate="visible" exit="exit" style={{
+          transformOrigin: "top center"
+        }}>
+              {loading ? <div className="p-6 text-center">
+                  <motion.div variants={loadingVariants} animate="animate" className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full mx-auto mb-3"></motion.div>
                   <p className="text-white text-white dark:text-white">Загрузка данных...</p>
-                </div>
-              ) : (
-                <>
+                </div> : <>
                   {/* Секция книг */}
                   <DropdownMenuGroup>
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
+                    <motion.div initial={{
+                opacity: 0,
+                y: -5
+              }} animate={{
+                opacity: 1,
+                y: 0
+              }} transition={{
+                duration: 0.3
+              }}>
                       <DropdownMenuLabel className="flex items-center font-bold text-emerald-600 dark:text-emerald-400 text-lg pb-2">
                         <Book className="mr-3 h-5 w-5" />
                         <span>Книги</span>
@@ -302,12 +264,7 @@ export default function CatalogMenu() {
                     </motion.div>
                     
                     <div className="grid grid-cols-1 gap-2 my-2">
-                      <motion.div
-                        custom={0}
-                        variants={menuItemVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                      >
+                      <motion.div custom={0} variants={menuItemVariants} whileHover="hover" whileTap="tap">
                         <DropdownMenuItem asChild>
                           <Link href="/admin/books" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             <LayoutGrid className="mr-3 h-5 w-5 text-emerald-500" />
@@ -316,12 +273,7 @@ export default function CatalogMenu() {
                         </DropdownMenuItem>
                       </motion.div>
                       
-                      <motion.div
-                        custom={1}
-                        variants={menuItemVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                      >
+                      <motion.div custom={1} variants={menuItemVariants} whileHover="hover" whileTap="tap">
                         <DropdownMenuItem asChild>
                           <Link href="/admin/books/create" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             <PlusCircle className="mr-3 h-5 w-5 text-emerald-500" />
@@ -332,12 +284,7 @@ export default function CatalogMenu() {
                     </div>
                     
                     <DropdownMenuSub>
-                      <motion.div
-                        custom={2}
-                        variants={menuItemVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                      >
+                      <motion.div custom={2} variants={menuItemVariants} whileHover="hover" whileTap="tap">
                         <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                           <Bookmark className="mr-3 h-5 w-5 text-emerald-500" />
                           <span>Популярные книги</span>
@@ -345,24 +292,11 @@ export default function CatalogMenu() {
                       </motion.div>
                       
                       <DropdownMenuPortal>
-                        <DropdownMenuSubContent 
-                          className="max-h-[60vh] overflow-auto w-72 p-3 rounded-xl backdrop-blur-md bg-green-900/30 dark:bg-emerald-900/70 border border-emerald-200/50 dark:border-emerald-700/50 shadow-xl"
-                          sideOffset={5}
-                          style={{ transformOrigin: "top left" }}
-                        >
-                          <motion.div
-                            variants={dropdownVariants}
-                            initial="hidden"
-                            animate="visible"
-                          >
-                            {books.slice(0, 8).map((book, index) => (
-                              <motion.div
-                                key={book.id}
-                                custom={index}
-                                variants={menuItemVariants}
-                                whileHover="hover"
-                                whileTap="tap"
-                              >
+                        <DropdownMenuSubContent className="max-h-[60vh] overflow-auto w-72 p-3 rounded-xl backdrop-blur-md bg-green-900/30 dark:bg-emerald-900/70 border border-emerald-200/50 dark:border-emerald-700/50 shadow-xl" sideOffset={5} style={{
+                    transformOrigin: "top left"
+                  }}>
+                          <motion.div variants={dropdownVariants} initial="hidden" animate="visible">
+                            {books.slice(0, 8).map((book, index) => <motion.div key={book.id} custom={index} variants={menuItemVariants} whileHover="hover" whileTap="tap">
                                 <DropdownMenuItem asChild>
                                   <Link href={`/admin/books/${book.id}`} className="flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
                                     <Book className="flex-shrink-0 h-5 w-5 text-emerald-500" />
@@ -372,23 +306,19 @@ export default function CatalogMenu() {
                                     </div>
                                   </Link>
                                 </DropdownMenuItem>
-                              </motion.div>
-                            ))}
+                              </motion.div>)}
                             
-                            {books.length > 8 && (
-                              <motion.div
-                                custom={8}
-                                variants={menuItemVariants}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                              >
+                            {books.length > 8 && <motion.div custom={8} variants={menuItemVariants} whileHover={{
+                        scale: 1.02
+                      }} whileTap={{
+                        scale: 0.98
+                      }}>
                                 <DropdownMenuItem asChild>
                                   <Link href="/admin/books" className="flex items-center justify-center text-white dark:text-emerald-400 mt-2 text-white font-medium">
                                     Показать все ({books.length})
                                   </Link>
                                 </DropdownMenuItem>
-                              </motion.div>
-                            )}
+                              </motion.div>}
                           </motion.div>
                         </DropdownMenuSubContent>
                       </DropdownMenuPortal>
@@ -399,11 +329,16 @@ export default function CatalogMenu() {
                   
                   {/* Секция журналов */}
                   <DropdownMenuGroup>
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 0.2 }}
-                    >
+                    <motion.div initial={{
+                opacity: 0,
+                y: -5
+              }} animate={{
+                opacity: 1,
+                y: 0
+              }} transition={{
+                duration: 0.3,
+                delay: 0.2
+              }}>
                       <DropdownMenuLabel className="flex items-center font-bold text-emerald-600 dark:text-emerald-400 text-lg pb-2">
                         <BookOpen className="mr-3 h-5 w-5" />
                         <span>Журналы</span>
@@ -413,12 +348,7 @@ export default function CatalogMenu() {
                     </motion.div>
                     
                     <div className="grid grid-cols-1 gap-2 my-2">
-                      <motion.div
-                        custom={3}
-                        variants={menuItemVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                      >
+                      <motion.div custom={3} variants={menuItemVariants} whileHover="hover" whileTap="tap">
                         <DropdownMenuItem asChild>
                           <Link href="/admin/journals" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             <LayoutGrid className="mr-3 h-5 w-5 text-emerald-500" />
@@ -427,12 +357,7 @@ export default function CatalogMenu() {
                         </DropdownMenuItem>
                       </motion.div>
                       
-                      <motion.div
-                        custom={4}
-                        variants={menuItemVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                      >
+                      <motion.div custom={4} variants={menuItemVariants} whileHover="hover" whileTap="tap">
                         <DropdownMenuItem asChild>
                           <Link href="/admin/journals/create" className="flex items-center cursor-pointer rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             <PlusCircle className="mr-3 h-5 w-5 text-emerald-500" />
@@ -443,14 +368,8 @@ export default function CatalogMenu() {
                     </div>
                     
                     {/* Группировка журналов по категориям */}
-                    {Object.entries(categorizedJournals).map(([category, journals], catIndex) => (
-                      <DropdownMenuSub key={category}>
-                        <motion.div
-                          custom={5 + catIndex}
-                          variants={menuItemVariants}
-                          whileHover="hover"
-                          whileTap="tap"
-                        >
+                    {Object.entries(categorizedJournals).map(([category, journals], catIndex) => <DropdownMenuSub key={category}>
+                        <motion.div custom={5 + catIndex} variants={menuItemVariants} whileHover="hover" whileTap="tap">
                           <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2.5 transition-colors text-white font-medium">
                             {categoryIcons[category] || <BookOpen className="mr-3 h-5 w-5 text-emerald-500" />}
                             <span>{category} ({journals.length})</span>
@@ -458,62 +377,38 @@ export default function CatalogMenu() {
                         </motion.div>
                         
                         <DropdownMenuPortal>
-                          <DropdownMenuSubContent
-                            className="max-h-[60vh] overflow-auto w-72 p-3 rounded-xl backdrop-blur-md bg-green-900/30 dark:bg-emerald-900/70 border border-emerald-200/50 dark:border-emerald-700/50 shadow-xl"
-                            sideOffset={5}
-                            style={{ transformOrigin: "top left" }}
-                          >
-                            <motion.div
-                              variants={dropdownVariants}
-                              initial="hidden"
-                              animate="visible"
-                            >
-                              {journals.slice(0, 8).map((journal, index) => (
-                                <motion.div
-                                  key={journal.id}
-                                  custom={index}
-                                  variants={menuItemVariants}
-                                  whileHover="hover"
-                                  whileTap="tap"
-                                >
+                          <DropdownMenuSubContent className="max-h-[60vh] overflow-auto w-72 p-3 rounded-xl backdrop-blur-md bg-green-900/30 dark:bg-emerald-900/70 border border-emerald-200/50 dark:border-emerald-700/50 shadow-xl" sideOffset={5} style={{
+                    transformOrigin: "top left"
+                  }}>
+                            <motion.div variants={dropdownVariants} initial="hidden" animate="visible">
+                              {journals.slice(0, 8).map((journal, index) => <motion.div key={journal.id} custom={index} variants={menuItemVariants} whileHover="hover" whileTap="tap">
                                   <DropdownMenuItem asChild>
                                     <Link href={`/admin/journals/${journal.id}`} className="flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
                                       <BookOpen className="flex-shrink-0 h-5 w-5 text-emerald-500" />
                                       <p className="truncate font-medium text-white">{journal.title}</p>
                                     </Link>
                                   </DropdownMenuItem>
-                                </motion.div>
-                              ))}
+                                </motion.div>)}
                               
-                              {journals.length > 8 && (
-                                <motion.div
-                                  custom={8}
-                                  variants={menuItemVariants}
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                >
+                              {journals.length > 8 && <motion.div custom={8} variants={menuItemVariants} whileHover={{
+                        scale: 1.02
+                      }} whileTap={{
+                        scale: 0.98
+                      }}>
                                   <DropdownMenuItem asChild>
-                                    <Link 
-                                      href={`/admin/journals?category=${encodeURIComponent(category)}`} 
-                                      className="flex items-center justify-center text-emerald-600 dark:text-emerald-400 mt-2 text-white font-medium"
-                                    >
+                                    <Link href={`/admin/journals?category=${encodeURIComponent(category)}`} className="flex items-center justify-center text-emerald-600 dark:text-emerald-400 mt-2 text-white font-medium">
                                       Показать все ({journals.length})
                                     </Link>
                                   </DropdownMenuItem>
-                                </motion.div>
-                              )}
+                                </motion.div>}
                             </motion.div>
                           </DropdownMenuSubContent>
                         </DropdownMenuPortal>
-                      </DropdownMenuSub>
-                    ))}
+                      </DropdownMenuSub>)}
                   </DropdownMenuGroup>
-                </>
-              )}
+                </>}
             </motion.div>
-          </DropdownMenuContent>
-        )}
+          </DropdownMenuContent>}
       </AnimatePresence>
-    </DropdownMenu>
-  );
+    </DropdownMenu>;
 }

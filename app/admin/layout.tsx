@@ -51,7 +51,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="flex flex-col flex-1">
         <NewTopNavigation user={user} />
         <main className="p-6">{children}</main>
-        <Footer />
       </div>
     </div>
   );

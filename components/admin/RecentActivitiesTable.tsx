@@ -280,8 +280,8 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
           className="pointer-events-none"
           springConfig={{ stiffness: 300, damping: 30 }}
           attachToParent={false}
-          x={cursorPos.x}
-          y={cursorPos.y - 80}
+          x={cursorPos.x - 100}
+          y={cursorPos.y - 400}
           variants={{
             initial: { opacity: 0, scale: 0.9 },
             animate: { opacity: 1, scale: 1 },
@@ -305,10 +305,6 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
                   boxShadow: "0 4px 24px rgba(0,0,0,0.18)"
                 }}
               />
-            )}
-            {hoveredBookId && bookCoversCache[hoveredBookId] === null && !loadingCover && !hoveredCover && (
-              // Временная заглушка обложки
-              <div style={{ width: 120, height: 180, backgroundColor: '#ccc', borderRadius: 8 }} />
             )}
           </div>
         </Cursor>
@@ -357,5 +353,5 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
         )}
       </div>
     </div>
-  )
+  );
 } 
