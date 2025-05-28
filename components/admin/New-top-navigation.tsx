@@ -742,82 +742,71 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     </NavigationMenuTrigger>
                   </motion.div>
                   <NavigationMenuContent>
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="w-[900px] p-6 bg-emerald-50/95 dark:bg-emerald-900/95 backdrop-blur-xl border border-emerald-200/50 dark:border-emerald-700/50 rounded-2xl shadow-2xl shadow-emerald-500/20"
-                    >
-                      <div className="grid grid-cols-2 gap-8">
-                        {megaMenuSections.map((section, sectionIndex) => (
-                          <div key={section.title} className="space-y-4">
-                            <motion.h3
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: sectionIndex * 0.1 }}
-                              className="text-sm font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider"
-                            >
-                              {section.title}
-                            </motion.h3>
-                            <div className="space-y-2">
-                              {section.items.map((item, itemIndex) => (
-                                <motion.div
-                                  key={item.href}
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: (sectionIndex * 0.1) + (itemIndex * 0.05) }}
-                                  onHoverStart={() => setHoveredItem(item.href)}
-                                  onHoverEnd={() => setHoveredItem(null)}
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                >
-                                  <Link
-                                    href={item.href}
-                                    className="group flex items-start gap-4 p-4 rounded-xl hover:bg-emerald-100/50 dark:hover:bg-emerald-800/30 transition-all duration-300 border border-transparent hover:border-emerald-200/50 dark:hover:border-emerald-700/50"
+                    <div className="relative">
+                      <div className="absolute inset-0 -z-10 rounded-2xl" />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="relative w-[900px] p-6 bg-green/20 dark:bg-green/40 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 rounded-2xl shadow-2xl shadow-emerald-500/20 text-white overflow-hidden"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-emerald-400/5 to-emerald-600/10 pointer-events-none rounded-2xl" />
+                        <div className="relative grid grid-cols-2 gap-8">
+                          {megaMenuSections.map((section, sectionIndex) => (
+                            <div key={section.title} className="space-y-4">
+                              <motion.h3
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: sectionIndex * 0.1 }}
+                                className="text-sm font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider"
+                              >
+                                {section.title}
+                              </motion.h3>
+                              <div className="space-y-2">
+                                {section.items.map((item, itemIndex) => (
+                                  <motion.div
+                                    key={item.href}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: (sectionIndex * 0.1) + (itemIndex * 0.05) }}
+                                    onHoverStart={() => setHoveredItem(item.href)}
+                                    onHoverEnd={() => setHoveredItem(null)}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
                                   >
-                                    {item.image && (
-                                      <div className="relative overflow-hidden rounded-lg">
-                                        <Image
-                                          src={item.image || "/placeholder.svg"}
-                                          alt={item.title}
-                                          width={60}
-                                          height={40}
-                                          className={cn(
-                                            "object-cover transition-all duration-300",
-                                            hoveredItem === item.href ? "scale-110 brightness-110" : "scale-100"
-                                          )}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/20 to-transparent" />
+                                    <Link
+                                      href={item.href}
+                                      className="group flex items-start gap-4 p-4 rounded-xl hover:bg-emerald-100/30 dark:hover:bg-emerald-800/30 transition-all duration-300 border border-transparent hover:border-emerald-200/40 dark:hover:border-emerald-700/40 text-white"
+                                    >
+                                      <div className="flex-shrink-0 mt-1">
+                                        <motion.div
+                                          animate={{
+                                            rotate: hoveredItem === item.href ? 360 : 0,
+                                            scale: hoveredItem === item.href ? 1.2 : 1,
+                                          }}
+                                          transition={{ duration: 0.3 }}
+                                          className="text-emerald-600 dark:text-emerald-400"
+                                        >
+                                          {item.icon}
+                                        </motion.div>
                                       </div>
-                                    )}
-                                    <div className="flex-shrink-0 mt-1">
-                                      <motion.div
-                                        animate={{
-                                          rotate: hoveredItem === item.href ? 360 : 0,
-                                          scale: hoveredItem === item.href ? 1.2 : 1,
-                                        }}
-                                        transition={{ duration: 0.3 }}
-                                        className="text-emerald-600 dark:text-emerald-400"
-                                      >
-                                        {item.icon}
-                                      </motion.div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-100 group-hover:text-emerald-900 dark:group-hover:text-white transition-colors">
-                                        {item.title}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-white group-hover:text-emerald-200 transition-colors">
+                                          {item.title}
+                                        </div>
+                                        <div className="text-xs text-emerald-100/80 dark:text-emerald-300/80 mt-1 group-hover:text-emerald-200 transition-colors">
+                                          {item.description}
+                                        </div>
                                       </div>
-                                      <div className="text-xs text-emerald-600/80 dark:text-emerald-300/80 mt-1 group-hover:text-emerald-700 dark:group-hover:text-emerald-200 transition-colors">
-                                        {item.description}
-                                      </div>
-                                    </div>
-                                  </Link>
-                                </motion.div>
-                              ))}
+                                    </Link>
+                                  </motion.div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    </div>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
@@ -836,7 +825,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                       className={cn(
                         "group inline-flex h-10 w-max items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all duration-300",
                         pathname.includes("/admin/statistics")
-                          ? "text-white bg-white/20 shadow-lg shadow-white/10 backdrop-blur-sm"
+                          ? "text-white bg-emerald-500/20 shadow-lg shadow-white/10 backdrop-blur-sm"
                           : "text-white/90 hover:text-white hover:bg-white/15 hover:shadow-lg hover:shadow-white/5",
                       )}
                     >
