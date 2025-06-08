@@ -691,7 +691,10 @@ export default function DashboardPage() {
                   // зелёный фон для выбранных дат
                   day_range_start: "bg-emerald-500 text-white rounded-l-lg",
                   day_range_end: "bg-emerald-500 text-white rounded-r-lg",
-                  day_range_middle: "bg-emerald-200 text-emerald-900" // светло-зелёный для промежуточных дат
+                  day_range_middle: "bg-emerald-200 text-emerald-900", // светло-зелёный для промежуточных дат
+                  nav_button_previous: "bg-emerald-500/50 hover:bg-emerald-500/40 text-white",
+                  nav_button_next: "bg-emerald-500/50 hover:bg-emerald-500/40 text-white",
+                  caption_label: "uppercase"
                 } as Record<string, string>} />
                   </div>
                 </div>

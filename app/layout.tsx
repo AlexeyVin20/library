@@ -31,7 +31,7 @@ export default function RootLayout({
     <html lang="ru" suppressHydrationWarning>
       <body
         className={cn(
-          `${geistSans.variable} ${geistMono.variable} antialiased floating-shapes`,
+          `${geistSans.variable} ${geistMono.variable} antialiased`,
           "min-h-screen bg-[url('/images/bg2.jpg')] bg-cover bg-center bg-fixed bg-no-repeat"
         )}
       >

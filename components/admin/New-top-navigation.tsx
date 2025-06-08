@@ -581,31 +581,10 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   }
 
   const searchResultsVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: -20, 
-      scale: 0.95,
-      filter: "blur(4px)",
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      filter: "blur(0px)",
-      transition: {
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
-    exit: {
-      opacity: 0,
-      y: -20,
-      scale: 0.95,
-      filter: "blur(4px)",
-      transition: { 
-        duration: 0.2,
-      },
-    },
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+    exit: { opacity: 0 },
+    transition: { duration: 0.15 },
   }
 
   const mobileMenuVariants = {
@@ -613,30 +592,18 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     visible: {
       opacity: 1,
       height: "auto",
-      transition: {
-        duration: 0.4,
-        ease: [0.22, 1, 0.36, 1],
-        staggerChildren: 0.1,
-        delayChildren: 0.1,
-      },
+      transition: { duration: 0.4 },
     },
     exit: {
       opacity: 0,
       height: 0,
-      transition: {
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1],
-      },
+      transition: { duration: 0.3 },
     },
   }
 
   const mobileMenuItemVariants = {
     hidden: { opacity: 0, x: -20 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: { duration: 0.3 },
-    },
+    visible: { opacity: 1 },
     exit: { opacity: 0, x: -20 },
   }
 
@@ -658,8 +625,8 @@ const TopNavigation = ({ user }: { user: User | null }) => {
       className={cn(
         "sticky top-0 z-50 w-full backdrop-blur-xl transition-all duration-500",
         scrolled
-          ? "bg-emerald-500/25 dark:bg-emerald-600/30 shadow-xl shadow-emerald-500/10"
-          : "bg-emerald-500/20 dark:bg-emerald-600/25",
+          ? "bg-emerald-700/20 dark:bg-emerald-900/40 shadow-xl shadow-emerald-500/10"
+          : "bg-emerald-700/20 dark:bg-emerald-900/40",
       )}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-emerald-400/5 to-emerald-600/10" />
@@ -745,10 +712,11 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     <div className="relative">
                       <div className="absolute inset-0 -z-10 rounded-2xl" />
                       <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                        className="relative w-[900px] p-6 bg-green/20 dark:bg-green/40 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 rounded-2xl shadow-2xl shadow-emerald-500/20 text-white overflow-hidden"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="relative w-[900px] p-6 backdrop-blur-xl bg-emerald-900 border border-emerald-600/50 rounded-2xl shadow-2xl shadow-emerald-500/20 text-white overflow-hidden"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-emerald-400/5 to-emerald-600/10 pointer-events-none rounded-2xl" />
                         <div className="relative grid grid-cols-2 gap-8">

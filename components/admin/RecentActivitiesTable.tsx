@@ -313,17 +313,17 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
         value={globalFilter ?? ""}
         onChange={e => setGlobalFilter(e.target.value)}
         placeholder="Поиск..."
-        className="mb-2 px-3 py-2 rounded w-full bg-emerald-600/30 text-white placeholder-white/70 border border-emerald-400 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400 outline-none transition"
+        className="mb-2 px-3 py-2 rounded-xl w-full bg-emerald-700/20 dark:bg-emerald-900/40 text-white placeholder-white/70 border border-emerald-400/30 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400 outline-none transition"
       />
       <div className="overflow-x-auto rounded-xl border border-white/30 dark:border-gray-700/30 bg-white/10 dark:bg-gray-900/30">
-        <table className="min-w-full text-sm">
+        <table className="min-w-full text-sm bg-emerald-700/20 dark:bg-emerald-900/40 rounded-xl text-white">
           <thead className="sticky top-0 z-10 bg-emerald-50/80 dark:bg-emerald-900/30 backdrop-blur-md">
             {table.getHeaderGroups().map((headerGroup: HeaderGroup<RecentActivity>) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header: any) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left font-semibold text-white uppercase tracking-wider cursor-pointer select-none bg-emerald-700/60"
+                    className="px-4 py-3 text-left font-semibold text-white uppercase tracking-wider cursor-pointer select-none bg-emerald-700/60 border-b border-emerald-400/30"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
@@ -337,10 +337,10 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
             {table.getRowModel().rows.map((row: Row<RecentActivity>) => (
               <tr
                 key={row.id}
-                className="border-b border-white/20 dark:border-gray-700/30 hover:bg-emerald-100/40 dark:hover:bg-emerald-900/20"
+                className="border-b border-emerald-400/30 hover:bg-emerald-800/30 dark:hover:bg-emerald-900/40"
               >
                 {row.getVisibleCells().map((cell: any) => (
-                  <td key={cell.id} className="px-4 py-3 bg-emerald-600/40 text-white">
+                  <td key={cell.id} className="px-4 py-3 bg-transparent text-white">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -349,7 +349,7 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
           </tbody>
         </table>
         {table.getRowModel().rows.length === 0 && (
-          <div className="p-4 text-center text-gray-500">Нет данных</div>
+          <div className="p-4 text-center text-white/70">Нет данных</div>
         )}
       </div>
     </div>

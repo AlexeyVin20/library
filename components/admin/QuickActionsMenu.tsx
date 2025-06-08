@@ -68,7 +68,7 @@ export function QuickActionsMenuTrigger({
       openMenu(triggerRef.current.getBoundingClientRect());
     }
   };
-  return <motion.button ref={triggerRef} layoutId={`quick-actions-trigger-${uniqueId}`} className={cn("fixed z-50 bottom-8 right-8 p-4 rounded-full bg-emerald-500 hover:bg-emerald-600 shadow-xl border-2 border-white/30 flex items-center justify-center transition-colors", className)} onClick={handleClick} whileHover={{
+  return <motion.button ref={triggerRef} layoutId={`quick-actions-trigger-${uniqueId}`} className={cn("fixed z-50 bottom-8 right-8 p-4 rounded-full bg-emerald-500/90 hover:bg-emerald-600/90 shadow-md border-emerald-400/30 flex items-center justify-center text-white transition-colors", className)} onClick={handleClick} whileHover={{
     scale: 1.08
   }} whileTap={{
     scale: 0.95
@@ -156,7 +156,7 @@ export function QuickActionsMenuContent({
       }} exit={{
         backdropFilter: "blur(0px)"
       }} className="fixed inset-0 z-40 bg-black/5" />
-          <motion.div ref={contentRef} layoutId={`quick-actions-menu-${uniqueId}`} className={cn("fixed z-50 min-w-[280px] max-w-[320px] overflow-hidden rounded-2xl border border-white/20 dark:border-gray-700/30 bg-green/20 dark:bg-green/40 backdrop-blur-xl shadow-lg outline-none", className)} style={getMenuPosition()} initial={{
+          <motion.div ref={contentRef} layoutId={`quick-actions-menu-${uniqueId}`} className={cn("fixed z-50 min-w-[280px] max-w-[320px] overflow-hidden rounded-2xl border border-emerald-400/30 bg-emerald-700/20 dark:bg-emerald-900/40 backdrop-blur-xl shadow-lg outline-none text-white", className)} style={getMenuPosition()} initial={{
         opacity: 0,
         scale: 0.9,
         x: -20
