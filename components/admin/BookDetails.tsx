@@ -75,17 +75,17 @@ const InfoField = ({
   value: string;
   icon?: React.ReactNode;
 }) => {
-  return <motion.div className="backdrop-blur-xl bg-green/30 dark:bg-green-900/40 rounded-xl p-3 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm" whileHover={{
+  return <motion.div className="bg-gray-100 rounded-xl p-3 border border-gray-200 shadow-sm" whileHover={{
     y: -3,
     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
   }} transition={{
     duration: 0.2
   }}>
       <div className="flex items-center gap-2 mb-1">
-        {icon && <span className="text-white">{icon}</span>}
-        <span className="font-medium text-white">{label}</span>
+        {icon && <span className="text-gray-800">{icon}</span>}
+        <span className="font-medium text-gray-800">{label}</span>
       </div>
-      <span className="text-white">{value}</span>
+      <span className="text-gray-800">{value}</span>
     </motion.div>;
 };
 
@@ -101,11 +101,11 @@ const AnimatedTabsTrigger = ({
 }) => {
   return <TabsTrigger value={value} className="relative data-[state=active]:bg-transparent">
       <div className="flex items-center gap-2 py-2 px-3">
-        <span className={isActive ? "text-white" : "text-white font-medium"}>
+        <span className={isActive ? "text-white" : "text-gray-800 font-medium"}>
           {label}
         </span>
       </div>
-      {isActive && <motion.div layoutId="activeBookTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" initial={{
+      {isActive && <motion.div layoutId="activeBookTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" initial={{
       opacity: 0
     }} animate={{
       opacity: 1
@@ -118,11 +118,11 @@ export default function BookDetails({
   book
 }: BookDetailsProps) {
   const [activeTab, setActiveTab] = useState("details");
-  return <div className="min-h-screen relative">
+  return <div className="min-h-screen bg-gray-200 relative">
       {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-blue-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-blue-300/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-blue-300/10 rounded-full blur-3xl"></div>
       <div className="container mx-auto p-6 relative z-10">
         {/* Header */}
         <FadeInView>
@@ -136,7 +136,7 @@ export default function BookDetails({
           }} transition={{
             duration: 0.5
           }}>
-              <Link href="/admin/books" className="flex items-center gap-2 text-white hover:text-white transition-colors">
+              <Link href="/admin/books" className="flex items-center gap-2 text-gray-800 hover:text-blue-500 transition-colors">
                 <ChevronLeft className="h-5 w-5" />
                 <span className="font-medium">Назад к списку книг</span>
               </Link>
@@ -151,7 +151,7 @@ export default function BookDetails({
           }} transition={{
             duration: 0.5,
             delay: 0.1
-          }} className="text-3xl font-bold text-white">
+          }} className="text-3xl font-bold text-gray-800">
               Просмотр книги
             </motion.h1>
           </div>
@@ -159,13 +159,13 @@ export default function BookDetails({
 
         {/* Main Content */}
         <FadeInView delay={0.2}>
-          <motion.div className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-emerald-500/20 dark:border-emerald-700/30" whileHover={{
+          <motion.div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200" whileHover={{
           y: -5,
           boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)"
         }}>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">{book.title}</h2>
-              <p className="text-white">{book.authors}</p>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">{book.title}</h2>
+              <p className="text-gray-500">{book.authors}</p>
             </div>
 
             <div className="flex flex-col md:flex-row gap-8">
@@ -173,18 +173,18 @@ export default function BookDetails({
               <div className="flex-shrink-0">
                 <Book color="#012B48" width={250} depth={5}>
                   {book.cover ? <Image src={book.cover} alt={book.title} width={250} height={400} className="object-cover w-full h-full rounded" priority /> : <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen className="w-16 h-16 text-white" />
+                      <BookOpen className="w-16 h-16 text-gray-500" />
                     </div>}
                 </Book>
                 {/* Book status indicators */}
                 <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2 text-white bg-emerald-400/20 dark:bg-emerald-800/30 p-2 rounded-lg">
+                  <div className="flex items-center gap-2 text-gray-800 bg-blue-300 p-2 rounded-lg">
                     <BookCopy className="w-5 h-5" />
                     <span>
                       Доступно копий: <strong>{book.availableCopies}</strong>
                     </span>
                   </div>
-                  {book.isEbook && <div className="flex items-center gap-2 text-white bg-emerald-100/50 dark:bg-emerald-800/30 p-2 rounded-lg">
+                  {book.isEbook && <div className="flex items-center gap-2 text-gray-800 bg-gray-100 p-2 rounded-lg">
                       <Bookmark className="w-5 h-5" />
                       <span>Электронная книга</span>
                     </div>}
@@ -203,17 +203,17 @@ export default function BookDetails({
                 </div>
 
                 {/* Description preview */}
-                <motion.div className="mt-4 backdrop-blur-xl bg-emerald-500/20 dark:bg-emerald-900/30 rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm" whileHover={{
+                <motion.div className="mt-4 bg-gray-100 rounded-xl p-4 border border-gray-200 shadow-sm" whileHover={{
                 y: -3,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
               }} transition={{
                 duration: 0.2
               }}>
-                  <h3 className="font-medium text-white mb-2 flex items-center gap-2">
+                  <h3 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
                     <BookOpen className="w-4 h-4" />
                     Описание книги:
                   </h3>
-                  <p className="text-white line-clamp-3">
+                  <p className="text-gray-800 line-clamp-3">
                     {book.description || "Описание отсутствует"}
                   </p>
                 </motion.div>
@@ -223,7 +223,7 @@ export default function BookDetails({
             {/* Tabs */}
             <div className="mt-8">
               <Tabs defaultValue="details" onValueChange={setActiveTab}>
-                <TabsList className="border-b border-emerald-500/20 dark:border-emerald-700/30 p-0 rounded-none bg-transparent shadow-none">
+                <TabsList className="border-b border-gray-200 p-0 rounded-none bg-blue-300 shadow-none">
                   <AnimatedTabsTrigger value="details" label="Детальная информация" isActive={activeTab === "details"} />
                   <AnimatedTabsTrigger value="additional" label="Дополнительно" isActive={activeTab === "additional"} />
                 </TabsList>
@@ -239,17 +239,17 @@ export default function BookDetails({
                     <InfoField label="ББК" value={book.bbk || "Не указан"} />
                   </div>
 
-                  <motion.div className="mt-6 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm" whileHover={{
+                  <motion.div className="mt-6 bg-gray-100 rounded-xl p-4 border border-gray-200 shadow-sm" whileHover={{
                   y: -3,
                   boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
                 }} transition={{
                   duration: 0.2
                 }}>
-                    <h3 className="font-medium text-white mb-2 flex items-center gap-2">
+                    <h3 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
                       <BookOpen className="w-4 h-4" />
                       Полное описание книги:
                     </h3>
-                    <p className="text-white">{book.description || "Описание отсутствует"}</p>
+                    <p className="text-gray-800">{book.description || "Описание отсутствует"}</p>
                   </motion.div>
                 </TabsContent>
 
@@ -262,17 +262,17 @@ export default function BookDetails({
                     {book.dateModified && <InfoField label="Дата изменения" value={new Date(book.dateModified).toLocaleDateString()} icon={<Clock className="w-4 h-4" />} />}
                   </div>
 
-                  <motion.div className="mt-6 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm" whileHover={{
+                  <motion.div className="mt-6 bg-gray-100 rounded-xl p-4 border border-gray-200 shadow-sm" whileHover={{
                   y: -3,
                   boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
                 }} transition={{
                   duration: 0.2
                 }}>
-                    <h3 className="font-medium text-white mb-2 flex items-center gap-2">
+                    <h3 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
                       <BookOpen className="w-4 h-4" />
                       Резюме книги:
                     </h3>
-                    <p className="text-white">{book.summary || "Резюме отсутствует"}</p>
+                    <p className="text-gray-800">{book.summary || "Резюме отсутствует"}</p>
                   </motion.div>
                 </TabsContent>
               </Tabs>
@@ -281,7 +281,7 @@ export default function BookDetails({
             {/* Buttons */}
             <div className="flex gap-4 justify-end mt-8">
               <Link href={`/admin/books/${book.id}/update`}>
-                <motion.button className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md backdrop-blur-md" whileHover={{
+                <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md" whileHover={{
                 y: -3,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
               }} whileTap={{
@@ -292,7 +292,7 @@ export default function BookDetails({
                 </motion.button>
               </Link>
               <Link href="/admin/books">
-                <motion.button className="bg-green-500/90 hover:bg-green-600/90 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md backdrop-blur-md" whileHover={{
+                <motion.button className="bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md" whileHover={{
                 y: -3,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
               }} whileTap={{

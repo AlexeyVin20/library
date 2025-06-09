@@ -32,6 +32,12 @@
     transform: translateY(-5px);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
+
+  /* Background pattern */
+  .bg-pattern {
+    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.15) 1px, transparent 0);
+    background-size: 20px 20px;
+  }
 }
 
 @layer base {
@@ -61,12 +67,11 @@
     --transition-speed: 300ms;
 }
 
-.dark {
+  .dark {
     --color-brand: #1e40af;
     --color-accent: #4f46e5;
     --color-neutral: #374151;
-}
-
+  }
 
   .hide-scrollbar::-webkit-scrollbar {
     width: 0px;

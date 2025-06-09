@@ -33,7 +33,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Показываем пустой контейнер во время загрузки, чтобы избежать мигания контента
   if (isLoading) {
-    return <div className="min-h-screen flex bg-[url('/images/bg2.jpg')] bg-cover bg-center bg-fixed bg-no-repeat text-white" />;
+    return <div className="min-h-screen flex bg-gray-200 bg-cover bg-center bg-fixed bg-no-repeat text-white" />;
   }
   
   // Если пользователь не аутентифицирован или не имеет роли администратора, не рендерим контент
@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen flex bg-[url('/images/bg2.jpg')] bg-cover bg-center bg-fixed bg-no-repeat text-white">
+    <div className="min-h-screen flex bg-gray-200 bg-cover bg-center bg-fixed bg-no-repeat text-white">
       {/* Добавляем плавающие фигуры как на странице admin/page.tsx */}
       <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
       <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>

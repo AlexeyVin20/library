@@ -88,17 +88,17 @@ const AnimatedTabsTrigger = ({
   return (
     <TabsTrigger value={value} className="relative data-[state=active]:bg-transparent">
       <div className="flex items-center gap-2 py-2 px-3">
-        <span className={isActive ? "text-white" : "text-white"}>
+        <span className={isActive ? "text-white" : "text-gray-800"}>
           {icon}
         </span>
-        <span className={isActive ? "text-white" : "text-white"}>
+        <span className={isActive ? "text-white" : "text-gray-800"}>
           {label}
         </span>
       </div>
       {isActive && (
         <motion.div
           layoutId="activeBookFormTab"
-          className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -119,8 +119,8 @@ const FormSection = ({
   children: React.ReactNode
 }) => {
   return (
-    <div className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 rounded-xl p-5 border border-emerald-500/20 dark:border-emerald-700/40 shadow-sm">
-      <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+    <div className="bg-gray-100 rounded-xl p-5 border border-gray-200 shadow-sm">
+      <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center gap-2">
         {icon}
         {title}
       </h3>
@@ -143,7 +143,7 @@ const FormField = ({
 }) => {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-white">
+      <label className="block text-sm font-medium text-gray-800">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       {children}
@@ -409,64 +409,64 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       }
     }
 
-    const handleDrag = (e: React.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      if (e.type === "dragenter" || e.type === "dragover") {
-        setDragActive(true)
-      } else if (e.type === "dragleave") {
+          const handleDrag = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (e.type === "dragenter" || e.type === "dragover") {
+          setDragActive(true)
+        } else if (e.type === "dragleave") {
+          setDragActive(false)
+        }
+      }
+
+      const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
         setDragActive(false)
-      }
-    }
 
-    const handleDrop = async (e: React.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setDragActive(false)
-
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        const file = e.dataTransfer.files[0]
-        setFileName(file.name)
-        if (file.size > 10 * 1024 * 1024) {
-          setFormError("Размер файла не должен превышать 10 МБ")
-          return
-        }
-        try {
-          const base64 = await fileToBase64(file)
-          onFileChange(base64)
-        } catch (error) {
-          setFormError("Ошибка при обработке файла")
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          const file = e.dataTransfer.files[0]
+          setFileName(file.name)
+          if (file.size > 10 * 1024 * 1024) {
+            setFormError("Размер файла не должен превышать 10 МБ")
+            return
+          }
+          try {
+            const base64 = await fileToBase64(file)
+            onFileChange(base64)
+          } catch (error) {
+            setFormError("Ошибка при обработке файла")
+          }
         }
       }
-    }
 
-    return (
-      <motion.div
-        className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer backdrop-blur-xl transition-all ${
-          dragActive
-            ? "bg-emerald-500/20 border-emerald-500/50 dark:bg-emerald-500/40 dark:border-emerald-500/50"
-            : "bg-emerald-500/5 dark:bg-emerald-900/10 border-emerald-500/40 dark:border-emerald-700/40 hover:bg-emerald-500/10 dark:hover:bg-emerald-900/20"
-        }`}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <input type="file" className="hidden" accept="image/*" onChange={handleChange} id="gemini-file-input" />
-        <label
-          htmlFor="gemini-file-input"
-          className="flex flex-col items-center justify-center w-full h-full cursor-pointer"
+      return (
+        <motion.div
+          className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
+            dragActive
+              ? "bg-blue-300 border-blue-500"
+              : "bg-gray-100 border-gray-300 hover:bg-gray-200"
+          }`}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
         >
-          <Camera className="w-10 h-10 mb-2 text-white" />
-          <p className="mb-2 text-sm text-center text-white">
-            Перетащите файл сюда или нажмите для загрузки
-          </p>
-          {fileName && <p className="text-xs text-white">{fileName}</p>}
-        </label>
-      </motion.div>
-    )
+          <input type="file" className="hidden" accept="image/*" onChange={handleChange} id="gemini-file-input" />
+          <label
+            htmlFor="gemini-file-input"
+            className="flex flex-col items-center justify-center w-full h-full cursor-pointer"
+          >
+            <Camera className="w-10 h-10 mb-2 text-gray-800" />
+            <p className="mb-2 text-sm text-center text-gray-800">
+              Перетащите файл сюда или нажмите для загрузки
+            </p>
+            {fileName && <p className="text-xs text-gray-800">{fileName}</p>}
+          </label>
+        </motion.div>
+      )
   }
 
   const handleGeminiFileChange = (base64: string) => {
@@ -898,24 +898,19 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
     }
   }, [])
   return (
-    <div className="min-h-screen relative">
-      {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-
-      <div className="container mx-auto p-6 relative z-10">
+    <div className="min-h-screen bg-gray-200">
+      <div className="container mx-auto p-6">
         {/* Header */}
         <FadeInView>
           <motion.div
-            className="sticky top-0 z-10 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border-b border-emerald-500/20 dark:border-emerald-700/40 p-4 rounded-xl shadow-lg mb-6"
+            className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4 rounded-xl shadow-lg mb-6"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
             <div className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-white" />
-              <h1 className="text-2xl font-bold text-white">
+              <BookOpen className="h-6 w-6 text-blue-500" />
+              <h1 className="text-2xl font-bold text-gray-800">
                 {mode === "create" ? "Добавление новой книги" : "Редактирование книги"}
               </h1>
             </div>
@@ -931,7 +926,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
               exit={{ opacity: 0, y: -10 }}
               className="mb-4"
             >
-              <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
+              <Alert variant="destructive" className="border-red-500 bg-red-100">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Ошибка</AlertTitle>
                 <AlertDescription>{formError}</AlertDescription>
@@ -946,10 +941,10 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
               exit={{ opacity: 0, y: -10 }}
               className="mb-4"
             >
-              <Alert className="border-emerald-500/50 bg-emerald-500/10">
-                <CheckCircle2 className="h-4 w-4 text-white" />
-                <AlertTitle className="text-white">Успех</AlertTitle>
-                <AlertDescription className="text-white">
+              <Alert className="border-green-500 bg-green-100">
+                <CheckCircle2 className="h-4 w-4 text-green-800" />
+                <AlertTitle className="text-green-800">Успех</AlertTitle>
+                <AlertDescription className="text-green-800">
                   {formSuccess}
                 </AlertDescription>
               </Alert>
@@ -960,7 +955,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
         {/* Main Content */}
         <FadeInView delay={0.2}>
           <motion.div
-            className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-2xl p-6 shadow-lg border border-emerald-500/20 dark:border-emerald-700/40"
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
             whileHover={{
               y: -5,
               boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)",
@@ -970,22 +965,22 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
             <FadeInView delay={0.3}>
               <FormSection
                 title="Сканирование обложки книги"
-                icon={<Camera className="h-5 w-5 text-white" />}
+                icon={<Camera className="h-5 w-5 text-gray-800" />}
               >
-                <p className="text-sm text-white mb-3">
+                <p className="text-sm text-gray-800 mb-3">
                   Загрузите изображение обложки книги для автоматического заполнения информации
                 </p>
                 <GeminiFileUpload onFileChange={handleGeminiFileChange} />
                 {geminiLoading && (
-                  <div className="flex items-center mt-2 text-white">
-                    <Loader2 className="h-5 w-5 animate-spin mr-2 text-white" />
+                  <div className="flex items-center mt-2 text-gray-800">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2 text-gray-800" />
                     <span>Обработка изображения...</span>
                   </div>
                 )}
                 {geminiImage && !geminiLoading && (
                   <motion.button
                     onClick={handleGeminiUpload}
-                    className="mt-2 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border border-emerald-500/20 dark:border-emerald-700/40 text-white rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
+                    className="mt-2 bg-blue-500 hover:bg-blue-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -998,7 +993,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
             {/* Form */}
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-8 mt-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-green/40 dark:bg-green-800/40 backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/40 shadow-md">
+                <TabsList className="bg-blue-300 p-1 rounded-xl border border-gray-200 shadow-md">
                   <AnimatedTabsTrigger
                     value="basic-info"
                     icon={<BookmarkIcon className="w-4 h-4" />}
@@ -1021,14 +1016,14 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
 
                 {/* Основная информация */}
                 <TabsContent value="basic-info" className="space-y-6 mt-6">
-                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40">
+                  <Card className="bg-white border border-gray-200">
                     <CardContent className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField label="Название книги" error={errors.title?.message} required>
                           <Input
                             placeholder="Введите название книги"
                             {...register("title")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1036,7 +1031,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите имена авторов через запятую"
                             {...register("authors")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1046,7 +1041,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                               id="isbn"
                               placeholder="000-0000000000"
                               className={cn(
-                                "backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg pr-16 px-4 text-white shadow-sm w-full h-12 placeholder:text-white",
+                                "bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pr-16 px-4 text-gray-800 shadow-sm w-full h-12 placeholder:text-gray-500",
                                 errors.isbn && "focus-visible:ring-red-500",
                               )}
                               value={isbn}
@@ -1061,7 +1056,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                               type="button"
                               onClick={handleFetchByISBN}
                               disabled={isSearchLoading}
-                              className="absolute right-2 bg-emerald-500/20 hover:bg-emerald-500/40 text-white rounded-md px-3 py-1 flex items-center gap-1 transition-all"
+                              className="absolute right-2 bg-blue-500 hover:bg-blue-700 text-white rounded-md px-3 py-1 flex items-center gap-1 transition-all"
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -1079,7 +1074,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите жанр книги"
                             {...register("genre")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1090,7 +1085,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                             min={1000}
                             max={new Date().getFullYear()}
                             {...register("publicationYear", { valueAsNumber: true })}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1098,7 +1093,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите название издательства"
                             {...register("publisher")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1108,11 +1103,11 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                               id="isEbook"
                               checked={isEbook}
                               onCheckedChange={(checked) => setValue("isEbook", checked === true)}
-                              className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                              className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                             />
                             <label
                               htmlFor="isEbook"
-                              className="text-base font-medium text-white"
+                              className="text-base font-medium text-gray-800"
                             >
                               Электронная книга
                             </label>
@@ -1127,7 +1122,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                 placeholder="Введите количество доступных экземпляров"
                                 min={0}
                                 {...register("availableCopies", { valueAsNumber: true })}
-                                className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                                className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                               />
                             </FormField>
 
@@ -1136,10 +1131,10 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                 onValueChange={(value) => setValue("condition", value)}
                                 defaultValue={initialData?.condition || ""}
                               >
-                                <SelectTrigger className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12">
+                                <SelectTrigger className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12">
                                   <SelectValue placeholder="Выберите состояние" />
                                 </SelectTrigger>
-                                <SelectContent className="backdrop-blur-xl bg-emerald-100/90 dark:bg-emerald-900/90 border border-emerald-500/20 dark:border-emerald-700/40">
+                                <SelectContent className="bg-white border border-gray-200">
                                   <SelectItem value="Новое">Новое</SelectItem>
                                   <SelectItem value="Б/У">Б/У</SelectItem>
                                   <SelectItem value="Не определено">Не определено</SelectItem>
@@ -1152,7 +1147,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                         )}
 
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-white mb-2 text-center">
+                          <label className="block text-sm font-medium text-gray-800 mb-2 text-center">
                             Обложка книги
                           </label>
                           <div className="flex flex-row gap-4 justify-center">
@@ -1181,7 +1176,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                 </motion.div>
                               ) : (
                                 <motion.div
-                                  className="w-48 h-64 mb-4 flex items-center justify-center backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 rounded-xl border border-emerald-500/20 dark:border-emerald-700/40 shadow-md text-white"
+                                  className="w-48 h-64 mb-4 flex items-center justify-center bg-gray-100 rounded-xl border border-gray-200 shadow-md text-gray-500"
                                   whileHover={{ scale: 1.02 }}
                                 >
                                   <BookOpen className="h-12 w-12" />
@@ -1191,7 +1186,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                 <motion.button
                                   type="button"
                                   onClick={() => document.getElementById("coverInput")?.click()}
-                                  className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md"
                                   whileHover={{ y: -2 }}
                                   whileTap={{ scale: 0.98 }}
                                 >
@@ -1222,7 +1217,8 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                         variant: "destructive",
                                       })
                                     }
-                                  }}                                  className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+                                  }}
+                                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md"
                                   whileHover={{ y: -2 }}
                                   whileTap={{ scale: 0.98 }}
                                 >
@@ -1241,7 +1237,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                             {showManualCoverInput && (
                               <div className="flex flex-col w-full max-w-xs">
                                 <div className="mt-3">
-                                  <label className="block text-xs font-medium text-white mb-1">
+                                  <label className="block text-xs font-medium text-gray-800 mb-1">
                                     Вставьте ссылку на обложку
                                   </label>
                                   <Input
@@ -1252,7 +1248,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                       setValue("cover", e.target.value)
                                       setPreviewUrl(e.target.value)
                                     }}
-                                    className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm text-xs h-12 placeholder:text-white"
+                                    className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm text-xs h-12 placeholder:text-gray-500"
                                   />
                                 </div>
                               </div>
@@ -1266,7 +1262,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
 
                 {/* Детальная информация */}
                 <TabsContent value="details" className="space-y-6 mt-6">
-                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40">
+                  <Card className="bg-white border border-gray-200">
                     <CardContent className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="md:col-span-2">
@@ -1275,7 +1271,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                               placeholder="Введите описание книги"
                               {...register("description")}
                               rows={7}
-                              className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-3 text-white shadow-sm resize-none placeholder:text-white"
+                              className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-3 text-gray-800 shadow-sm resize-none placeholder:text-gray-500"
                             />
                           </FormField>
                         </div>
@@ -1286,7 +1282,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                             placeholder="Введите количество страниц"
                             min={1}
                             {...register("pageCount", { valueAsNumber: true })}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1294,7 +1290,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите язык книги"
                             {...register("language")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1303,10 +1299,10 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                             onValueChange={(value) => setValue("format", value)}
                             defaultValue={initialData?.format || ""}
                           >
-                            <SelectTrigger className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12">
+                            <SelectTrigger className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12">
                               <SelectValue placeholder="Выберите формат" />
                             </SelectTrigger>
-                            <SelectContent className="backdrop-blur-xl bg-emerald-100/90 dark:bg-emerald-900/90 border border-emerald-500/20 dark:border-emerald-700/40">
+                            <SelectContent className="bg-white border border-gray-200">
                               <SelectItem value="Твердый переплет">Твердый переплет</SelectItem>
                               <SelectItem value="Мягкий переплет">Мягкий переплет</SelectItem>
                               <SelectItem value="Электронный">Электронный</SelectItem>
@@ -1322,7 +1318,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                             min={0.00}
                             step="0.01"
                             {...register("price", { valueAsNumber: true })}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1330,7 +1326,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите категоризацию"
                             {...register("categorization")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1338,7 +1334,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите УДК"
                             {...register("udk")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1346,7 +1342,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите ББК"
                             {...register("bbk")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
                       </div>
@@ -1356,14 +1352,14 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
 
                 {/* Дополнительные поля */}
                 <TabsContent value="rare-fields" className="space-y-6 mt-6">
-                  <Card className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40">
+                  <Card className="bg-white border border-gray-200">
                     <CardContent className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField label="Оригинальное название" error={errors.originalTitle?.message}>
                           <Input
                             placeholder="Введите оригинальное название книги"
                             {...register("originalTitle")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1371,7 +1367,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите оригинальный язык книги"
                             {...register("originalLanguage")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1379,7 +1375,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           <Input
                             placeholder="Введите информацию об издании"
                             {...register("edition")}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 text-white shadow-sm h-12 placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
 
@@ -1388,7 +1384,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                             placeholder="Введите резюме книги"
                             {...register("summary")}
                             rows={5}
-                            className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-emerald-500/20 dark:border-emerald-700/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-3 text-white shadow-sm resize-none placeholder:text-white"
+                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-3 text-gray-800 shadow-sm resize-none placeholder:text-gray-500"
                           />
                         </FormField>
                       </div>
@@ -1397,11 +1393,11 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                 </TabsContent>
               </Tabs>
 
-              <div className="pt-4 border-t border-emerald-500/20 dark:border-emerald-700/40 flex flex-col md:flex-row gap-4">
+              <div className="pt-4 border-t border-gray-200 flex flex-col md:flex-row gap-4">
                 <motion.button
                   type="button"
                   onClick={handleImportFromClipboard}
-                  className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-4 py-2 w-full md:w-1/3 flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 w-full md:w-1/3 flex items-center justify-center gap-2 shadow-md"
                   whileHover={{ y: -3 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -1412,7 +1408,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                 <motion.button
                   type="button"
                   onClick={() => router.back()}
-                  className="bg-gray-500/90 hover:bg-gray-600/90 text-white font-medium rounded-lg px-4 py-2 w-full md:w-1/3 flex items-center justify-center gap-2 shadow-md backdrop-blur-md"
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg px-4 py-2 w-full md:w-1/3 flex items-center justify-center gap-2 shadow-md"
                   whileHover={{ y: -3 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -1423,7 +1419,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                 <motion.button
                   type="submit"
                   disabled={isSubmitting || (!isDirty && mode === "update")}
-                  className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-4 py-2 w-full md:w-2/3 flex items-center justify-center gap-2 shadow-md backdrop-blur-md disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 w-full md:w-2/3 flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                   whileHover={!isSubmitting ? { y: -3 } : {}}
                   whileTap={!isSubmitting ? { scale: 0.98 } : {}}
                 >

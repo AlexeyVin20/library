@@ -37,7 +37,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
       <>
         <div className="flex flex-col md:flex-row gap-6">
           <div className="w-full md:w-1/3 flex flex-col items-center">
-            <div className="w-48 h-64 bg-emerald-700/50 rounded-lg overflow-hidden shadow-lg mb-4">
+            <div className="w-48 h-64 bg-gray-100 rounded-lg overflow-hidden shadow-lg mb-4">
               {book.cover ? (
                 <img
                   src={book.cover || "/placeholder.svg"}
@@ -49,22 +49,22 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <BookOpen className="h-16 w-16 text-white/50" />
+                  <BookOpen className="h-16 w-16 text-gray-400" />
                 </div>
               )}
             </div>
 
             <div className="space-y-2 w-full">
-              <div className="bg-emerald-700/40 rounded-lg p-3 text-center">
-                <p className="text-white/80 text-sm">Статус</p>
-                <p className="text-lg font-medium text-white">
+              <div className="bg-gray-100 rounded-lg p-3 text-center">
+                <p className="text-gray-500 text-sm">Статус</p>
+                <p className="text-lg font-medium text-gray-800">
                   {book.availableCopies && book.availableCopies > 0 ? "Доступна" : "Недоступна"}
                 </p>
               </div>
 
-              <div className="bg-emerald-700/40 rounded-lg p-3 text-center">
-                <p className="text-white/80 text-sm">Расположение</p>
-                <p className="text-lg font-medium text-white">
+              <div className="bg-gray-100 rounded-lg p-3 text-center">
+                <p className="text-gray-500 text-sm">Расположение</p>
+                <p className="text-lg font-medium text-gray-800">
                   Полка #{shelfId}, Позиция {position + 1}
                 </p>
               </div>
@@ -300,20 +300,18 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`max-w-4xl backdrop-blur-xl ${
-          isJournal ? "bg-blue-600/30 dark:bg-blue-800/40" : "bg-emerald-600/30 dark:bg-emerald-800/40"
-        } border border-white/20 dark:border-gray-700/30 rounded-xl shadow-lg p-0 overflow-hidden`}
+        className="max-w-4xl bg-white border border-gray-100 rounded-xl shadow-lg p-0 overflow-hidden"
       >
         <DialogHeader className="p-6 pb-4">
           <div className="flex items-start justify-between">
-            <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
-              <BookOpen className={`h-6 w-6 ${isJournal ? "text-blue-400" : "text-emerald-400"}`} />
+            <DialogTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <BookOpen className={`h-6 w-6 ${isJournal ? "text-blue-500" : "text-blue-500"}`} />
               {item.title}
             </DialogTitle>
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full text-white/80 hover:text-white hover:bg-white/10"
+              className="rounded-full text-gray-500 hover:text-gray-800 hover:bg-gray-100"
               onClick={() => onOpenChange(false)}
             >
               <X className="h-5 w-5" />
@@ -321,41 +319,37 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
             {isJournal ? (
-              <Badge className="bg-blue-700/70 text-white">Журнал</Badge>
+              <Badge className="bg-blue-100 text-blue-800">Журнал</Badge>
             ) : (
-              <Badge className="bg-emerald-700/70 text-white">Книга</Badge>
+              <Badge className="bg-blue-100 text-blue-800">Книга</Badge>
             )}
             {!isJournal && (item as Book).genre && (
-              <Badge className="bg-emerald-800/70 text-white">{(item as Book).genre}</Badge>
+              <Badge className="bg-gray-100 text-gray-800">{(item as Book).genre}</Badge>
             )}
           </div>
         </DialogHeader>
 
         <div className="p-6 pt-0">{isJournal ? renderJournalContent() : renderBookContent()}</div>
 
-        <DialogFooter
-          className={`${
-            isJournal ? "bg-blue-700/30" : "bg-emerald-700/30"
-          } p-4 border-t border-white/20 dark:border-gray-700/30`}
-        >
+        <DialogFooter className="bg-gray-100 p-4 border-t border-gray-200">
           <div className="flex justify-between w-full">
             <Button
               variant="destructive"
               onClick={handleRemove}
-              className="bg-red-600/80 hover:bg-red-700/80 text-white"
+              className="bg-red-500 hover:bg-red-700 text-white"
             >
               Удалить с полки
             </Button>
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="text-white border-white/30"
+                className="text-gray-800 border-gray-200"
                 onClick={() => window.open(`/admin/books/${item.id}`, "_blank")}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Открыть карточку
               </Button>
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="text-white border-white/30">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="text-gray-800 border-gray-200">
                 Закрыть
               </Button>
             </div>

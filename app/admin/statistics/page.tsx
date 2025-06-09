@@ -130,32 +130,32 @@ const StatCard = ({
   href?: string;
 }) => {
   return <FadeInView delay={delay}>
-      <motion.div className={`xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-white/20 dark:border-gray-700/30 relative overflow-hidden`} whileHover={{
+      <motion.div className={`bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-gray-200 relative overflow-hidden`} whileHover={{
       y: -5,
       boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)"
     }}>
         <div className={`absolute top-0 left-0 w-1.5 h-full ${color}`}></div>
         <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
             {icon}
             {title}
           </h3>
-          <div className={`w-10 h-10 rounded-full ${color} bg-opacity-20 dark:bg-opacity-30 flex items-center justify-center shadow-inner`}>
+          <div className={`w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shadow-inner`}>
             {icon}
           </div>
         </div>
         <div>
-          <p className={`text-4xl font-bold mb-2 text-white`}>
+          <p className={`text-4xl font-bold mb-2 text-gray-800`}>
             <CountUp end={value} decimals={title === "Штрафы" ? 2 : 0} />
             {title === "Штрафы" && " ₽"}
           </p>
-          <p className="text-sm text-white">{subtitle}</p>
-          {additionalInfo && <div className="mt-3 text-sm text-white">
+          <p className="text-sm text-gray-500">{subtitle}</p>
+          {additionalInfo && <div className="mt-3 text-sm text-gray-500">
               {additionalInfo}
             </div>}
         </div>
         {href && <Link href={href} className="mt-4">
-            <span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center">
+            <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center">
               Подробнее
               <ArrowRight className="w-4 h-4 ml-1" />
             </span>
@@ -182,14 +182,14 @@ const ChartCard = ({
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   return <FadeInView delay={delay}>
-      <motion.div className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30">
+      <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-gray-200">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              {icon || <BarChart3 className="w-5 h-5 text-emerald-500" />}
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              {icon || <BarChart3 className="w-5 h-5 text-blue-500" />}
               {title}
             </h3>
-            {description && <p className="text-sm text-white mt-1">{description}</p>}
+            {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
           </div>
           
           {infoTooltip && <div className="relative">
@@ -197,7 +197,7 @@ const ChartCard = ({
             scale: 1.1
           }} whileTap={{
             scale: 0.9
-          }} className="text-white hover:text-emerald-500 transition-colors" onClick={() => setShowTooltip(!showTooltip)}>
+          }} className="text-gray-500 hover:text-blue-500 transition-colors" onClick={() => setShowTooltip(!showTooltip)}>
                 <Info className="w-5 h-5" />
               </motion.button>
               
@@ -211,8 +211,8 @@ const ChartCard = ({
             }} exit={{
               opacity: 0,
               y: 10
-            }} className="absolute right-0 top-full mt-2 p-3 bg-green dark:bg-green-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 w-64 z-20">
-                    <p className="text-sm text-white">
+            }} className="absolute right-0 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border border-gray-200 w-64 z-20">
+                    <p className="text-sm text-gray-800">
                       {infoTooltip}
                     </p>
                   </motion.div>}
@@ -220,7 +220,7 @@ const ChartCard = ({
             </div>}
         </div>
         
-        <div className="flex-1 bg-emerald-500/10 dark:bg-emerald-900/20 md rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30">
+        <div className="flex-1 bg-gray-100 rounded-xl p-4 border border-gray-200">
           {children}
         </div>
       </motion.div>
@@ -241,12 +241,12 @@ const AnimatedTabsTrigger = ({
 }) => {
   return <TabsTrigger value={value} className="relative data-[state=active]:bg-transparent">
       <div className="flex items-center gap-2 py-2 px-1">
-        <span className={isActive ? "text-emerald-500" : "text-white"}>
+        <span className={isActive ? "text-blue-500" : "text-gray-500"}>
           {icon}
         </span>
-        <span className={isActive ? "text-emerald-500" : "text-white"}>{label}</span>
+        <span className={isActive ? "text-blue-500" : "text-gray-500"}>{label}</span>
       </div>
-      {isActive && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" initial={{
+      {isActive && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" initial={{
       opacity: 0
     }} animate={{
       opacity: 1
@@ -437,21 +437,21 @@ export default function StatisticsPage() {
 
   // Компонент загрузки
   const LoadingSpinner = () => {
-    return <div className="flex flex-col justify-center items-center h-screen">
+    return <div className="flex flex-col justify-center items-center h-screen bg-gray-200">
         <motion.div animate={{
         rotate: 360
       }} transition={{
         duration: 1.5,
         repeat: Infinity,
         ease: "linear"
-      }} className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full" />
+      }} className="w-12 h-12 border-4 border-blue-300 border-t-blue-500 rounded-full" />
         <motion.p initial={{
         opacity: 0
       }} animate={{
         opacity: 1
       }} transition={{
         delay: 0.5
-      }} className="mt-4 text-emerald-600 dark:text-emerald-400 font-medium">
+      }} className="mt-4 text-blue-500 font-medium">
           Загрузка данных...
         </motion.p>
       </div>;
@@ -623,8 +623,8 @@ export default function StatisticsPage() {
     opacity: 0
   }} animate={{
     opacity: 1
-  }} className="flex flex-col items-center justify-center h-screen p-6">
-      <div className="bg-green/70 dark:bg-green-800/70 xl text-red-600 dark:text-red-400 p-6 rounded-xl border border-white/20 dark:border-gray-700/30 max-w-md w-full text-center shadow-lg">
+  }} className="flex flex-col items-center justify-center h-screen p-6 bg-gray-200">
+      <div className="bg-red-100 text-red-800 p-6 rounded-xl border border-gray-200 max-w-md w-full text-center shadow-lg">
         <AlertTriangle className="w-12 h-12 mx-auto mb-4" />
         <h2 className="text-xl font-bold mb-2">Произошла ошибка</h2>
         <p>{error}</p>
@@ -632,12 +632,12 @@ export default function StatisticsPage() {
         scale: 1.05
       }} whileTap={{
         scale: 0.95
-      }} onClick={() => window.location.reload()} className="mt-4 bg-emerald-500/90 hover:bg-emerald-600/90 text-white px-4 py-2 rounded-lg font-medium shadow-md md">
+      }} onClick={() => window.location.reload()} className="mt-4 bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md">
           Попробовать снова
         </motion.button>
       </div>
     </motion.div>;
-  const COLORS = ["#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6"];
+  const COLORS = ["#3B82F6", "#6B7280", "#93C5FD", "#374151", "#9CA3AF"];
 
   // Функция для форматирования подсказок в графиках
   const formatTooltipValue = (value: any, name?: string) => {
@@ -664,14 +664,10 @@ export default function StatisticsPage() {
     }
     return [value, name || ""];
   };
-  return <div className="min-h-screen relative" ref={containerRef}>
-      {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl"></div>
+  return <div className="min-h-screen bg-gray-200 relative" ref={containerRef}>
       <div className="container mx-auto p-6 relative z-10">
         {/* Заголовок с анимацией при скролле */}
-        <motion.div className="mb-8 sticky top-0 z-10 pt-4 pb-6 bg-transparent" style={{
+        <motion.div className="mb-8 sticky top-0 z-10 pt-4 pb-6 bg-gray-200" style={{
         opacity,
         scale,
         y
@@ -687,7 +683,7 @@ export default function StatisticsPage() {
             }} transition={{
               duration: 0.5
             }}>
-                <Link href="/admin" className="flex items-center gap-2 text-white hover:text-emerald-300 transition-colors">
+                <Link href="/admin" className="flex items-center gap-2 text-gray-800 hover:text-blue-500 transition-colors">
                   <ChevronLeft className="h-5 w-5" />
                   <span className="font-medium">Назад</span>
                 </Link>
@@ -702,7 +698,7 @@ export default function StatisticsPage() {
             }} transition={{
               duration: 0.5,
               delay: 0.1
-            }} className="text-3xl font-bold text-white">
+            }} className="text-3xl font-bold text-gray-800">
                 Статистика библиотеки
               </motion.h1>
             </div>
@@ -717,7 +713,7 @@ export default function StatisticsPage() {
             duration: 0.5,
             delay: 0.3
           }}>
-              <Button onClick={generateSummary} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2" disabled={summaryLoading}>
+              <Button onClick={generateSummary} className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2" disabled={summaryLoading}>
                 <FileText className="w-5 h-5" />
                 {summaryLoading ? "Генерация..." : "Подвести итоги"}
               </Button>
@@ -733,42 +729,42 @@ export default function StatisticsPage() {
         }} transition={{
           duration: 0.5,
           delay: 0.2
-        }} className="text-white mt-2 max-w-2xl">
+        }} className="text-gray-500 mt-2 max-w-2xl">
             Подробная аналитика по книгам, пользователям, резервациям и штрафам в библиотеке
           </motion.p>
         </motion.div>
 
         <Tabs defaultValue="overview" className="space-y-8" onValueChange={setActiveTab}>
-          <TabsList className="bg-green/30 dark:bg-green-800/30 md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md">
-            <AnimatedTabsTrigger value="overview" icon={<TrendingUp className="w-5 h-5 text-emerald-500" />} label="Обзор" isActive={activeTab === "overview"} />
-            <AnimatedTabsTrigger value="books" icon={<BookMarked className="w-5 h-5 text-emerald-500" />} label="Книги" isActive={activeTab === "books"} />
-            <AnimatedTabsTrigger value="users" icon={<Users className="w-5 h-5 text-emerald-500 " />} label="Пользователи" isActive={activeTab === "users"} />
-            <AnimatedTabsTrigger value="reservations" icon={<CalendarClock className="w-5 h-5 text-emerald-500" />} label="Резервации" isActive={activeTab === "reservations"} />
-            <AnimatedTabsTrigger value="fines" icon={<CircleDollarSign className="w-5 h-5 text-emerald-500" />} label="Штрафы" isActive={activeTab === "fines"} />
+          <TabsList className="bg-white p-1 rounded-xl border border-gray-200 shadow-md">
+            <AnimatedTabsTrigger value="overview" icon={<TrendingUp className="w-5 h-5 text-blue-500" />} label="Обзор" isActive={activeTab === "overview"} />
+            <AnimatedTabsTrigger value="books" icon={<BookMarked className="w-5 h-5 text-blue-500" />} label="Книги" isActive={activeTab === "books"} />
+            <AnimatedTabsTrigger value="users" icon={<Users className="w-5 h-5 text-blue-500 " />} label="Пользователи" isActive={activeTab === "users"} />
+            <AnimatedTabsTrigger value="reservations" icon={<CalendarClock className="w-5 h-5 text-blue-500" />} label="Резервации" isActive={activeTab === "reservations"} />
+            <AnimatedTabsTrigger value="fines" icon={<CircleDollarSign className="w-5 h-5 text-blue-500" />} label="Штрафы" isActive={activeTab === "fines"} />
           </TabsList>
 
           {/* Обзор библиотеки */}
           <TabsContent value="overview" className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-green/20">
-              <StatCard title="Книги" value={totalAvailableBooks + totalBorrowedBooks} subtitle="всего в библиотеке" additionalInfo={<p className="text-emerald-600 dark:text-emerald-400">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatCard title="Книги" value={totalAvailableBooks + totalBorrowedBooks} subtitle="всего в библиотеке" additionalInfo={<p className="text-blue-500">
                     {totalAvailableBooks} доступно сейчас
-                  </p>} icon={<BookOpen className="w-5 h-5 text-emerald-500" />} color="bg-emerald-500" delay={0.1} href="/admin/books" />
-              <StatCard title="Пользователи" value={totalUsersCount} subtitle="зарегистрировано" additionalInfo={<p className="text-emerald-400 dark:text-emerald-300">
+                  </p>} icon={<BookOpen className="w-5 h-5 text-blue-500" />} color="bg-blue-500" delay={0.1} href="/admin/books" />
+              <StatCard title="Пользователи" value={totalUsersCount} subtitle="зарегистрировано" additionalInfo={<p className="text-gray-500">
                     {activeUsersCount} активных ({Math.round(activeUsersCount / totalUsersCount * 100)}%)
-                  </p>} icon={<Users className="w-5 h-5 text-emerald-400" />} color="bg-emerald-400" delay={0.2} href="/admin/users" />
+                  </p>} icon={<Users className="w-5 h-5 text-gray-500" />} color="bg-gray-500" delay={0.2} href="/admin/users" />
               <StatCard title="Резервации" value={reservations.length} subtitle="всего заявок" additionalInfo={<div className="flex items-center">
-                    <span className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full bg-emerald-400">
+                    <span className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full bg-blue-400">
                       {pendingReservations}
                     </span>
                     <span className="ml-2">в обработке</span>
-                  </div>} icon={<CalendarClock className="w-5 h-5 text-emerald-400" />} color="bg-emerald-400" delay={0.3} href="/admin/reservations" />
-              <StatCard title="Штрафы" value={totalFines} subtitle="общая сумма" additionalInfo={<p className="text-gray-500 dark:text-gray-400">
+                  </div>} icon={<CalendarClock className="w-5 h-5 text-blue-400" />} color="bg-blue-400" delay={0.3} href="/admin/reservations" />
+              <StatCard title="Штрафы" value={totalFines} subtitle="общая сумма" additionalInfo={<p className="text-gray-500">
                     За просроченные книги
-                  </p>} icon={<AlertTriangle className="w-5 h-5 text-gray-500" />} color="bg-green-500" delay={0.4} href="/admin/users/fines" />
+                  </p>} icon={<AlertTriangle className="w-5 h-5 text-gray-500" />} color="bg-gray-600" delay={0.4} href="/admin/users/fines" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-              <ChartCard title="Взятые книги по месяцам" description="Количество взятых книг за последние 6 месяцев" delay={0.5} icon={<TrendingUp className="w-5 h-5 text-emerald-500" />} infoTooltip="График показывает динамику выдачи книг за последние полгода. Позволяет отслеживать сезонные тренды и активность пользователей.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ChartCard title="Взятые книги по месяцам" description="Количество взятых книг за последние 6 месяцев" delay={0.5} icon={<TrendingUp className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает динамику выдачи книг за последние полгода. Позволяет отслеживать сезонные тренды и активность пользователей.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={monthlyBorrowedData} margin={{
@@ -799,7 +795,7 @@ export default function StatisticsPage() {
                 </div>
               </ChartCard>
 
-              <ChartCard title="Распределение статусов резерваций" description="Статусы всех заявок в системе" delay={0.6} icon={<PieChartIcon className="w-5 h-5 text-emerald-500" />} infoTooltip="Диаграмма показывает соотношение статусов всех резерваций в системе: выполненные, в обработке и отмененные.">
+              <ChartCard title="Распределение статусов резерваций" description="Статусы всех заявок в системе" delay={0.6} icon={<PieChartIcon className="w-5 h-5 text-blue-500" />} infoTooltip="Диаграмма показывает соотношение статусов всех резерваций в системе: выполненные, в обработке и отмененные.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -829,8 +825,8 @@ export default function StatisticsPage() {
 
           {/* Статистика по книгам */}
           <TabsContent value="books" className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-              <ChartCard title="Категории книг" description="Распределение книг по категориям" delay={0.3} icon={<BookMarked className="w-5 h-5 text-emerald-500" />} infoTooltip="Диаграмма показывает распределение книг по категориям в библиотеке. Помогает анализировать разнообразие коллекции.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ChartCard title="Категории книг" description="Распределение книг по категориям" delay={0.3} icon={<BookMarked className="w-5 h-5 text-blue-500" />} infoTooltip="Диаграмма показывает распределение книг по категориям в библиотеке. Помогает анализировать разнообразие коллекции.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -856,7 +852,7 @@ export default function StatisticsPage() {
                 </div>
               </ChartCard>
 
-              <ChartCard title="Статистика доступности" description="Соотношение взятых и доступных книг" delay={0.4} icon={<BookOpen className="w-5 h-5 text-emerald-500" />} infoTooltip="График показывает соотношение доступных и взятых книг в библиотеке. Помогает оценить загруженность фонда.">
+              <ChartCard title="Статистика доступности" description="Соотношение взятых и доступных книг" delay={0.4} icon={<BookOpen className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает соотношение доступных и взятых книг в библиотеке. Помогает оценить загруженность фонда.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[{
@@ -897,23 +893,23 @@ export default function StatisticsPage() {
             </div>
             
             <FadeInView delay={0.5}>
-              <motion.div className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30">
+              <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
                     Рекомендации по управлению книгами
                   </h3>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-                    <h4 className="font-medium text-white mb-2">Популярные категории</h4>
-                    <p className="text-sm text-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">Популярные категории</h4>
+                    <p className="text-sm text-gray-500">
                       Наиболее популярные категории книг: {bookCategoriesData.sort((a, b) => b.value - a.value).slice(0, 2).map(cat => cat.name).join(', ')}.
                       Рекомендуется пополнить коллекцию книгами этих категорий.
                     </p>
                     <Link href="/admin/books/create" className="mt-4 inline-block">
-                      <motion.span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center" whileHover={{
+                      <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
                         Добавить книгу
@@ -922,13 +918,13 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-                    <h4 className="font-medium text-white mb-2">Доступность книг</h4>
-                    <p className="text-sm text-white">
+                  <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">Доступность книг</h4>
+                    <p className="text-sm text-gray-500">
                       {totalBorrowedBooks > totalAvailableBooks ? "Большинство книг сейчас на руках у читателей. Рекомендуется пополнить библиотеку новыми экземплярами." : "Большинство книг доступно для выдачи. Хороший показатель доступности фонда."}
                     </p>
                     <Link href="/admin/books" className="mt-4 inline-block">
-                      <motion.span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center" whileHover={{
+                      <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
                         Управление книгами
@@ -943,8 +939,8 @@ export default function StatisticsPage() {
 
           {/* Статистика по пользователям */}
           <TabsContent value="users" className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-              <ChartCard title="Топ пользователей" description="Пользователи с наибольшим количеством взятых книг" delay={0.3} icon={<Users className="w-5 h-5 text-emerald-500" />} infoTooltip="График показывает пользователей, взявших наибольшее количество книг. Помогает выявить самых активных читателей.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ChartCard title="Топ пользователей" description="Пользователи с наибольшим количеством взятых книг" delay={0.3} icon={<Users className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает пользователей, взявших наибольшее количество книг. Помогает выявить самых активных читателей.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topUsersData} layout="vertical" margin={{
@@ -969,7 +965,7 @@ export default function StatisticsPage() {
                 </div>
               </ChartCard>
 
-              <ChartCard title="Активность пользователей" description="Соотношение активных и неактивных пользователей" delay={0.4} icon={<Users className="w-5 h-5 text-emerald-500" />} infoTooltip="Диаграмма показывает соотношение активных (имеющих книги на руках) и неактивных пользователей библиотеки.">
+              <ChartCard title="Активность пользователей" description="Соотношение активных и неактивных пользователей" delay={0.4} icon={<Users className="w-5 h-5 text-blue-500" />} infoTooltip="Диаграмма показывает соотношение активных (имеющих книги на руках) и неактивных пользователей библиотеки.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -1001,22 +997,22 @@ export default function StatisticsPage() {
             </div>
             
             <FadeInView delay={0.5}>
-              <motion.div className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30">
+              <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
                     Анализ активности пользователей
                   </h3>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-                    <h4 className="font-medium text-white mb-2">Активные пользователи</h4>
-                    <p className="text-sm text-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">Активные пользователи</h4>
+                    <p className="text-sm text-gray-500">
                       {activeUsersCount > totalUsersCount / 2 ? `Большинство пользователей (${Math.round(activeUsersCount / totalUsersCount * 100)}%) активно пользуются библиотекой. Это отличный показатель!` : `Только ${Math.round(activeUsersCount / totalUsersCount * 100)}% пользователей активно пользуются библиотекой. Рекомендуется провести акции для привлечения читателей.`}
                     </p>
                     <Link href="/admin/users" className="mt-4 inline-block">
-                      <motion.span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center" whileHover={{
+                      <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
                         Управление пользователями
@@ -1025,14 +1021,14 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-                    <h4 className="font-medium text-white mb-2">Топ читатели</h4>
-                    <p className="text-sm text-white">
+                  <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">Топ читатели</h4>
+                    <p className="text-sm text-gray-500">
                       Самые активные читатели: {topUsersData.slice(0, 3).map(user => user.name).join(', ')}.
                       Рекомендуется рассмотреть программу лояльности для постоянных читателей.
                     </p>
                     <Link href="/admin/users/create" className="mt-4 inline-block">
-                      <motion.span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center" whileHover={{
+                      <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
                         Добавить пользователя
@@ -1047,8 +1043,8 @@ export default function StatisticsPage() {
 
           {/* Статистика по резервациям */}
           <TabsContent value="reservations" className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-              <ChartCard title="Динамика резерваций" description="Количество резерваций за последние 6 месяцев" delay={0.3} icon={<CalendarClock className="w-5 h-5 text-emerald-500" />} infoTooltip="График показывает динамику резерваций книг за последние полгода. Помогает отслеживать сезонные тренды и активность пользователей.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ChartCard title="Динамика резерваций" description="Количество резерваций за последние 6 месяцев" delay={0.3} icon={<CalendarClock className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает динамику резерваций книг за последние полгода. Помогает отслеживать сезонные тренды и активность пользователей.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={monthlyBorrowedData} margin={{
@@ -1079,7 +1075,7 @@ export default function StatisticsPage() {
                 </div>
               </ChartCard>
 
-              <ChartCard title="Статусы резерваций" description="Распределение резерваций по статусам" delay={0.4} icon={<CalendarClock className="w-5 h-5 text-emerald-500" />} infoTooltip="График показывает распределение резерваций по статусам: выполненные, в обработке и отмененные.">
+              <ChartCard title="Статусы резерваций" description="Распределение резерваций по статусам" delay={0.4} icon={<CalendarClock className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает распределение резерваций по статусам: выполненные, в обработке и отмененные.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={statusDistribution} margin={{
@@ -1108,22 +1104,22 @@ export default function StatisticsPage() {
             </div>
             
             <FadeInView delay={0.5}>
-              <motion.div className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30">
+              <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
                     Анализ резерваций
                   </h3>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-                    <h4 className="font-medium text-white mb-2">Эффективность обработки</h4>
-                    <p className="text-sm text-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">Эффективность обработки</h4>
+                    <p className="text-sm text-gray-500">
                       {completedReservations > canceledReservations * 2 ? `Высокая эффективность обработки заявок: ${Math.round(completedReservations / reservations.length * 100)}% заявок выполнено успешно.` : `Средняя эффективность обработки заявок: ${Math.round(completedReservations / reservations.length * 100)}% заявок выполнено успешно. Рекомендуется улучшить процесс обработки.`}
                     </p>
                     <Link href="/admin/reservations" className="mt-4 inline-block">
-                      <motion.span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center" whileHover={{
+                      <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
                         Управление резервациями
@@ -1132,14 +1128,14 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-                    <h4 className="font-medium text-white mb-2">Текущие заявки</h4>
-                    <p className="text-sm text-white">
+                  <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">Текущие заявки</h4>
+                    <p className="text-sm text-gray-500">
                       В настоящее время в обработке находится {pendingReservations} заявок.
                       {pendingReservations > 10 ? " Рекомендуется ускорить обработку заявок для улучшения пользовательского опыта." : " Хороший показатель скорости обработки заявок."}
                     </p>
                     <Link href="/admin/reservations/create" className="mt-4 inline-block">
-                      <motion.span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center" whileHover={{
+                      <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
                         Создать резервацию
@@ -1154,8 +1150,8 @@ export default function StatisticsPage() {
 
           {/* Статистика по штрафам */}
           <TabsContent value="fines" className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green/20">
-              <ChartCard title="Динамика штрафов" description="Сумма штрафов за последние 6 месяцев" delay={0.3} icon={<CircleDollarSign className="w-5 h-5 text-emerald-500" />} infoTooltip="График показывает динамику штрафов за последние полгода. Помогает отслеживать тенденции в нарушениях сроков возврата книг.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ChartCard title="Динамика штрафов" description="Сумма штрафов за последние 6 месяцев" delay={0.3} icon={<CircleDollarSign className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает динамику штрафов за последние полгода. Помогает отслеживать тенденции в нарушениях сроков возврата книг.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={monthlyFinesData} margin={{
@@ -1186,7 +1182,7 @@ export default function StatisticsPage() {
                 </div>
               </ChartCard>
 
-              <ChartCard title="Пользователи со штрафами" description="Топ пользователей по сумме штрафов" delay={0.4} icon={<CircleDollarSign className="w-5 h-5 text-emerald-500" />} infoTooltip="График показывает пользователей с наибольшими суммами штрафов. Помогает выявить проблемных читателей.">
+              <ChartCard title="Пользователи со штрафами" description="Топ пользователей по сумме штрафов" delay={0.4} icon={<CircleDollarSign className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает пользователей с наибольшими суммами штрафов. Помогает выявить проблемных читателей.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={users.filter(user => (user.fineAmount || 0) > 0).sort((a, b) => (b.fineAmount || 0) - (a.fineAmount || 0)).slice(0, 5).map(user => ({
@@ -1216,23 +1212,23 @@ export default function StatisticsPage() {
             </div>
             
             <FadeInView delay={0.5}>
-              <motion.div className="xl bg-green/20 dark:bg-green-800/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30">
+              <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
                     Анализ штрафов
                   </h3>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-                    <h4 className="font-medium text-white mb-2">Общая сумма штрафов</h4>
-                    <p className="text-sm text-white">
+                  <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">Общая сумма штрафов</h4>
+                    <p className="text-sm text-gray-500">
                       Общая сумма штрафов составляет {totalFines.toFixed(2)} ₽.
                       {totalFines > 5000 ? " Это высокий показатель. Рекомендуется улучшить систему уведомлений о сроках возврата." : " Это нормальный показатель для библиотеки данного размера."}
                     </p>
                     <Link href="/admin/users/fines" className="mt-4 inline-block">
-                      <motion.span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center" whileHover={{
+                      <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
                         Управление штрафами
@@ -1241,13 +1237,13 @@ export default function StatisticsPage() {
                     </Link>
                   </div>
                   
-                  <div className="bg-green/70 dark:bg-green-800/70 md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
-                    <h4 className="font-medium text-white mb-2">Рекомендации</h4>
-                    <p className="text-sm text-white">
+                  <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">Рекомендации</h4>
+                    <p className="text-sm text-gray-500">
                       {users.filter(u => (u.fineAmount || 0) > 0).length > totalUsersCount * 0.1 ? `${users.filter(u => (u.fineAmount || 0) > 0).length} пользователей имеют штрафы. Рекомендуется пересмотреть политику штрафов и улучшить систему уведомлений.` : `Только ${users.filter(u => (u.fineAmount || 0) > 0).length} пользователей имеют штрафы. Это хороший показатель дисциплины читателей.`}
                     </p>
                     <Link href="/admin/settings" className="mt-4 inline-block">
-                      <motion.span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center" whileHover={{
+                      <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
                         Настройки системы
@@ -1263,20 +1259,20 @@ export default function StatisticsPage() {
       </div>
       {/* Модальное окно для отображения сводки */}
       <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <DialogContent className="bg-green/90 dark:bg-green-800/90 xl border border-white/20 dark:border-gray-700/30 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-white border border-gray-200 text-gray-800 max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex justify-between items-center">
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <FileText className="w-5 h-5 text-emerald-500" />
+                <FileText className="w-5 h-5 text-blue-500" />
                 Аналитический отчет библиотеки
               </DialogTitle>
               
-              <Button onClick={copyReportToClipboard} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 px-3 py-1" size="sm">
+              <Button onClick={copyReportToClipboard} className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 px-3 py-1" size="sm">
                 <Copy className="w-4 h-4" />
                 {copiedToClipboard ? "Скопировано!" : "Копировать"}
               </Button>
             </div>
-            <DialogDescription className="text-white opacity-80">
+            <DialogDescription className="text-gray-500">
               Сгенерированный ИИ анализ данных библиотеки
             </DialogDescription>
           </DialogHeader>
@@ -1288,15 +1284,15 @@ export default function StatisticsPage() {
             duration: 1.5,
             repeat: Infinity,
             ease: "linear"
-          }} className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full" />
-              <p className="mt-4 text-emerald-300">Генерация аналитики...</p>
-            </div> : <div className="bg-green/70 dark:bg-green-900/70 rounded-lg p-6 prose prose-invert max-w-none">
+          }} className="w-12 h-12 border-4 border-blue-300 border-t-blue-500 rounded-full" />
+              <p className="mt-4 text-blue-500">Генерация аналитики...</p>
+            </div> : <div className="bg-gray-100 rounded-lg p-6 prose max-w-none">
               {/* Добавляем дату сверху отчета */}
               <div className="text-right mb-4">
-                <p className="text-emerald-400 font-medium">{getCurrentDate()}</p>
+                <p className="text-blue-500 font-medium">{getCurrentDate()}</p>
               </div>
               <div className="whitespace-pre-line markdown-report" dangerouslySetInnerHTML={{
-            __html: summaryResult.replace(/\n\n/g, '<br><br>').replace(/### (.*)/g, '<h3 class="text-xl font-bold text-emerald-400 mt-6 mb-3">$1</h3>').replace(/## (.*)/g, '<h2 class="text-2xl font-bold text-emerald-300 mt-8 mb-4">$1</h2>').replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-emerald-400">$1</span>').replace(/\* (.*)/g, '<li class="ml-4">$1</li>')
+            __html: summaryResult.replace(/\n\n/g, '<br><br>').replace(/### (.*)/g, '<h3 class="text-xl font-bold text-blue-500 mt-6 mb-3">$1</h3>').replace(/## (.*)/g, '<h2 class="text-2xl font-bold text-blue-600 mt-8 mb-4">$1</h2>').replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-blue-500">$1</span>').replace(/\* (.*)/g, '<li class="ml-4">$1</li>')
           }} />
             </div>}
         </DialogContent>

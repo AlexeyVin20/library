@@ -29,6 +29,7 @@ import {
   BookMarked,
   AlertCircle,
   CheckCircle2,
+  Settings,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -129,11 +130,11 @@ const FadeInView = ({
 const InfoField = ({ label, value, icon }: { label: string; value: React.ReactNode; icon: React.ReactNode }) => {
   return (
     <div className="flex flex-col space-y-1">
-      <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+      <div className="flex items-center gap-2 text-sm text-blue-500">
         {icon}
         <span>{label}</span>
       </div>
-      <div className="text-base text-white dark:text-gray-200 font-medium pl-6">{value}</div>
+      <div className="text-base text-gray-800 font-medium pl-6">{value}</div>
     </div>
   )
 }
@@ -148,17 +149,17 @@ const AnimatedTabsTrigger = ({
   return (
     <TabsTrigger value={value} className="relative">
       <div className="flex items-center gap-2 py-2 px-3">
-        <span className={isActive ? "text-emerald-600 dark:text-emerald-400" : "text-white dark:text-gray-500"}>
+        <span className={isActive ? "text-blue-500" : "text-gray-500"}>
           {icon}
         </span>
-        <span className={isActive ? "text-emerald-700 dark:text-emerald-300" : "text-white dark:text-gray-500"}>
+        <span className={isActive ? "text-blue-700" : "text-gray-500"}>
           {label}
         </span>
       </div>
       {isActive && (
         <motion.div
           layoutId="activeProfileTab"
-          className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -284,8 +285,8 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-10 w-10 animate-spin text-emerald-600 mx-auto" />
-          <p className="mt-4 text-emerald-100 dark:text-emerald-200">Загрузка данных...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-blue-500 mx-auto" />
+          <p className="mt-4 text-gray-500">Загрузка данных...</p>
         </div>
       </div>
     )
@@ -295,19 +296,19 @@ export default function ProfilePage() {
   if (error && !isLoading && !loading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md backdrop-blur-xl bg-red-500/10 dark:bg-red-800/30 border-red-500/30 dark:border-red-700/50">
+        <Card className="w-full max-w-md bg-red-100 border-red-500">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
+            <CardTitle className="flex items-center gap-2 text-red-800">
               <AlertCircle className="h-5 w-5" />
               Ошибка
             </CardTitle>
-            <CardDescription className="text-red-200 dark:text-red-300">Произошла ошибка при загрузке профиля</CardDescription>
+            <CardDescription className="text-red-800">Произошла ошибка при загрузке профиля</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-red-100 dark:text-red-200 mb-4">{error}</p>
+            <p className="text-sm text-red-800 mb-4">{error}</p>
             <Button 
               variant="default" 
-              className="w-full"
+              className="w-full bg-blue-500 hover:bg-blue-700 text-white"
               onClick={() => router.push("/auth/login")}
             >
               Вернуться на страницу входа
@@ -426,7 +427,7 @@ export default function ProfilePage() {
           {allBooks.map((book) => (
             <motion.div
               key={`book-${book.id}`}
-              className="backdrop-blur-xl bg-emerald-500/5 dark:bg-emerald-900/10 border border-white/20 dark:border-gray-700/30 rounded-lg p-4 shadow-sm"
+              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
               whileHover={{
                 y: -2,
                 boxShadow:
@@ -444,31 +445,31 @@ export default function ProfilePage() {
                       className="object-cover rounded-md"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-emerald-500/20 rounded-md">
-                      <BookOpen className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                    <div className="w-full h-full flex items-center justify-center bg-blue-300 rounded-md">
+                      <BookOpen className="h-8 w-8 text-blue-500" />
                     </div>
                   )}
                 </div>
                 <div className="flex-grow">
-                  <h4 className="font-medium text-white dark:text-white">{book.title}</h4>
-                  <p className="text-sm text-gray-300 dark:text-gray-400">{book.authors}</p>
+                  <h4 className="font-medium text-gray-800">{book.title}</h4>
+                  <p className="text-sm text-gray-500">{book.authors}</p>
                   <div className="mt-2 flex flex-wrap gap-4 text-xs">
                     {book.genre && (
-                      <span className="text-emerald-600 dark:text-emerald-400">{book.genre}</span>
+                      <span className="text-blue-500">{book.genre}</span>
                     )}
                     {book.publicationYear && (
-                      <span className="text-gray-500 dark:text-gray-400">
+                      <span className="text-gray-500">
                         {book.publicationYear} г.
                       </span>
                     )}
                     {book.publisher && (
-                      <span className="text-gray-500 dark:text-gray-400">{book.publisher}</span>
+                      <span className="text-gray-500">{book.publisher}</span>
                     )}
                   </div>
                 </div>
                 <div className="flex-shrink-0 text-right">
                   {book.borrowDate && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-gray-500">
                       Взята: {formatDate(book.borrowDate)}
                     </div>
                   )}
@@ -477,8 +478,8 @@ export default function ProfilePage() {
                       className={cn(
                         "text-xs font-medium mt-1",
                         new Date(book.dueDate) < new Date()
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-emerald-600 dark:text-emerald-400"
+                          ? "text-red-800"
+                          : "text-blue-500"
                       )}
                     >
                       Вернуть до: {formatDate(book.dueDate)}
@@ -493,8 +494,8 @@ export default function ProfilePage() {
     } else {
       return (
         <div className="text-center py-8">
-          <BookOpen className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-300 dark:text-gray-400">У вас нет книг на руках</p>
+          <BookOpen className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+          <p className="text-gray-500">У вас нет книг на руках</p>
         </div>
       );
     }
@@ -502,26 +503,21 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen relative py-12 px-4">
-      {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-
-      <div className="container mx-auto max-w-5xl relative z-10">
+      <div className="container mx-auto max-w-5xl">
         <FadeInView>
           <div className="flex flex-col md:flex-row gap-6 items-start">
             {/* Profile sidebar */}
             <div className="w-full md:w-1/3">
-              <Card className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border border-white/20 dark:border-gray-700/30 shadow-lg">
+              <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center text-center">
-                    <Avatar className="h-24 w-24 mb-4 border-4 border-emerald-100 dark:border-emerald-900">
-                      <AvatarFallback className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xl">
+                    <Avatar className="h-24 w-24 mb-4 border-4 border-blue-300">
+                      <AvatarFallback className="bg-blue-300 text-blue-700 text-xl">
                         {user && user.fullName ? getInitials(user.fullName) : ""}
                       </AvatarFallback>
                     </Avatar>
-                    <h2 className="text-xl font-bold text-white dark:text-white mb-1">{user?.fullName}</h2>
-                    <p className="text-emerald-600 dark:text-emerald-400 mb-3">{user?.username}</p>
+                    <h2 className="text-xl font-bold text-gray-800 mb-1">{user?.fullName}</h2>
+                    <p className="text-blue-500 mb-3">{user?.username}</p>
 
                     <div className="flex flex-wrap gap-2 justify-center mb-4">
                       {user?.roles && user.roles.length > 0 ? (
@@ -529,7 +525,7 @@ export default function ProfilePage() {
                           <Badge
                             key={role}
                             variant="outline"
-                            className="bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                            className="bg-blue-300 border-blue-500 text-blue-700"
                           >
                             {role}
                           </Badge>
@@ -537,77 +533,77 @@ export default function ProfilePage() {
                       ) : (
                         <Badge
                           variant="outline"
-                          className="bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                          className="bg-blue-300 border-blue-500 text-blue-700"
                         >
                           Пользователь
                         </Badge>
                       )}
                     </div>
 
-                    <Separator className="my-4 bg-emerald-200/30 dark:bg-emerald-700/30" />
+                    <Separator className="my-4 bg-gray-200" />
 
                     <div className="w-full space-y-4">
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-gray-300 dark:text-gray-400">
-                          <BookOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <BookOpen className="h-4 w-4 text-blue-500" />
                           <span>Книги на руках:</span>
                         </div>
-                        <span className="font-medium text-white dark:text-gray-100">
+                        <span className="font-medium text-gray-800">
                           {user?.borrowedBooksCount || 0}
                         </span>
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-gray-300 dark:text-gray-400">
-                          <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <CreditCard className="h-4 w-4 text-blue-500" />
                           <span>Штрафы:</span>
                         </div>
-                        <span className="font-medium text-white dark:text-gray-100">{user?.fineAmount || 0} ₽</span>
+                        <span className="font-medium text-gray-800">{user?.fineAmount || 0} ₽</span>
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-gray-300 dark:text-gray-400">
-                          <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Clock className="h-4 w-4 text-blue-500" />
                           <span>Срок займа:</span>
                         </div>
-                        <span className="font-medium text-white dark:text-gray-100">
+                        <span className="font-medium text-gray-800">
                           {user?.loanPeriodDays || 0} дней
                         </span>
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-gray-300 dark:text-gray-400">
-                          <BookMarked className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <BookMarked className="h-4 w-4 text-blue-500" />
                           <span>Макс. книг:</span>
                         </div>
-                        <span className="font-medium text-white dark:text-gray-100">{user?.maxBooksAllowed || 0}</span>
+                        <span className="font-medium text-gray-800">{user?.maxBooksAllowed || 0}</span>
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-gray-300 dark:text-gray-400">
-                          <Calendar className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Calendar className="h-4 w-4 text-blue-500" />
                           <span>Регистрация:</span>
                         </div>
-                        <span className="font-medium text-white dark:text-gray-100">
+                        <span className="font-medium text-gray-800">
                           {user?.registrationDate ? formatDate(user.registrationDate) : "Недоступно"}
                         </span>
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-gray-300 dark:text-gray-400">
-                          <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Shield className="h-4 w-4 text-blue-500" />
                           <span>Статус:</span>
                         </div>
                         <div className="flex items-center gap-1">
                           {user?.isActive ? (
                             <>
-                              <Check className="h-4 w-4 text-green-500" />
-                              <span className="font-medium text-green-600 dark:text-green-400">Активен</span>
+                              <Check className="h-4 w-4 text-green-600" />
+                              <span className="font-medium text-green-600">Активен</span>
                             </>
                           ) : (
                             <>
-                              <X className="h-4 w-4 text-red-500" />
-                              <span className="font-medium text-red-600 dark:text-red-400">Неактивен</span>
+                              <X className="h-4 w-4 text-red-600" />
+                              <span className="font-medium text-red-600">Неактивен</span>
                             </>
                           )}
                         </div>
@@ -620,16 +616,16 @@ export default function ProfilePage() {
 
             {/* Main content */}
             <div className="w-full md:w-2/3">
-              <Card className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 border border-white/20 dark:border-gray-700/30 shadow-lg">
+              <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-2xl font-bold text-white dark:text-white">Мой профиль</CardTitle>
-                  <CardDescription className="text-gray-200 dark:text-gray-300">
+                  <CardTitle className="text-2xl font-bold text-gray-800">Мой профиль</CardTitle>
+                  <CardDescription className="text-gray-500">
                     Просмотр и управление вашей учетной записью
                   </CardDescription>
                 </CardHeader>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="bg-emerald-700/10 dark:bg-emerald-900/30 text-white rounded-none border-b border-emerald-200/30 dark:border-emerald-700/30 p-0 h-auto">
+                  <TabsList className="bg-gray-100 text-gray-800 rounded-none border-b border-gray-200 p-0 h-auto">
                     <AnimatedTabsTrigger
                       value="personal"
                       icon={<User className="h-4 w-4" />}
@@ -653,6 +649,12 @@ export default function ProfilePage() {
                       icon={<BookOpen className="h-4 w-4" />}
                       label="Мои книги"
                       isActive={activeTab === "books"}
+                    />
+                    <AnimatedTabsTrigger
+                      value="settings"
+                      icon={<Settings className="h-4 w-4" />}
+                      label="Настройки"
+                      isActive={activeTab === "settings"}
                     />
                   </TabsList>
 
@@ -707,7 +709,7 @@ export default function ProfilePage() {
                   </TabsContent>
 
                   <TabsContent value="security" className="p-6">
-                    <h3 className="text-lg font-medium text-white dark:text-white mb-4">Изменение пароля</h3>
+                    <h3 className="text-lg font-medium text-gray-800 mb-4">Изменение пароля</h3>
 
                     <AnimatePresence>
                       {error && (
@@ -717,7 +719,7 @@ export default function ProfilePage() {
                           exit={{ opacity: 0, y: -10 }}
                           className="mb-4"
                         >
-                          <Alert variant="destructive" className="bg-red-500/10 border-red-500/30">
+                          <Alert variant="destructive" className="bg-red-100 border-red-500">
                             <AlertCircle className="h-4 w-4" />
                             <AlertTitle>Ошибка</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
@@ -732,10 +734,10 @@ export default function ProfilePage() {
                           exit={{ opacity: 0, y: -10 }}
                           className="mb-4"
                         >
-                          <Alert className="bg-emerald-500/10 border-emerald-500/30">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                            <AlertTitle className="text-emerald-700 dark:text-emerald-300">Успех</AlertTitle>
-                            <AlertDescription className="text-emerald-600/80 dark:text-emerald-400/80">
+                          <Alert className="bg-green-100 border-green-500">
+                            <CheckCircle2 className="h-4 w-4 text-green-800" />
+                            <AlertTitle className="text-green-800">Успех</AlertTitle>
+                            <AlertDescription className="text-green-800">
                               {success}
                             </AlertDescription>
                           </Alert>
@@ -750,26 +752,26 @@ export default function ProfilePage() {
                           name="currentPassword"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-200 dark:text-gray-300">Текущий пароль</FormLabel>
+                              <FormLabel className="text-gray-800">Текущий пароль</FormLabel>
                               <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                                 <FormControl>
                                   <Input
                                     type={showCurrentPassword ? "text" : "password"}
                                     placeholder="********"
                                     {...field}
                                     disabled={isSubmitting}
-                                    className="pl-10 pr-10 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white dark:text-gray-200 shadow-sm"
+                                    className="pl-12 pr-12 bg-gray-100 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg py-2 text-gray-800 shadow-sm"
                                   />
                                 </FormControl>
                                 <button
                                   type="button"
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                                 >
                                   {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
-                                <FormMessage className="text-red-500" />
+                                <FormMessage className="text-red-800" />
                               </div>
                             </FormItem>
                           )}
@@ -780,26 +782,26 @@ export default function ProfilePage() {
                           name="newPassword"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-200 dark:text-gray-300">Новый пароль</FormLabel>
+                              <FormLabel className="text-gray-800">Новый пароль</FormLabel>
                               <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                                 <FormControl>
                                   <Input
                                     type={showNewPassword ? "text" : "password"}
                                     placeholder="********"
                                     {...field}
                                     disabled={isSubmitting}
-                                    className="pl-10 pr-10 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white dark:text-gray-200 shadow-sm"
+                                    className="pl-12 pr-12 bg-gray-100 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg py-2 text-gray-800 shadow-sm"
                                   />
                                 </FormControl>
                                 <button
                                   type="button"
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                                   onClick={() => setShowNewPassword(!showNewPassword)}
                                 >
                                   {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
-                                <FormMessage className="text-red-500" />
+                                <FormMessage className="text-red-800" />
                               </div>
                             </FormItem>
                           )}
@@ -810,26 +812,26 @@ export default function ProfilePage() {
                           name="confirmPassword"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-200 dark:text-gray-300">Подтверждение пароля</FormLabel>
+                              <FormLabel className="text-gray-800">Подтверждение пароля</FormLabel>
                               <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                                 <FormControl>
                                   <Input
                                     type={showConfirmPassword ? "text" : "password"}
                                     placeholder="********"
                                     {...field}
                                     disabled={isSubmitting}
-                                    className="pl-10 pr-10 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-white dark:text-gray-200 shadow-sm"
+                                    className="pl-12 pr-12 bg-gray-100 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg py-2 text-gray-800 shadow-sm"
                                   />
                                 </FormControl>
                                 <button
                                   type="button"
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 >
                                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
-                                <FormMessage className="text-red-500" />
+                                <FormMessage className="text-red-800" />
                               </div>
                             </FormItem>
                           )}
@@ -838,7 +840,7 @@ export default function ProfilePage() {
                         <motion.div className="pt-2" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                           <Button
                             type="submit"
-                            className="w-full bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 shadow-md backdrop-blur-md"
+                            className="w-full bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 shadow-md"
                             disabled={isSubmitting}
                           >
                             {isSubmitting ? (
@@ -856,8 +858,26 @@ export default function ProfilePage() {
                   </TabsContent>
 
                   <TabsContent value="books" className="p-6">
-                    <h3 className="text-lg font-medium text-white dark:text-white mb-4">Книги на руках</h3>
+                    <h3 className="text-lg font-medium text-gray-800 mb-4">Книги на руках</h3>
                     {renderBooks()}
+                  </TabsContent>
+
+                  <TabsContent value="settings" className="p-6">
+                    <div className="text-center py-8">
+                      <div className="mb-4">
+                        <Settings className="h-12 w-12 mx-auto text-blue-500 mb-2" />
+                        <h3 className="text-lg font-medium text-gray-800 mb-2">Настройки пользователя</h3>
+                        <p className="text-gray-600 mb-6">
+                          Персонализируйте свой опыт использования библиотеки
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => router.push('/settings')}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-2 shadow-md"
+                      >
+                        Перейти к настройкам
+                      </Button>
+                    </div>
                   </TabsContent>
                 </Tabs>
               </Card>

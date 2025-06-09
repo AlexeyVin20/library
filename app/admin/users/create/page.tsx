@@ -155,18 +155,15 @@ export default function CreateUserPage() {
   };
 
   return (
-    <div className="min-h-screen relative p-6 max-w-2xl mx-auto">
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-
+    <div className="min-h-screen bg-gray-200 p-6 max-w-2xl mx-auto">
       <FadeInView>
         <motion.div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-black-800 dark:text-black-100">Создание пользователя</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Создание пользователя</h1>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => router.back()}
-            className="bg-gray-500/80 hover:bg-gray-600/80 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md"
+            className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md"
           >
             <ArrowLeft className="w-4 h-4" />
             Назад
@@ -178,7 +175,7 @@ export default function CreateUserPage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mb-6 p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg"
+          className="mb-6 p-4 bg-red-100 border border-red-200 text-red-800 rounded-lg"
         >
           {error}
         </motion.div>
@@ -187,7 +184,7 @@ export default function CreateUserPage() {
       <FadeInView delay={0.2}>
         <form onSubmit={handleSubmit} className="space-y-6">
           <motion.div
-            className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg border border-white/20 dark:border-gray-700/30"
+            className="bg-white rounded-xl p-6 shadow-lg border border-gray-200"
             whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1)" }}
           >
             <div className="space-y-4">
@@ -209,7 +206,7 @@ export default function CreateUserPage() {
                 { label: "Штраф (руб.)", name: "fineAmount", type: "number", min: 0, step: 0.01 },
               ].map((field, index) => (
                 <div key={field.name}>
-                  <label htmlFor={field.name} className="block text-sm font-medium text-white dark:text-white mb-1">
+                  <label htmlFor={field.name} className="block text-sm font-medium text-gray-800 mb-1">
                     {field.label}
                   </label>
                   <motion.input
@@ -221,7 +218,7 @@ export default function CreateUserPage() {
                     required={field.required}
                     min={field.min}
                     step={field.step}
-                    className="w-full p-3 rounded-lg bg-green/10 dark:bg-green-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     whileFocus={{ scale: 1.02 }}
                   />
                 </div>
@@ -234,7 +231,7 @@ export default function CreateUserPage() {
               whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => router.back()}
-              className="bg-gray-500/80 hover:bg-gray-600/80 text-white font-medium rounded-lg px-4 py-2 shadow-md backdrop-blur-md"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 shadow-md"
             >
               Отмена
             </motion.button>
@@ -243,7 +240,7 @@ export default function CreateUserPage() {
               whileTap={{ scale: 0.95 }}
               type="submit"
               disabled={loading}
-              className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md disabled:opacity-50"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md disabled:opacity-50"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Создать пользователя

@@ -39,29 +39,29 @@ const Section = ({
   children: React.ReactNode;
   delay?: number;
 }) => <FadeInView delay={delay}>
-    <motion.div className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30" whileHover={{
+    <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200" whileHover={{
     y: -5,
     boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1)"
   }}>
-      <h2 className="text-lg font-bold text-white dark:text-white mb-4 flex items-center gap-2">{title}</h2>
+      <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">{title}</h2>
       <div>{children}</div>
     </motion.div>
   </FadeInView>;
-const LoadingSpinner = () => <div className="flex flex-col justify-center items-center h-screen">
+const LoadingSpinner = () => <div className="flex flex-col justify-center items-center h-screen bg-gray-200">
     <motion.div animate={{
     rotate: 360
   }} transition={{
     duration: 1.5,
     repeat: Infinity,
     ease: "linear"
-  }} className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full" />
+  }} className="w-12 h-12 border-4 border-blue-300 border-t-blue-500 rounded-full" />
     <motion.p initial={{
     opacity: 0
   }} animate={{
     opacity: 1
   }} transition={{
     delay: 0.5
-  }} className="mt-4 text-emerald-600 dark:text-emerald-400 font-medium">
+  }} className="mt-4 text-blue-500 font-medium">
       Загрузка данных...
     </motion.p>
   </div>;
@@ -185,12 +185,8 @@ export default function RolesPage() {
     });
   };
   if (loading) return <LoadingSpinner />;
-  return <div className="min-h-screen relative">
-      {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-      <main className="max-w-7xl mx-auto space-y-8 relative z-10 p-6">
+  return <div className="min-h-screen bg-gray-200">
+      <main className="max-w-7xl mx-auto space-y-8 p-6">
         <FadeInView>
           <div className="mb-8 flex items-center gap-4">
             <motion.div initial={{
@@ -202,7 +198,7 @@ export default function RolesPage() {
           }} transition={{
             duration: 0.5
           }}>
-              <Link href="/admin" className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors">
+              <Link href="/admin" className="flex items-center gap-2 text-blue-500 hover:text-blue-700 transition-colors">
                 <ChevronLeft className="h-5 w-5" />
                 <span className="font-medium">Назад</span>
               </Link>
@@ -217,12 +213,12 @@ export default function RolesPage() {
           }} transition={{
             duration: 0.5,
             delay: 0.1
-          }} className="text-3xl font-bold text-white dark:text-white">
+          }} className="text-3xl font-bold text-gray-800">
               Управление ролями
             </motion.h1>
 
             <div className="ml-auto">
-              <motion.button className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md" whileHover={{
+              <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
               y: -3,
               boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
             }} whileTap={{
@@ -239,9 +235,9 @@ export default function RolesPage() {
         opacity: 0
       }} animate={{
         opacity: 1
-      }} className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-white mb-4">
+      }} className="p-4 bg-red-100 border border-red-200 rounded-lg text-red-800 mb-4">
             {error}
-            <button className="ml-2 text-white font-bold" onClick={() => setError(null)}>
+            <button className="ml-2 text-red-800 font-bold" onClick={() => setError(null)}>
               ×
             </button>
           </motion.div>}
@@ -249,32 +245,32 @@ export default function RolesPage() {
         {isAddingRole && <Section title="Добавление новой роли" delay={0.2}>
             <div className="space-y-4">
               <div>
-                <label className="block mb-1 text-white">Название</label>
+                <label className="block mb-1 text-gray-800">Название</label>
                 <input type="text" value={newRole.name} onChange={e => setNewRole({
               ...newRole,
               name: e.target.value
-            })} className="w-full p-2 rounded-lg bg-green/20 dark:bg-green-800/40 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+            })} className="w-full p-2 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block mb-1 text-white">Описание</label>
+                <label className="block mb-1 text-gray-800">Описание</label>
                 <textarea value={newRole.description} onChange={e => setNewRole({
               ...newRole,
               description: e.target.value
-            })} className="w-full p-2 rounded-lg bg-green/20 dark:bg-green-800/40 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" rows={3} />
+            })} className="w-full p-2 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" rows={3} />
               </div>
               <div className="flex gap-2 justify-end">
                 <motion.button whileHover={{
               y: -2
             }} whileTap={{
               scale: 0.95
-            }} onClick={handleCancelAdd} className="bg-gray-500/90 hover:bg-gray-600/90 text-white font-medium rounded-lg px-4 py-2 shadow-md backdrop-blur-md">
+            }} onClick={handleCancelAdd} className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 shadow-md">
                   Отмена
                 </motion.button>
                 <motion.button whileHover={{
               y: -2
             }} whileTap={{
               scale: 0.95
-            }} onClick={handleAddRole} className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 shadow-md backdrop-blur-md">
+            }} onClick={handleAddRole} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 shadow-md">
                   Сохранить
                 </motion.button>
               </div>
@@ -284,32 +280,32 @@ export default function RolesPage() {
         {isEditingRole && editingRole && <Section title="Редактирование роли" delay={0.2}>
             <div className="space-y-4">
               <div>
-                <label className="block mb-1 text-white">Название</label>
+                <label className="block mb-1 text-gray-800">Название</label>
                 <input type="text" value={editingRole.name} onChange={e => setEditingRole({
               ...editingRole,
               name: e.target.value
-            })} className="w-full p-2 rounded-lg bg-green/20 dark:bg-green-800/40 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+            })} className="w-full p-2 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block mb-1 text-white">Описание</label>
+                <label className="block mb-1 text-gray-800">Описание</label>
                 <textarea value={editingRole.description} onChange={e => setEditingRole({
               ...editingRole,
               description: e.target.value
-            })} className="w-full p-2 rounded-lg bg-green/20 dark:bg-green-800/40 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" rows={3} />
+            })} className="w-full p-2 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" rows={3} />
               </div>
               <div className="flex gap-2 justify-end">
                 <motion.button whileHover={{
               y: -2
             }} whileTap={{
               scale: 0.95
-            }} onClick={handleCancelEdit} className="bg-gray-500/90 hover:bg-gray-600/90 text-white font-medium rounded-lg px-4 py-2 shadow-md backdrop-blur-md">
+            }} onClick={handleCancelEdit} className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 shadow-md">
                   Отмена
                 </motion.button>
                 <motion.button whileHover={{
               y: -2
             }} whileTap={{
               scale: 0.95
-            }} onClick={handleUpdateRole} className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 shadow-md backdrop-blur-md">
+            }} onClick={handleUpdateRole} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 shadow-md">
                   Обновить
                 </motion.button>
               </div>
@@ -327,10 +323,10 @@ export default function RolesPage() {
               x: 0
             }} transition={{
               delay: 0.1 * role.id
-            }} className="p-4 bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30">
+            }} className="p-4 bg-gray-100 rounded-lg border border-gray-200 shadow-md">
                     <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-white flex items-center gap-2">
-                        <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                      <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <ShieldCheck className="w-5 h-5 text-blue-500" />
                         {role.name}
                       </h3>
                       <div className="flex gap-2">
@@ -338,24 +334,24 @@ export default function RolesPage() {
                     y: -2
                   }} whileTap={{
                     scale: 0.95
-                  }} onClick={() => handleEditClick(role)} className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white rounded-lg p-1 shadow-md backdrop-blur-md">
+                  }} onClick={() => handleEditClick(role)} className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg p-1 shadow-md">
                           <Edit className="w-4 h-4" />
                         </motion.button>
                         <motion.button whileHover={{
                     y: -2
                   }} whileTap={{
                     scale: 0.95
-                  }} onClick={() => handleDeleteRole(role.id)} className="bg-red-500/90 hover:bg-red-600/90 text-white rounded-lg p-1 shadow-md backdrop-blur-md">
+                  }} onClick={() => handleDeleteRole(role.id)} className="bg-red-100 hover:bg-red-200 text-red-800 border border-red-200 rounded-lg p-1 shadow-md">
                           <Trash2 className="w-4 h-4" />
                         </motion.button>
                       </div>
                     </div>
-                    <p className="text-white mt-2">{role.description}</p>
-                    <p className="text-white text-sm mt-2">
+                    <p className="text-gray-500 mt-2">{role.description}</p>
+                    <p className="text-gray-500 text-sm mt-2">
                       Пользователей с этой ролью: {role.usersCount}
                     </p>
                   </motion.div>)}
-              </div> : <p className="text-white text-center py-4">Роли не найдены</p>}
+              </div> : <p className="text-gray-500 text-center py-4">Роли не найдены</p>}
           </div>
         </Section>
       </main>

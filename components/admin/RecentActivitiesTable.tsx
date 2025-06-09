@@ -13,25 +13,25 @@ import { useState, useMemo, useEffect } from "react"
 import { Cursor } from "@/components/ui/cursor";
 import BookCover from "@/components/BookCover";
 
-// Локальный компонент для статуса (аналогично app/admin/page.tsx)
+// Локальный компонент для статуса
 const StatusBadge = ({ status }: { status: string }) => {
   let color = ""
   let label = ""
 
   if (status === "Выполнена") {
-    color = "bg-emerald-500"
+    color = "bg-green-100 text-green-800"
     label = "Выполнена"
   } else if (status === "Обрабатывается") {
-    color = "bg-emerald-400"
+    color = "bg-blue-300 text-gray-800"
     label = "В обработке"
   } else {
-    color = "bg-gray-500"
+    color = "bg-gray-100 text-gray-800"
     label = "Отменена"
   }
 
   return (
     <span
-      className={`inline-block px-3 py-1 text-xs font-medium text-white rounded-full ${color} backdrop-blur-md shadow-sm`}
+      className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${color} shadow-sm`}
     >
       {label}
     </span>
@@ -248,7 +248,7 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
         header: "",
         cell: (info: any) => (
           <button
-            className="text-white hover:underline"
+            className="text-gray-800 hover:underline"
             onClick={() => (window.location.href = `/admin/reservations/${info.row.original.id}`)}
           >
             Подробнее
@@ -280,8 +280,8 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
           className="pointer-events-none"
           springConfig={{ stiffness: 300, damping: 30 }}
           attachToParent={false}
-          x={cursorPos.x - 100}
-          y={cursorPos.y - 400}
+          x={cursorPos.x }
+          y={cursorPos.y }
           variants={{
             initial: { opacity: 0, scale: 0.9 },
             animate: { opacity: 1, scale: 1 },
@@ -291,7 +291,7 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
         >
           <div style={{ width: 120, height: 180, pointerEvents: "none", display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translate(-50%, -50%)' }}>
             {loadingCover === hoveredBookId && (
-              <div className="animate-pulse text-white text-xs">Загрузка...</div>
+              <div className="animate-pulse text-gray-800 text-xs">Загрузка...</div>
             )}
             {hoveredCover && (
               <img
@@ -313,17 +313,17 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
         value={globalFilter ?? ""}
         onChange={e => setGlobalFilter(e.target.value)}
         placeholder="Поиск..."
-        className="mb-2 px-3 py-2 rounded-xl w-full bg-emerald-700/20 dark:bg-emerald-900/40 text-white placeholder-white/70 border border-emerald-400/30 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400 outline-none transition"
+        className="mb-2 px-3 py-2 rounded-xl w-full bg-white text-gray-800 placeholder-gray-500 border-2 border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition"
       />
-      <div className="overflow-x-auto rounded-xl border border-white/30 dark:border-gray-700/30 bg-white/10 dark:bg-gray-900/30">
-        <table className="min-w-full text-sm bg-emerald-700/20 dark:bg-emerald-900/40 rounded-xl text-white">
-          <thead className="sticky top-0 z-10 bg-emerald-50/80 dark:bg-emerald-900/30 backdrop-blur-md">
+      <div className="overflow-x-auto rounded-xl border-2 border-blue-500 bg-white">
+        <table className="min-w-full text-sm bg-white rounded-xl text-gray-800">
+          <thead className="sticky top-0 z-10 bg-gray-100">
             {table.getHeaderGroups().map((headerGroup: HeaderGroup<RecentActivity>) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header: any) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left font-semibold text-white uppercase tracking-wider cursor-pointer select-none bg-emerald-700/60 border-b border-emerald-400/30"
+                    className="px-4 py-3 text-left font-semibold text-gray-800 uppercase tracking-wider cursor-pointer select-none bg-gray-100 border-b-2 border-blue-500"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
@@ -337,10 +337,10 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
             {table.getRowModel().rows.map((row: Row<RecentActivity>) => (
               <tr
                 key={row.id}
-                className="border-b border-emerald-400/30 hover:bg-emerald-800/30 dark:hover:bg-emerald-900/40"
+                className="border-b border-gray-200 hover:bg-gray-100"
               >
                 {row.getVisibleCells().map((cell: any) => (
-                  <td key={cell.id} className="px-4 py-3 bg-transparent text-white">
+                  <td key={cell.id} className="px-4 py-3 bg-transparent text-gray-800">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -349,7 +349,7 @@ export function RecentActivitiesTable({ data }: { data: RecentActivity[] }) {
           </tbody>
         </table>
         {table.getRowModel().rows.length === 0 && (
-          <div className="p-4 text-center text-white/70">Нет данных</div>
+          <div className="p-4 text-center text-gray-500">Нет данных</div>
         )}
       </div>
     </div>

@@ -166,13 +166,13 @@ const BookSelectorModal = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl backdrop-blur-xl bg-emerald-600/30 dark:bg-emerald-800/40 border border-white/20 dark:border-gray-700/30 rounded-xl shadow-lg p-0 overflow-hidden">
+      <DialogContent className="max-w-4xl bg-white border border-gray-100 rounded-xl shadow-lg p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
-            <BookCopy className="h-6 w-6 text-emerald-400" />
+          <DialogTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <BookCopy className="h-6 w-6 text-blue-500" />
             Выберите элемент для добавления на полку
             {shelfCategory && (
-              <Badge variant="outline" className="ml-2 bg-emerald-700/50 text-white border-emerald-500/50">
+              <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800 border-blue-500">
                 {shelfCategory}
               </Badge>
             )}
@@ -182,11 +182,11 @@ const BookSelectorModal = ({
         <div className="p-6 pt-4">
           <Tabs defaultValue="books" onValueChange={setActiveTab} className="w-full">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-              <TabsList className="bg-emerald-700/50">
-                <TabsTrigger value="books" className="data-[state=active]:bg-emerald-500 text-white">
+              <TabsList className="bg-gray-100">
+                <TabsTrigger value="books" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-800">
                   Книги
                 </TabsTrigger>
-                <TabsTrigger value="journals" className="data-[state=active]:bg-emerald-500 text-white">
+                <TabsTrigger value="journals" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-800">
                   Журналы
                 </TabsTrigger>
               </TabsList>
@@ -194,17 +194,17 @@ const BookSelectorModal = ({
               <div className="flex flex-wrap gap-2">
                 {/* Search */}
                 <div className="relative flex-1 min-w-[200px]">
-                  <Search className="absolute left-3 top-2.5 text-white/80" size={18} />
+                  <Search className="absolute left-3 top-2.5 text-gray-500" size={18} />
                   <Input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Поиск..."
-                    className="pl-10 bg-emerald-700/50 border-emerald-500/50 text-white placeholder:text-white/60"
+                    className="pl-10 bg-gray-100 border-gray-200 text-gray-800 placeholder:text-gray-500"
                   />
                   {searchTerm && (
                     <button
-                      className="absolute right-3 top-2.5 text-white/80 hover:text-white"
+                      className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-800"
                       onClick={() => setSearchTerm("")}
                     >
                       <X size={18} />
@@ -215,30 +215,30 @@ const BookSelectorModal = ({
                 {/* Sort dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="bg-emerald-700/50 border-emerald-500/50 text-white">
+                    <Button variant="outline" className="bg-gray-100 border-gray-200 text-gray-800">
                       {sortOrder === "asc" ? <SortAsc size={18} /> : <SortDesc size={18} />}
                       <span className="ml-2 hidden sm:inline">Сортировка</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-emerald-700/90 backdrop-blur-md border-emerald-500/50 text-white">
+                  <DropdownMenuContent className="bg-white border-gray-200 text-gray-800">
                     <DropdownMenuLabel>Сортировать по</DropdownMenuLabel>
-                    <DropdownMenuSeparator className="bg-white/20" />
+                    <DropdownMenuSeparator className="bg-gray-200" />
                     <DropdownMenuItem
-                      className={sortField === "title" ? "bg-emerald-600/50" : ""}
+                      className={sortField === "title" ? "bg-blue-100" : ""}
                       onClick={() => setSortField("title")}
                     >
                       <Check className={`mr-2 h-4 w-4 ${sortField === "title" ? "opacity-100" : "opacity-0"}`} />
                       Названию
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={sortField === "authors" ? "bg-emerald-600/50" : ""}
+                      className={sortField === "authors" ? "bg-blue-100" : ""}
                       onClick={() => setSortField("authors")}
                     >
                       <Check className={`mr-2 h-4 w-4 ${sortField === "authors" ? "opacity-100" : "opacity-0"}`} />
                       {activeTab === "books" ? "Автору" : "Издателю"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={sortField === "publicationYear" ? "bg-emerald-600/50" : ""}
+                      className={sortField === "publicationYear" ? "bg-blue-100" : ""}
                       onClick={() => setSortField("publicationYear")}
                     >
                       <Check
@@ -246,7 +246,7 @@ const BookSelectorModal = ({
                       />
                       Году издания
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-white/20" />
+                    <DropdownMenuSeparator className="bg-gray-200" />
                     <DropdownMenuItem onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
                       {sortOrder === "asc" ? "По возрастанию" : "По убыванию"}
                     </DropdownMenuItem>
@@ -347,14 +347,14 @@ const BookSelectorModal = ({
             </div>
 
             <TabsContent value="books" className="mt-2">
-              <div className="bg-emerald-700/30 backdrop-blur-md rounded-lg border border-emerald-500/30 overflow-hidden">
+              <div className="bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
                 {filteredBooks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-white/80">
-                    <BookOpen className="h-16 w-16 mb-4 text-white/50" />
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                    <BookOpen className="h-16 w-16 mb-4 text-gray-400" />
                     <p className="text-lg font-medium">Книги не найдены</p>
                     <p className="text-sm mt-2">Попробуйте изменить параметры поиска или фильтры</p>
                     {(searchTerm || filters.available || selectedGenres.length > 0 || selectedYears.length > 0) && (
-                      <Button variant="outline" className="mt-4 text-white" onClick={resetFilters}>
+                      <Button variant="outline" className="mt-4 text-gray-800 border-gray-200" onClick={resetFilters}>
                         Сбросить все фильтры
                       </Button>
                     )}
@@ -365,7 +365,7 @@ const BookSelectorModal = ({
                       {filteredBooks.map((book) => (
                         <motion.div
                           key={book.id}
-                          className="bg-emerald-600/40 hover:bg-emerald-600/60 border border-emerald-500/30 rounded-lg overflow-hidden shadow-md transition-all"
+                          className="bg-white hover:bg-gray-50 border border-gray-200 rounded-lg overflow-hidden shadow-md transition-all"
                           whileHover={{ y: -4, boxShadow: "0 12px 20px -5px rgba(0, 0, 0, 0.2)" }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => onSelect(book.id, false)}
@@ -487,14 +487,14 @@ const BookSelectorModal = ({
           </Tabs>
         </div>
 
-        <DialogFooter className="bg-emerald-700/30 p-4 border-t border-emerald-500/30">
+        <DialogFooter className="bg-gray-100 p-4 border-t border-gray-200">
           <div className="flex justify-between w-full items-center">
-            <div className="text-white/80 text-sm">
+            <div className="text-gray-500 text-sm">
               {activeTab === "books"
                 ? `Найдено книг: ${filteredBooks.length} из ${books.length}`
                 : `Найдено журналов: ${filteredJournals.length} из ${journals.length}`}
             </div>
-            <Button variant="outline" onClick={handleClose} className="text-white border-white/30">
+            <Button variant="outline" onClick={handleClose} className="text-gray-800 border-gray-200">
               Закрыть
             </Button>
           </div>

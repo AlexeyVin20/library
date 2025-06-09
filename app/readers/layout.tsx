@@ -18,12 +18,11 @@ export default function ReaderLayout({
 }) {
   return (
     <div className={cn(
-      "min-h-screen bg-[url('/images/bg2.jpg')] bg-cover bg-center bg-fixed bg-no-repeat",
+      "min-h-screen bg-gray-200"
     )}>
       <div className="flex flex-col min-h-screen">
         <ReaderNavigation />
         <main className="flex-1">{children}</main>
-        <Footer />
       </div>
     </div>
   )

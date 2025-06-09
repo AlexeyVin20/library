@@ -340,6 +340,8 @@ export interface PixelCanvasProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const PixelCanvas = React.forwardRef<HTMLDivElement, PixelCanvasProps>(
   ({ gap, speed, colors, variant, noFocus, style, ...props }, ref) => {
+    const elementRef = React.useRef<HTMLElement>(null)
+
     React.useEffect(() => {
       // Регистрируем веб-компонент при первом рендере
       if (typeof window !== "undefined") {
@@ -349,25 +351,35 @@ const PixelCanvas = React.forwardRef<HTMLDivElement, PixelCanvasProps>(
       }
     }, [])
 
-    return (
-      <pixel-canvas
-        ref={ref}
-        data-gap={gap}
-        data-speed={speed}
-        data-colors={colors?.join(",")}
-        data-variant={variant}
-        {...(noFocus && { "data-no-focus": "" })}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          width: '100%',
-          height: '100%',
-          ...style
-        }}
-        {...props}
-      />
-    )
+    React.useEffect(() => {
+      if (elementRef.current) {
+        const element = elementRef.current as any
+        if (gap !== undefined) element.dataset.gap = gap.toString()
+        if (speed !== undefined) element.dataset.speed = speed.toString()
+        if (colors) element.dataset.colors = colors.join(",")
+        if (variant) element.dataset.variant = variant
+        if (noFocus) element.setAttribute("data-no-focus", "")
+      }
+    }, [gap, speed, colors, variant, noFocus])
+
+    return React.createElement('pixel-canvas', {
+      ref: (el: HTMLElement) => {
+        if (elementRef) elementRef.current = el
+        if (ref) {
+          if (typeof ref === 'function') ref(el as any)
+          else ref.current = el as any
+        }
+      },
+      style: {
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        width: '100%',
+        height: '100%',
+        ...style
+      },
+      ...props
+    })
   }
 )
 PixelCanvas.displayName = "PixelCanvas"

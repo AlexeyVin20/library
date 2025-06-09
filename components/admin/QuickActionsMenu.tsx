@@ -68,7 +68,7 @@ export function QuickActionsMenuTrigger({
       openMenu(triggerRef.current.getBoundingClientRect());
     }
   };
-  return <motion.button ref={triggerRef} layoutId={`quick-actions-trigger-${uniqueId}`} className={cn("fixed z-50 bottom-8 right-8 p-4 rounded-full bg-emerald-500/90 hover:bg-emerald-600/90 shadow-md border-emerald-400/30 flex items-center justify-center text-white transition-colors", className)} onClick={handleClick} whileHover={{
+  return <motion.button ref={triggerRef} layoutId={`quick-actions-trigger-${uniqueId}`} className={cn("fixed z-50 bottom-8 right-8 p-4 rounded-full bg-blue-500 hover:bg-blue-700 shadow-lg border-2 border-blue-500 flex items-center justify-center text-white transition-colors", className)} onClick={handleClick} whileHover={{
     scale: 1.08
   }} whileTap={{
     scale: 0.95
@@ -93,32 +93,32 @@ export function QuickActionsMenuContent({
     href: "/admin/reservations",
     label: "Резервирования",
     icon: <CalendarIcon className="w-5 h-5" />,
-    color: "emerald-light" as const
+    color: "blue-light" as const
   }, {
     href: "/admin/books",
     label: "Все книги",
     icon: <Layers className="w-5 h-5" />,
-    color: "emerald" as const
+    color: "blue" as const
   }, {
     href: "/admin/users",
     label: "Пользователи",
     icon: <Users className="w-5 h-5" />,
-    color: "emerald-light" as const
+    color: "blue-light" as const
   }, {
     href: "/admin/roles",
     label: "Управление ролями",
     icon: <Shield className="w-5 h-5" />,
-    color: "emerald" as const
+    color: "blue" as const
   }, {
     href: "/admin/statistics",
     label: "Статистика",
     icon: <PieChart className="w-5 h-5" />,
-    color: "emerald-light" as const
+    color: "blue-light" as const
   }, {
     href: "/admin/shelfs",
     label: "Полки",
     icon: <Bookmark className="w-5 h-5" />,
-    color: "emerald" as const
+    color: "blue" as const
   }];
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -150,13 +150,13 @@ export function QuickActionsMenuContent({
   return <AnimatePresence>
       {isOpen && <>
           <motion.div initial={{
-        backdropFilter: "blur(0px)"
+        opacity: 0
       }} animate={{
-        backdropFilter: "blur(4px)"
+        opacity: 0.5
       }} exit={{
-        backdropFilter: "blur(0px)"
-      }} className="fixed inset-0 z-40 bg-black/5" />
-          <motion.div ref={contentRef} layoutId={`quick-actions-menu-${uniqueId}`} className={cn("fixed z-50 min-w-[280px] max-w-[320px] overflow-hidden rounded-2xl border border-emerald-400/30 bg-emerald-700/20 dark:bg-emerald-900/40 backdrop-blur-xl shadow-lg outline-none text-white", className)} style={getMenuPosition()} initial={{
+        opacity: 0
+      }} className="fixed inset-0 z-40 bg-gray-800" />
+          <motion.div ref={contentRef} layoutId={`quick-actions-menu-${uniqueId}`} className={cn("fixed z-50 min-w-[280px] max-w-[320px] overflow-hidden rounded-xl border-2 border-blue-500 bg-white shadow-lg outline-none text-gray-800", className)} style={getMenuPosition()} initial={{
         opacity: 0,
         scale: 0.9,
         x: -20
@@ -169,8 +169,8 @@ export function QuickActionsMenuContent({
         scale: 0.9,
         x: -20
       }}>
-            <div className="px-6 py-4 border-b border-white/10">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <div className="px-6 py-4 border-b-2 border-blue-500">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <Activity className="w-5 h-5" />
                 Быстрые действия
               </h3>
@@ -185,12 +185,12 @@ export function QuickActionsMenuContent({
           }} transition={{
             delay: index * 0.05
           }}>
-                  <Link href={action.href} onClick={closeMenu} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-white hover:bg-white/10 transition-all duration-200 group">
-                    <div className={`p-2 rounded-lg ${action.color === "emerald" ? "bg-emerald-500/20" : "bg-emerald-400/20"} group-hover:scale-110 transition-transform duration-200`}>
+                  <Link href={action.href} onClick={closeMenu} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-gray-800 hover:bg-gray-100 transition-all duration-200 group">
+                    <div className={`p-2 rounded-lg ${action.color === "blue" ? "bg-blue-500 text-white" : "bg-blue-300 text-gray-800"} group-hover:scale-110 transition-transform duration-200`}>
                       {action.icon}
                     </div>
                     <span className="font-medium flex-1">{action.label}</span>
-                    <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
+                    <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-800 group-hover:translate-x-1 transition-all duration-200" />
                   </Link>
                 </motion.div>)}
             </div>

@@ -77,108 +77,103 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center px-4 py-12">
-      {/* Floating shapes for background */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-      
-      <FadeInView>
-        <Card className="w-full max-w-md backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 shadow-lg">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center justify-center mb-2">
-              <div className="h-12 w-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <BookOpen className="h-6 w-6 text-emerald-500" />
-              </div>
+    <FadeInView>
+      <Card className="w-full bg-white rounded-xl shadow-lg border-0">
+        <CardHeader className="space-y-1 pb-4">
+          <div className="flex items-center justify-center mb-4">
+            <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center">
+              <BookOpen className="h-6 w-6 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold text-center text-gray-800 dark:text-white">Вход в систему</CardTitle>
-            <CardDescription className="text-center text-gray-600 dark:text-gray-300">
-              Введите ваши учетные данные для входа
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {error && (
-                  <Alert variant="destructive" className="bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
+          </div>
+          <CardTitle className="text-2xl font-bold text-center text-gray-800">
+            Вход в систему
+          </CardTitle>
+          <CardDescription className="text-center text-gray-500">
+            Введите ваши учетные данные для входа
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {error && (
+                <Alert className="bg-red-100 border-l-4 border-red-500 rounded-lg">
+                  <AlertDescription className="text-red-800">{error}</AlertDescription>
+                </Alert>
+              )}
+              
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-800 font-medium">Имя пользователя</FormLabel>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <FormControl>
+                        <Input 
+                          placeholder="username" 
+                          {...field} 
+                          disabled={isLoading} 
+                          className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-800" />
+                    </div>
+                  </FormItem>
                 )}
-                
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-200">Имя пользователя</FormLabel>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                        <FormControl>
-                          <Input 
-                            placeholder="username" 
-                            {...field} 
-                            disabled={isLoading} 
-                            className="pl-10 backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-500" />
-                      </div>
-                    </FormItem>
+              />
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-800 font-medium">Пароль</FormLabel>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="********" 
+                          {...field} 
+                          disabled={isLoading} 
+                          className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-800" />
+                    </div>
+                  </FormItem>
+                )}
+              />
+              
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg h-11 mt-6" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Вход...
+                    </>
+                  ) : (
+                    "Войти"
                   )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-200">Пароль</FormLabel>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                        <FormControl>
-                          <Input 
-                            type="password" 
-                            placeholder="********" 
-                            {...field} 
-                            disabled={isLoading} 
-                            className="pl-10 backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-4 py-2 text-gray-700 dark:text-gray-200 shadow-sm"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-500" />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 shadow-md backdrop-blur-md" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Вход...
-                      </>
-                    ) : (
-                      "Войти"
-                    )}
-                  </Button>
-                </motion.div>
-              </form>
-            </Form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-center text-sm text-gray-600 dark:text-gray-300">
-              Ещё нет аккаунта?{" "}
-              <Link href="/auth/register" className="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
-                Зарегистрироваться
-              </Link>
-            </div>
-          </CardFooter>
-        </Card>
-      </FadeInView>
-    </div>
+                </Button>
+              </motion.div>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="text-center text-sm text-gray-500">
+            Ещё нет аккаунта?{" "}
+            <Link href="/auth/register" className="font-medium text-blue-500 hover:text-blue-700 transition-colors">
+              Зарегистрироваться
+            </Link>
+          </div>
+        </CardFooter>
+      </Card>
+    </FadeInView>
   );
 }

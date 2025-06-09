@@ -113,15 +113,23 @@ export default function BookUpdatePage({
   };
 
   if (error) return notFound();
-  if (loading) return <div>Загрузка...</div>;
-  if (!book) return <div>Книга не найдена</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-gray-200 flex items-center justify-center">
+      <div className="text-center text-gray-500">Загрузка...</div>
+    </div>
+  );
+  if (!book) return (
+    <div className="min-h-screen bg-gray-200 flex items-center justify-center">
+      <div className="text-center text-gray-500">Книга не найдена</div>
+    </div>
+  );
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Редактирование книги</h1>
+    <div className="min-h-screen bg-gray-200 p-6">
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Редактирование книги</h1>
       
       {updateError && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 border border-red-500 text-red-800 px-4 py-3 rounded-lg mb-4">
           {updateError}
         </div>
       )}
@@ -131,13 +139,12 @@ export default function BookUpdatePage({
         onSubmit={handleSubmit} 
         isSubmitting={updating} 
         mode="update"
-        shelves={shelves}
       />
       
       <div className="mt-4">
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+          className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors border border-gray-200"
         >
           Отмена
         </button>

@@ -93,11 +93,11 @@ const Section = ({
   children: React.ReactNode;
   delay?: number;
 }) => <FadeInView delay={delay}>
-    <motion.div className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30" whileHover={{
+    <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200" whileHover={{
     y: -5,
     boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1)"
   }}>
-      <h2 className="text-white font-bold text-white dark:text-white mb-4 flex items-center gap-2">{title}</h2>
+      <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">{title}</h2>
       <div>{children}</div>
     </motion.div>
   </FadeInView>;
@@ -106,27 +106,42 @@ const StatusBadge = ({
 }: {
   status: string;
 }) => {
-  const color = status === "Выполнена" || status === "Выдана" || status === "Возвращена" ? "bg-emerald-500" : status === "Обрабатывается" ? "bg-emerald-400" : status === "Истекла" ? "bg-yellow-500" : "bg-gray-500";
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "Выполнена":
+      case "Выдана":
+      case "Возвращена":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "Обрабатывается":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Истекла":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+  
   const label = status === "Выполнена" ? "Одобрено" : status === "Обрабатывается" ? "В обработке" : status === "Отклонена" || status === "Отменена" ? "Отклонено" : status === "Истекла" ? "Истекла" : status === "Выдана" ? "Выдана" : status === "Возвращена" ? "Возвращена" : "Неизвестно";
-  return <span className={`inline-block px-3 py-1 text-whitexs font-medium text-white rounded-full ${color} backdrop-blur-md shadow-sm`}>
+  
+  return <span className={`inline-block px-3 py-1 text-xs font-medium rounded-lg border ${getStatusStyle(status)}`}>
       {label}
     </span>;
 };
-const LoadingSpinner = () => <div className="flex flex-col justify-center items-center h-screen">
+const LoadingSpinner = () => <div className="flex flex-col justify-center items-center h-screen bg-gray-200">
     <motion.div animate={{
     rotate: 360
   }} transition={{
     duration: 1.5,
     repeat: Infinity,
     ease: "linear"
-  }} className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full" />
+  }} className="w-12 h-12 border-4 border-blue-300 border-t-blue-500 rounded-full" />
     <motion.p initial={{
     opacity: 0
   }} animate={{
     opacity: 1
   }} transition={{
     delay: 0.5
-  }} className="mt-4 text-white-600 dark:text-white-400 font-medium">
+  }} className="mt-4 text-blue-500 font-medium">
       Загрузка данных...
     </motion.p>
   </div>;
@@ -334,14 +349,14 @@ export default function UserDetailPage() {
     opacity: 0
   }} animate={{
     opacity: 1
-  }} className="p-6 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-whitered-700 dark:text-whitered-200 rounded-lg">
+  }} className="p-6 bg-red-100 border border-red-200 text-red-800 rounded-lg">
       {error}
     </motion.div>;
   if (!user) return <motion.div initial={{
     opacity: 0
   }} animate={{
     opacity: 1
-  }} className="p-6 bg-yellow-100/80 dark:bg-yellow-900/80 backdrop-blur-xl border border-yellow-400 text-whiteyellow-700 dark:text-whiteyellow-200 rounded-lg">
+  }} className="p-6 bg-red-100 border border-red-200 text-red-800 rounded-lg">
       Пользователь не найден
     </motion.div>;
   const chartData = {
@@ -349,13 +364,11 @@ export default function UserDetailPage() {
     available: user.maxBooksAllowed - user.borrowedBooksCount,
     reservations: reservations.filter(r => r.status === "Обрабатывается" && r.userId === userId).length
   };
-  return <div className="min-h-screen relative p-6 max-w-7xl mx-auto">
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <main className="space-y-8 relative z-10">
+  return <div className="min-h-screen bg-gray-200 p-6 max-w-7xl mx-auto">
+      <main className="space-y-8">
         <FadeInView>
           <motion.div className="flex justify-between items-center mb-6">
-            <Link href="/admin/users" className="text-white-600 hover:text-white-700 dark:text-white-400 dark:hover:text-white-300 flex items-center">
+            <Link href="/admin/users" className="text-blue-500 hover:text-blue-700 flex items-center">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Назад к списку пользователей
             </Link>
@@ -365,7 +378,7 @@ export default function UserDetailPage() {
                 scale: 1.05
               }} whileTap={{
                 scale: 0.95
-              }} className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md">
+              }} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md">
                   <Edit className="w-4 h-4" />
                   Редактировать
                 </motion.button>
@@ -374,7 +387,7 @@ export default function UserDetailPage() {
               scale: 1.05
             }} whileTap={{
               scale: 0.95
-            }} onClick={handleDeleteUser} className="bg-red-500/90 hover:bg-red-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md">
+            }} onClick={handleDeleteUser} className="bg-red-100 hover:bg-red-200 text-red-800 border border-red-200 font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md">
                 <Trash2 className="w-4 h-4" />
                 Удалить
               </motion.button>
@@ -387,24 +400,24 @@ export default function UserDetailPage() {
             <Section title="Информация о пользователе" delay={0.2}>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-whitexl font-bold text-white dark:text-white flex items-center gap-2">
-                    <User className="w-5 h-5 text-white-500" />
+                  <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <User className="w-5 h-5 text-blue-500" />
                     {user.fullName}
                   </h3>
                   <StatusBadge status={user.isActive ? "Выполнена" : "Отменена"} />
                 </div>
-                <p className="text-white text-white dark:text-white flex items-center gap-2">
+                <p className="text-gray-800 flex items-center gap-2">
                   <Mail className="w-4 h-4" />
                   {user.email}
                 </p>
-                {user.phone && <p className="text-white text-white dark:text-white flex items-center gap-2">
+                {user.phone && <p className="text-gray-800 flex items-center gap-2">
                     <Phone className="w-4 h-4" />
                     {user.phone}
                   </p>}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-white font-semibold dark:text-white mb-2">Основная информация</h4>
-                    <ul className="space-y-2 text-white">
+                    <h4 className="text-gray-800 font-semibold mb-2">Основная информация</h4>
+                    <ul className="space-y-2 text-gray-500">
                       <li><span className="font-medium">Логин:</span> {user.username}</li>
                       <li><span className="font-medium">Дата рождения:</span> {formatDate(user.dateOfBirth)}</li>
                       <li><span className="font-medium">Адрес:</span> {user.address || "Не указан"}</li>
@@ -413,17 +426,17 @@ export default function UserDetailPage() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="text-white font-semibold text-white dark:text-white mb-2">Библиотечная информация</h4>
-                    <ul className="space-y-2 text-white">
+                    <h4 className="text-gray-800 font-semibold mb-2">Библиотечная информация</h4>
+                    <ul className="space-y-2 text-gray-500">
                       <li><span className="font-medium">Книг на руках:</span> {user.borrowedBooksCount}/{user.maxBooksAllowed}</li>
                       <li><span className="font-medium">Срок выдачи:</span> {user.loanPeriodDays || 14} дней</li>
-                      <li><span className="font-medium">Штраф:</span> <span className={user.fineAmount > 0 ? "text-whitered-500" : ""}>{user.fineAmount.toFixed(2)} руб.</span></li>
+                      <li><span className="font-medium">Штраф:</span> <span className={user.fineAmount > 0 ? "text-red-800" : ""}>{user.fineAmount.toFixed(2)} руб.</span></li>
                     </ul>
                   </div>
                 </div>
                 {user.passportNumber && <div>
-                    <h4 className="text-white font-semibold text-white dark:text-white mb-2">Паспортные данные</h4>
-                    <ul className="space-y-2 text-white">
+                    <h4 className="text-gray-800 font-semibold mb-2">Паспортные данные</h4>
+                    <ul className="space-y-2 text-gray-500">
                       <li><span className="font-medium">Номер паспорта:</span> {user.passportNumber}</li>
                       {user.passportIssuedBy && <li><span className="font-medium">Кем выдан:</span> {user.passportIssuedBy}</li>}
                       {user.passportIssuedDate && <li><span className="font-medium">Дата выдачи:</span> {formatDate(user.passportIssuedDate)}</li>}
@@ -437,15 +450,15 @@ export default function UserDetailPage() {
             <Section title="Роли пользователя" delay={0.3}>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-white font-semibold flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-gray-800 font-semibold flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-blue-500" />
                     Назначенные роли
                   </h3>
                   <motion.button whileHover={{
                   scale: 1.05
                 }} whileTap={{
                   scale: 0.95
-                }} onClick={() => setIsAssigningRole(!isAssigningRole)} className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white text-sm font-medium rounded-lg px-3 py-1 flex items-center gap-1 shadow-md backdrop-blur-md">
+                }} onClick={() => setIsAssigningRole(!isAssigningRole)} className="bg-blue-500 hover:bg-blue-700 text-white text-sm font-medium rounded-lg px-3 py-1 flex items-center gap-1 shadow-md">
                     <Plus className="w-3 h-3" />
                     Добавить роль
                   </motion.button>
@@ -457,11 +470,11 @@ export default function UserDetailPage() {
               }} animate={{
                 opacity: 1,
                 height: "auto"
-              }} className="p-3 bg-emerald-500/20 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30">
+              }} className="p-3 bg-blue-100 rounded-lg border border-blue-200">
                     <div className="space-y-3">
                       <div>
-                        <label className="block mb-1 text-white text-sm">Выберите роль:</label>
-                        <select value={selectedRoleId} onChange={e => setSelectedRoleId(Number(e.target.value) || "")} className="w-full p-2 rounded-lg bg-green-500 dark:bg-green-600 backdrop-blur-md border border-white/30 dark:border-gray-700/30 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                        <label className="block mb-1 text-gray-800 text-sm">Выберите роль:</label>
+                        <select value={selectedRoleId} onChange={e => setSelectedRoleId(Number(e.target.value) || "")} className="w-full p-2 rounded-lg bg-white border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
                           <option value="">Выберите роль</option>
                           {filteredAvailableRoles.map(role => <option key={role.id} value={role.id}>
                               {role.name}
@@ -473,14 +486,14 @@ export default function UserDetailPage() {
                       y: -2
                     }} whileTap={{
                       scale: 0.95
-                    }} onClick={() => setIsAssigningRole(false)} className="bg-green-500/30 hover:bg-green-600/30 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md">
+                    }} onClick={() => setIsAssigningRole(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium rounded-lg px-3 py-1 shadow-md border border-gray-200">
                           Отмена
                         </motion.button>
                         <motion.button whileHover={{
                       y: -2
                     }} whileTap={{
                       scale: 0.95
-                    }} onClick={handleAssignRole} className="bg-emerald-500/30 hover:bg-emerald-600/30 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md backdrop-blur-md">
+                    }} onClick={handleAssignRole} className="bg-blue-500 hover:bg-blue-700 text-white text-sm font-medium rounded-lg px-3 py-1 shadow-md">
                           Назначить
                         </motion.button>
                       </div>
@@ -494,22 +507,22 @@ export default function UserDetailPage() {
                 }} animate={{
                   opacity: 1,
                   x: 0
-                }} className="p-3 bg-green/10 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30 flex justify-between items-center">
+                }} className="p-3 bg-gray-100 rounded-lg border border-gray-200 flex justify-between items-center">
                         <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          <ShieldCheck className="w-4 h-4 text-blue-500" />
                           <div>
-                            <p className="font-medium text-white">{role.name}</p>
-                            <p className="text-white text-sm">{role.description}</p>
+                            <p className="font-medium text-gray-800">{role.name}</p>
+                            <p className="text-gray-500 text-sm">{role.description}</p>
                           </div>
                         </div>
                         <motion.button whileHover={{
                     y: -2
                   }} whileTap={{
                     scale: 0.95
-                  }} onClick={() => handleRemoveRole(role.id)} className="bg-red-500/90 hover:bg-red-600/90 text-white p-1 rounded-lg shadow-md backdrop-blur-md" title="Удалить роль">
+                  }} onClick={() => handleRemoveRole(role.id)} className="bg-red-100 hover:bg-red-200 text-red-800 border border-red-200 p-1 rounded-lg shadow-md" title="Удалить роль">
                           <UserMinus className="w-4 h-4" />
                         </motion.button>
-                      </motion.div>) : <p className="text-white text-center py-2">У пользователя нет ролей</p>}
+                      </motion.div>) : <p className="text-gray-500 text-center py-2">У пользователя нет ролей</p>}
                 </div>
               
                 <Link href="/admin/roles">
@@ -517,7 +530,7 @@ export default function UserDetailPage() {
                   y: -2
                 }} whileTap={{
                   scale: 0.95
-                }} className="w-full mt-2 bg-emerald-500/40 hover:bg-emerald-500/60 text-white text-sm font-medium rounded-lg px-3 py-2 flex items-center justify-center gap-2 shadow-md backdrop-blur-md">
+                }} className="w-full mt-2 bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 text-sm font-medium rounded-lg px-3 py-2 flex items-center justify-center gap-2 shadow-md">
                     <Shield className="w-4 h-4" />
                     Управление ролями
                   </motion.button>
@@ -537,22 +550,22 @@ export default function UserDetailPage() {
             x: 0
           }} transition={{
             delay: 0.1 * index
-          }} className="p-3 max-w-xs bg-green/70 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30 flex items-start gap-3 mx-auto">
+          }} className="p-3 max-w-xs bg-white rounded-lg border border-gray-200 flex items-start gap-3 mx-auto shadow-md">
                   {book.cover && <div className="w-14 h-20 relative flex-shrink-0 rounded-md overflow-hidden shadow-lg">
                       <Image src={book.cover} alt={book.title || "Книга"} fill style={{
                 objectFit: "cover"
               }} className="rounded-md" />
                     </div>}
                   <div className="flex-grow">
-                    <h4 className="font-semibold text-white dark:text-white mb-1 line-clamp-2">{book.title}</h4>
-                    <p className="text-sm text-white dark:text-white mb-1 line-clamp-1">Автор: {book.author}</p>
-                    <p className="text-sm text-white dark:text-white">
+                    <h4 className="font-semibold text-gray-800 mb-1 line-clamp-2">{book.title}</h4>
+                    <p className="text-sm text-gray-500 mb-1 line-clamp-1">Автор: {book.author}</p>
+                    <p className="text-sm text-gray-500">
                       Дата возврата: {formatDate(book.returnDate)}
                     </p>
-                    {book.isFromReservation && <span className="text-xs text-emerald-400 mt-1 inline-block"></span>}
+                    {book.isFromReservation && <span className="text-xs text-blue-500 mt-1 inline-block"></span>}
                   </div>
                 </motion.div>)}
-            </div> : <p className="text-white dark:text-white text-center py-4">Пользователь не имеет книг на руках</p>}
+            </div> : <p className="text-gray-500 text-center py-4">Пользователь не имеет книг на руках</p>}
         </Section>
 
         <Section title="Резервации пользователя" delay={0.5}>
@@ -572,24 +585,24 @@ export default function UserDetailPage() {
             x: 0
           }} transition={{
             delay: 0.1 * index
-          }} className="p-4 bg-green/20 dark:bg-green-800/70 backdrop-blur-md rounded-lg border border-white/30 dark:border-gray-700/30">
+          }} className="p-4 bg-white rounded-lg border border-gray-200 shadow-md">
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold text-white dark:text-white line-clamp-2">{reservation.book?.title || "Неизвестная книга"}</h4>
+                    <h4 className="font-semibold text-gray-800 line-clamp-2">{reservation.book?.title || "Неизвестная книга"}</h4>
                     <StatusBadge status={reservation.status} />
                   </div>
-                  <p className="text-sm text-white dark:text-white">Авторы: {reservation.book?.authors || "Не указаны"}</p>
-                  <p className="text-sm text-white dark:text-white">Зарезервировано до: {formatDate(reservation.expirationDate)}</p>
-                  <p className="text-sm text-white dark:text-white">Дата резервации: {formatDate(reservation.reservationDate)}</p>
-                  {reservation.notes && <p className="text-xs italic mt-2 text-white dark:text-white">Примечание: {reservation.notes}</p>}
+                  <p className="text-sm text-gray-500">Авторы: {reservation.book?.authors || "Не указаны"}</p>
+                  <p className="text-sm text-gray-500">Зарезервировано до: {formatDate(reservation.expirationDate)}</p>
+                  <p className="text-sm text-gray-500">Дата резервации: {formatDate(reservation.reservationDate)}</p>
+                  {reservation.notes && <p className="text-xs italic mt-2 text-gray-500">Примечание: {reservation.notes}</p>}
                    <Link href={`/admin/reservations/${reservation.id}`}>
                     <motion.button whileHover={{
                 scale: 1.05
-              }} className="mt-3 w-full bg-emerald-500/80 hover:bg-emerald-600/80 text-white text-sm font-medium rounded-lg py-1.5 shadow-md backdrop-blur-md">
+              }} className="mt-3 w-full bg-blue-500 hover:bg-blue-700 text-white text-sm font-medium rounded-lg py-1.5 shadow-md">
                       К резервации
                     </motion.button>
                   </Link>
                 </motion.div>)}
-            </div> : <p className="text-white dark:text-white text-center py-4">У пользователя нет резерваций</p>}
+            </div> : <p className="text-gray-500 text-center py-4">У пользователя нет резерваций</p>}
         </Section>
       </main>
     </div>;

@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookOpen, Search, Filter, BookMarked, ArrowUpDown, ChevronDown, Heart } from "lucide-react";
-import BookCover from "@/components/BookCover";
+import { Book } from "@/components/ui/book";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 interface Book {
@@ -166,7 +166,7 @@ export default function BooksPage() {
         title: "Требуется авторизация",
         description: "Пожалуйста, войдите в систему, чтобы добавлять книги в избранное.",
         variant: "default",
-        action: <Link href="/auth/login" variant="outline">Войти</Link>
+        action: <Button asChild variant="outline"><Link href="/auth/login">Войти</Link></Button>
       });
       return;
     }
@@ -225,45 +225,45 @@ export default function BooksPage() {
       });
     }
   };
-  return <div className="min-h-screen relative">
+  return <div className="min-h-screen bg-gray-200 relative">
       {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-blue-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
       <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
         <FadeInView>
-          <div className="backdrop-blur-xl bg-white/30 dark:bg-gray-800/30 border-b border-white/20 dark:border-gray-700/30 p-4 rounded-xl shadow-lg mb-6">
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-6">
             <div className="flex flex-wrap gap-4 items-center justify-between">
               <div className="flex items-center gap-2">
-                <BookMarked className="h-6 w-6 text-emerald-500" />
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Каталог книг</h1>
+                <BookMarked className="h-6 w-6 text-blue-500" />
+                <h1 className="text-2xl font-bold text-gray-800">Каталог книг</h1>
               </div>
 
               <div className="flex flex-wrap gap-4 items-center">
                 <form onSubmit={handleSearch} className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input type="text" placeholder="Поиск книг..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg pl-10 pr-4 py-2 text-gray-700 dark:text-gray-200 shadow-md w-[200px] md:w-[300px]" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+                  <Input type="text" placeholder="Поиск книг..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-white border border-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pl-10 pr-4 py-2 text-gray-800 w-[200px] md:w-[300px]" />
                 </form>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
+                    <Button variant="outline" className="flex items-center gap-2 bg-white border-blue-500 text-blue-500 hover:bg-gray-100">
                       <Filter className="h-4 w-4" />
                       Жанры
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56">
-                    <DropdownMenuItem onClick={clearFilters}>Сбросить фильтры</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {genres.map(genre => <DropdownMenuCheckboxItem key={genre} checked={selectedGenres.includes(genre)} onCheckedChange={() => toggleGenre(genre)}>
+                  <DropdownMenuContent className="w-56 bg-white border border-gray-100">
+                    <DropdownMenuItem onClick={clearFilters} className="text-gray-800 hover:bg-gray-100">Сбросить фильтры</DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-gray-100" />
+                    {genres.map(genre => <DropdownMenuCheckboxItem key={genre} checked={selectedGenres.includes(genre)} onCheckedChange={() => toggleGenre(genre)} className="text-gray-800 hover:bg-gray-100">
                         {genre}
                       </DropdownMenuCheckboxItem>)}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button variant="outline" className="flex items-center gap-2" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
+                <Button variant="outline" className="flex items-center gap-2 bg-white border-blue-500 text-blue-500 hover:bg-gray-100" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
                   <ArrowUpDown className="h-4 w-4" />
                   {sortOrder === "asc" ? "А-Я" : "Я-А"}
                 </Button>
@@ -281,8 +281,8 @@ export default function BooksPage() {
             duration: 1.5,
             repeat: Number.POSITIVE_INFINITY,
             ease: "linear"
-          }} className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full" />
-            </div> : filteredBooks.length === 0 ? <motion.div className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-2xl p-12 shadow-lg border border-white/20 dark:border-gray-700/30 text-center" initial={{
+          }} className="w-12 h-12 border-4 border-blue-300 border-t-blue-500 rounded-full" />
+            </div> : filteredBooks.length === 0 ? <motion.div className="bg-white rounded-xl p-12 shadow-md border border-gray-100 text-center" initial={{
           opacity: 0,
           y: 20
         }} animate={{
@@ -292,16 +292,16 @@ export default function BooksPage() {
           duration: 0.5,
           delay: 0.3
         }}>
-              <BookOpen className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-xl text-gray-700 dark:text-gray-200">Книги не найдены</p>
-              <p className="mt-2 text-gray-600 dark:text-gray-300">Попробуйте изменить параметры поиска</p>
-              <Button className="mt-6 bg-emerald-500 hover:bg-emerald-600 text-white" onClick={clearFilters}>
+              <BookOpen className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+              <p className="text-xl text-gray-800">Книги не найдены</p>
+              <p className="mt-2 text-gray-500">Попробуйте изменить параметры поиска</p>
+              <Button className="mt-6 bg-blue-500 hover:bg-blue-700 text-white rounded-lg" onClick={clearFilters}>
                 Сбросить фильтры
               </Button>
             </motion.div> : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
               {filteredBooks.map((book, index) => <div key={book.id} className="relative group">
                   <Link href={`/readers/books/${book.id}`}>
-                    <motion.div className="text-gray-700 dark:text-white" initial={{
+                    <motion.div className="text-gray-800" initial={{
                 opacity: 0,
                 y: 20
               }} animate={{
@@ -312,27 +312,34 @@ export default function BooksPage() {
                   duration: 0.5
                 }
               }}>
-                      <div className="relative w-full h-64 overflow-visible" style={{
-                  perspective: "1000px"
+                                            <div className="relative w-full overflow-visible flex items-center justify-center" style={{
+                  height: "240px"
                 }}>
-                        <motion.div className="absolute inset-0 transform-gpu transition-all duration-500 preserve-3d" initial={{
-                    rotateY: 15
+                        <motion.div className="transform-gpu transition-all duration-500" initial={{
+                    rotateY: 0
                   }} whileHover={{
-                    rotateY: 0,
                     scale: 1.05
                   }}>
-                          <BookCover coverColor="rgba(47, 47, 47, 0.5)" coverImage={book.cover || ""} variant="medium" className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/20 dark:border-gray-700/30 rounded-2xl shadow-lg w-full h-full" />
+                          <Book 
+                            color={book.cover ? "#3B82F6" : "#6B7280"} 
+                            width={180}
+                            depth={3}
+                            variant="default"
+                            illustration={book.cover ? <img src={book.cover} alt={book.title} className="w-full h-full object-cover rounded" /> : undefined}
+                          >
+                            <div></div>
+                          </Book>
                         </motion.div>
                       </div>
-                      <motion.div className="mt-2 backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 rounded-xl p-3 shadow-md border border-white/20 dark:border-gray-700/30" whileHover={{
+                      <motion.div className="mt-2 bg-white rounded-lg p-3 shadow-md border border-gray-100 text-center" whileHover={{
                   y: -3,
                   boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
                 }}>
-                        <p className="font-semibold line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        <p className="font-semibold line-clamp-1 group-hover:text-blue-500 transition-colors">
                           {book.title}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-1">{book.authors}</p>
-                        {book.genre && <p className="text-xs text-gray-500 dark:text-gray-400">{book.genre}</p>}
+                        <p className="text-sm text-gray-500 line-clamp-1">{book.authors}</p>
+                        {book.genre && <p className="text-xs text-gray-500">{book.genre}</p>}
                       </motion.div>
                     </motion.div>
                   </Link>
@@ -340,7 +347,7 @@ export default function BooksPage() {
               e.preventDefault();
               e.stopPropagation();
               handleToggleFavorite(book);
-            }} className="absolute top-2 right-2 z-20 text-gray-700 dark:text-white hover:text-emerald-500 dark:hover:text-emerald-400 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" aria-label="Toggle Favorite">
+            }} className="absolute top-2 right-2 z-20 text-gray-800 hover:text-blue-500 bg-white/80 backdrop-blur-sm rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" aria-label="Toggle Favorite">
                     <Heart fill={favoriteBookIds.has(book.id) ? "currentColor" : "none"} className="w-5 h-5" />
                   </Button>
                 </div>)}

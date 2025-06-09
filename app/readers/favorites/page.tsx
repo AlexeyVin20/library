@@ -38,24 +38,24 @@ const FavoriteBookCard = ({
   }} transition={{
     duration: 0.3,
     ease: [0.22, 1, 0.36, 1]
-  }} className="group relative overflow-hidden rounded-xl shadow-lg backdrop-blur-xl bg-white/30 dark:bg-gray-800/30 border border-white/30 dark:border-gray-700/40">
+  }} className="group relative overflow-hidden rounded-xl shadow-lg bg-white border border-gray-200 hover:shadow-xl transition-all duration-300">
       <Link href={`/readers/books/${book.bookId}`} className="block">
         <div className="relative w-full aspect-[2/3]">
-          {book.bookCover ? <NextImage src={book.bookCover} alt={book.bookTitle} fill className="object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full flex items-center justify-center bg-emerald-100 dark:bg-emerald-900">
-              <BookOpen className="text-emerald-500 w-16 h-16" />
+          {book.bookCover ? <NextImage src={book.bookCover} alt={book.bookTitle} fill className="object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full flex items-center justify-center bg-blue-100">
+              <BookOpen className="text-blue-500 w-16 h-16" />
             </div>}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
       </Link>
       <div className="p-4">
         <Link href={`/readers/books/${book.bookId}`}>
-          <h3 className="font-semibold text-lg line-clamp-2 text-gray-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+          <h3 className="font-semibold text-lg line-clamp-2 text-gray-800 group-hover:text-blue-500 transition-colors">
             {book.bookTitle}
           </h3>
         </Link>
-        {book.bookAuthors && <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-1 mt-1">{book.bookAuthors}</p>}
+        {book.bookAuthors && <p className="text-sm text-gray-500 line-clamp-1 mt-1">{book.bookAuthors}</p>}
       </div>
-      <Button variant="ghost" size="icon" onClick={() => onRemove(book.bookId)} className="absolute top-3 right-3 z-10 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-700 backdrop-blur-sm rounded-full p-1.5 transition-all" aria-label="Удалить из избранного">
+      <Button variant="ghost" size="icon" onClick={() => onRemove(book.bookId)} className="absolute top-3 right-3 z-10 text-red-500 hover:text-red-700 bg-white/90 hover:bg-white rounded-full p-1.5 transition-all" aria-label="Удалить из избранного">
         <Trash2 className="w-5 h-5" />
       </Button>
     </motion.div>;
@@ -137,80 +137,96 @@ export default function FavoritesPage() {
     }
   };
   if (loading) {
-    return <div className="container mx-auto px-4 py-8 md:px-6 md:py-12 min-h-[calc(100vh-10rem)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emerald-500"></div>
+    return <div className="min-h-screen bg-gray-200 flex items-center justify-center px-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+          <p className="text-gray-800">Загружаем ваши избранные книги...</p>
+        </div>
       </div>;
   }
   if (!currentUserId) {
-    return <div className="container mx-auto px-4 py-8 md:px-6 md:py-12 min-h-[calc(100vh-10rem)] flex flex-col items-center justify-center text-center">
-        <AlertTriangle className="w-16 h-16 text-amber-500 mb-6" />
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-3">Требуется авторизация</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Пожалуйста, войдите в систему, чтобы просмотреть свои избранные книги.
-        </p>
-        <Link href="/auth/login">
-          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
-            <BookOpen className="mr-2 h-5 w-5" />
-            Войти
-          </Button>
-        </Link>
+    return <div className="min-h-screen bg-gray-200 flex items-center justify-center px-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
+          <AlertTriangle className="w-16 h-16 text-blue-500 mb-6 mx-auto" />
+          <h2 className="text-2xl font-semibold text-gray-800 mb-3">Требуется авторизация</h2>
+          <p className="text-gray-500 mb-6">
+            Пожалуйста, войдите в систему, чтобы просмотреть свои избранные книги.
+          </p>
+          <Link href="/auth/login">
+            <Button className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg px-6 py-2">
+              <BookOpen className="mr-2 h-5 w-5" />
+              Войти
+            </Button>
+          </Link>
+        </div>
       </div>;
   }
   if (error) {
-    return <div className="container mx-auto px-4 py-8 md:px-6 md:py-12 min-h-[calc(100vh-10rem)] flex flex-col items-center justify-center text-center">
-        <AlertTriangle className="w-16 h-16 text-red-500 mb-6" />
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-3">Ошибка загрузки</h2>
-        <p className="text-gray-600 dark:text-gray-300">{error}</p>
-         <Button onClick={() => window.location.reload()} variant="outline" className="mt-6">
+    return <div className="min-h-screen bg-gray-200 flex items-center justify-center px-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
+          <AlertTriangle className="w-16 h-16 text-red-500 mb-6 mx-auto" />
+          <h2 className="text-2xl font-semibold text-gray-800 mb-3">Ошибка загрузки</h2>
+          <p className="text-gray-500 mb-6">{error}</p>
+          <Button onClick={() => window.location.reload()} className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg px-6 py-2">
             Попробовать снова
-        </Button>
+          </Button>
+        </div>
       </div>;
   }
   if (favoriteBooks.length === 0) {
-    return <div className="container mx-auto px-4 py-8 md:px-6 md:py-12 min-h-[calc(100vh-10rem)] flex flex-col items-center justify-center text-center">
-        <Heart className="w-16 h-16 text-emerald-400 mb-6" />
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-3">Список избранного пуст</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Вы еще не добавили ни одной книги в избранное. Начните исследовать нашу коллекцию!
-        </p>
-        <Link href="/readers">
-          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
-            <Search className="mr-2 h-5 w-5" />
-            Найти книги
-          </Button>
-        </Link>
+    return <div className="min-h-screen bg-gray-200 flex items-center justify-center px-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
+          <Heart className="w-16 h-16 text-blue-500 mb-6 mx-auto" />
+          <h2 className="text-2xl font-semibold text-gray-800 mb-3">Список избранного пуст</h2>
+          <p className="text-gray-500 mb-6">
+            Вы еще не добавили ни одной книги в избранное. Начните исследовать нашу коллекцию!
+          </p>
+          <Link href="/readers">
+            <Button className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg px-6 py-2">
+              <Search className="mr-2 h-5 w-5" />
+              Найти книги
+            </Button>
+          </Link>
+        </div>
       </div>;
   }
-  return <div className="container mx-auto px-4 py-8 md:px-6 md:py-12">
-      <motion.div initial={{
-      opacity: 0,
-      y: -20
-    }} animate={{
-      opacity: 1,
-      y: 0
-    }} transition={{
-      duration: 0.5
-    }}>
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2">
-          Мои <span className="text-emerald-600 dark:text-emerald-400">избранные</span> книги
-        </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 md:mb-12">
-          Здесь собраны все книги, которые вы отметили как избранные.
-        </p>
-      </motion.div>
-
-      <motion.div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8" variants={{
-      hidden: {
-        opacity: 0
-      },
-      show: {
+  return <div className="min-h-screen bg-gray-200 py-8 px-4">
+      <div className="container mx-auto">
+        <motion.div initial={{
+        opacity: 0,
+        y: -20
+      }} animate={{
         opacity: 1,
-        transition: {
-          staggerChildren: 0.1
+        y: 0
+      }} transition={{
+        duration: 0.5
+      }} className="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+            Мои <span className="text-blue-500">избранные</span> книги
+          </h1>
+          <p className="text-lg text-gray-500 mb-4">
+            Здесь собраны все книги, которые вы отметили как избранные.
+          </p>
+          <div className="bg-blue-100 border-l-4 border-blue-500 rounded-r-lg p-4">
+            <p className="text-blue-800 text-sm">
+              📚 Найдено книг: <strong>{favoriteBooks.length}</strong>
+            </p>
+          </div>
+        </motion.div>
+
+        <motion.div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6" variants={{
+        hidden: {
+          opacity: 0
+        },
+        show: {
+          opacity: 1,
+          transition: {
+            staggerChildren: 0.1
+          }
         }
-      }
-    }} initial="hidden" animate="show">
-        {favoriteBooks.map(book => <FavoriteBookCard key={book.bookId} book={book} onRemove={handleRemoveFromFavorites} />)}
-      </motion.div>
+      }} initial="hidden" animate="show">
+          {favoriteBooks.map(book => <FavoriteBookCard key={book.bookId} book={book} onRemove={handleRemoveFromFavorites} />)}
+        </motion.div>
+      </div>
     </div>;
 }

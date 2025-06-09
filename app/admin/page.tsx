@@ -116,16 +116,16 @@ const ChartCard = ({
   delay?: number;
 }) => {
   return <FadeInView delay={delay}>
-      <motion.div className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30">
-        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-emerald-500" />
+      <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border-2 border-blue-500">
+        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-blue-500" />
           {title}
         </h3>
-        <div className="flex-1 h-[300px] bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-gray-700/30">
+        <div className="flex-1 h-[300px] bg-gray-100 rounded-xl p-4 border border-gray-300">
           {children}
         </div>
         <Link href="/admin/statistics" className="mt-4">
-          <span className="text-white hover:text-emerald-300 text-sm font-medium flex items-center">
+          <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center">
             Подробная статистика
             <ArrowRight className="w-4 h-4 ml-1" />
           </span>
@@ -151,21 +151,21 @@ const BookCard = ({
   }} transition={{
     delay: 0.1 * index,
     duration: 0.3
-  }} className="flex p-4 backdrop-blur-xl bg-green/20 dark:bg-gray-800/30 rounded-xl border border-white/20 dark:border-gray-700/30 mb-3 transition-all duration-300 hover:shadow-lg relative overflow-hidden">
-      <PixelCanvas colors={['#34d399', '#10b981', '#059669']} gap={2} speed={10} variant="icon" noFocus />
+  }} className="flex p-4 bg-white rounded-xl border-2 border-blue-500 mb-3 transition-all duration-300 hover:shadow-lg relative overflow-hidden">
+      <PixelCanvas colors={['#3B82F6', '#2563EB', '#93C5FD']} gap={3} speed={8} variant="icon" noFocus />
       <div className="flex items-center w-full relative z-10">
-        <div className="w-12 h-16 flex-shrink-0 bg-emerald-100/70 dark:bg-emerald-900/30 rounded-lg mr-4 overflow-hidden shadow-md">
+        <div className="w-12 h-16 flex-shrink-0 bg-gray-100 rounded-lg mr-4 overflow-hidden shadow-md">
           {book.cover ? <img src={book.cover || "/placeholder.svg"} alt={book.title} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-emerald-400" />
+              <BookOpen className="w-6 h-6 text-blue-500" />
             </div>}
         </div>
         <div className="flex-1 min-w-0">
           <Link href={`/admin/books/${book.id}`}>
-            <h3 className="text-white font-medium truncate hover:text-emerald-300 transition-colors">{book.title}</h3>
+            <h3 className="text-gray-800 font-medium truncate hover:text-blue-500 transition-colors">{book.title}</h3>
           </Link>
-          <p className="text-sm text-white mt-1">{book.authors || "Автор не указан"}</p>
-          <p className="text-xs text-white mt-1 flex items-center">
-            <span className="inline-block px-2 py-0.5 bg-emerald-100/70 dark:bg-emerald-900/30 text-white rounded-full mr-1">
+          <p className="text-sm text-gray-500 mt-1">{book.authors || "Автор не указан"}</p>
+          <p className="text-xs text-gray-500 mt-1 flex items-center">
+            <span className="inline-block px-2 py-0.5 bg-green-100 text-green-800 rounded-full mr-1">
               {book.availableCopies}
             </span>
             экз.
@@ -191,10 +191,10 @@ const Section = ({
   delay?: number;
 }) => {
   return <FadeInView delay={delay}>
-      <motion.div className="backdrop-blur-xl bg-green/20 dark:bg-green/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-white/20 dark:border-gray-700/30">
+      <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col border-2 border-blue-500">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-white">{title}</h2>
-          {action && <span className="text-white hover:text-emerald-300 transition-colors text-sm font-medium flex items-center cursor-pointer">
+          <h2 className="text-lg font-bold text-gray-800">{title}</h2>
+          {action && <span className="text-blue-500 hover:text-blue-700 transition-colors text-sm font-medium flex items-center cursor-pointer">
               {action.label}
               <ChevronRight className="w-4 h-4 ml-1" />
             </span>}
@@ -213,16 +213,16 @@ const StatusBadge = ({
   let color = "";
   let label = "";
   if (status === "Выполнена") {
-    color = "bg-emerald-500";
+    color = "bg-green-100 text-green-800";
     label = "Выполнена";
   } else if (status === "Обрабатывается") {
-    color = "bg-emerald-400";
+    color = "bg-blue-300 text-gray-800";
     label = "В обработке";
   } else {
-    color = "bg-gray-500";
+    color = "bg-gray-100 text-gray-800";
     label = "Отменена";
   }
-  return <span className={`inline-block px-3 py-1 text-xs font-medium text-white rounded-full ${color} backdrop-blur-md shadow-sm`}>
+  return <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${color} shadow-sm`}>
       {label}
     </span>;
 };
@@ -231,21 +231,21 @@ const StatusBadge = ({
 const ActionButton = ({
   href,
   label,
-  color = "emerald",
+  color = "blue",
   icon
 }: {
   href: string;
   label: string;
-  color?: "emerald" | "emerald-light" | "gray";
+  color?: "blue" | "blue-light" | "gray";
   icon?: React.ReactNode;
 }) => {
   const colors = {
-    emerald: "bg-green-500/20 hover:bg-green-600/90 backdrop-blur-xl",
-    "emerald-light": "bg-green-400/20 hover:bg-green-500/90 backdrop-blur-xl",
-    gray: "bg-green-500/20 hover:bg-green-600/90 backdrop-blur-xl"
+    blue: "bg-blue-500 hover:bg-blue-700 text-white",
+    "blue-light": "bg-blue-300 hover:bg-blue-500 text-gray-800 hover:text-white",
+    gray: "bg-gray-100 hover:bg-gray-200 text-gray-800"
   };
   return <Link href={href}>
-      <motion.div className={`${colors[color]} backdrop-blur-xl text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 px-4 py-3 flex items-center justify-center gap-2 border border-white/10`} whileTap={{
+      <motion.div className={`${colors[color]} font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 px-4 py-3 flex items-center justify-center gap-2 border-2 border-blue-500`} whileTap={{
       scale: 0.98
     }}>
         {icon}
@@ -256,21 +256,21 @@ const ActionButton = ({
 
 // Компонент загрузки
 const LoadingSpinner = () => {
-  return <div className="flex flex-col justify-center items-center h-screen">
+  return <div className="flex flex-col justify-center items-center h-screen bg-gray-200">
       <motion.div animate={{
       rotate: 360
     }} transition={{
       duration: 1.5,
       repeat: Number.POSITIVE_INFINITY,
       ease: "linear"
-    }} className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full" />
+    }} className="w-12 h-12 border-4 border-gray-300 border-t-blue-500 rounded-full" />
       <motion.p initial={{
       opacity: 0
     }} animate={{
       opacity: 1
     }} transition={{
       delay: 0.5
-    }} className="mt-4 text-emerald-600 dark:text-emerald-400 font-medium">
+    }} className="mt-4 text-blue-500 font-medium">
         Загрузка данных...
       </motion.p>
     </div>;
@@ -298,16 +298,16 @@ const CornerCard = ({
     scale: 1
   }} transition={{
     duration: 0.5
-  }} className={`backdrop-blur-xl bg-green/30 dark:bg-green/50 rounded-2xl p-6 shadow-lg border border-white/30 dark:border-white/10 relative overflow-hidden`}>
-      <div className={`absolute top-0 right-0 w-24 h-24 ${color} opacity-20 rounded-bl-full`}></div>
-      <div className={`absolute top-3 right-3 w-12 h-12 rounded-full ${color} bg-opacity-30 flex items-center justify-center`}>
-        {React.cloneElement(icon as React.ReactElement<any, any>, {/* className: "w-6 h-6 text-white" */})}
+  }} className={`bg-white rounded-xl p-6 shadow-lg border-2 border-blue-500 relative overflow-hidden`}>
+      <div className={`absolute top-0 right-0 w-24 h-24 ${color} rounded-bl-full`}></div>
+      <div className={`absolute top-3 right-3 w-12 h-12 rounded-full ${color} flex items-center justify-center`}>
+        {React.cloneElement(icon as React.ReactElement<any, any>, {className: "w-6 h-6 text-white"})}
       </div>
-      <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-      <p className="text-3xl font-bold text-white mb-1">
+      <h3 className="text-lg font-bold text-gray-800 mb-2">{title}</h3>
+      <p className="text-3xl font-bold text-gray-800 mb-1">
         <CountUp end={value} />
       </p>
-      <p className="text-sm text-white/80">{subtitle}</p>
+      <p className="text-sm text-gray-500">{subtitle}</p>
     </motion.div>;
 };
 
@@ -561,8 +561,8 @@ export default function DashboardPage() {
     opacity: 0
   }} animate={{
     opacity: 1
-  }} className="flex flex-col items-center justify-center h-screen p-6">
-        <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl text-red-600 dark:text-red-400 p-6 rounded-xl border border-white/20 dark:border-gray-700/30 max-w-md w-full text-center shadow-lg">
+  }} className="flex flex-col items-center justify-center h-screen p-6 bg-gray-200">
+        <div className="bg-white text-red-800 p-6 rounded-xl border-2 border-red-100 max-w-md w-full text-center shadow-lg">
           <AlertCircle className="w-12 h-12 mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2">Произошла ошибка</h2>
           <p>{error}</p>
@@ -570,96 +570,92 @@ export default function DashboardPage() {
         scale: 1.05
       }} whileTap={{
         scale: 0.95
-      }} onClick={() => window.location.reload()} className="mt-4 bg-emerald-500/90 hover:bg-emerald-600/90 text-white px-4 py-2 rounded-lg font-medium shadow-md backdrop-blur-md">
+      }} onClick={() => window.location.reload()} className="mt-4 bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md">
             Попробовать снова
           </motion.button>
         </div>
       </motion.div>;
-  return <div className="min-h-screen relative" ref={containerRef}>
-      {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+  return <div className="min-h-screen bg-gray-200 relative" ref={containerRef}>
       <main className="max-w-7xl mx-auto space-y-8 relative z-10 p-6">
         {/* Статистические карточки */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-stretch">
           <PinContainer title="Книги" href="/admin/statistics" containerClassName="h-full w-full" className="h-full w-full">
-            <div className="flex flex-col justify-between h-full w-full">
+            <div className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <BookOpen className="text-emerald-500 w-7 h-7 drop-shadow-lg" />
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <BookOpen className="text-blue-500 w-7 h-7" />
                   Книги
                 </h3>
-                <div className="w-12 h-12 rounded-full bg-emerald-500 bg-opacity-30 dark:bg-opacity-40 flex items-center justify-center shadow-inner">
-                  <BookOpen className="text-emerald-500 w-7 h-7 drop-shadow-lg" />
+                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center shadow-inner">
+                  <BookOpen className="text-white w-7 h-7" />
                 </div>
               </div>
               <div>
-                <p className="text-4xl font-bold mb-2 text-white">
+                <p className="text-4xl font-bold mb-2 text-gray-800">
                   <CountUp end={totalAvailableBooks} />
                 </p>
-                <p className="text-sm text-white">доступных ресурсов</p>
-                <div className="mt-3 text-sm text-white flex items-center">
+                <p className="text-sm text-gray-500">доступных ресурсов</p>
+                <div className="mt-3 text-sm text-gray-500 flex items-center">
                   <span className="mr-1">+</span>
                   {recentBorrowed} <span className="ml-1">за последний месяц</span>
                 </div>
               </div>
-              <span className="mt-4 text-white hover:text-emerald-300 text-sm font-medium flex items-center cursor-pointer">
+              <span className="mt-4 text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
                 Подробная статистика
                 <ArrowRight className="w-4 h-4 ml-1" />
               </span>
             </div>
           </PinContainer>
           <PinContainer title="Пользователи" href="/admin/statistics" containerClassName="h-full w-full" className="h-full w-full">
-            <div className="flex flex-col justify-between h-full w-full">
+            <div className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Users className="text-blue-500 w-7 h-7 drop-shadow-lg" />
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <Users className="text-blue-500 w-7 h-7" />
                   Пользователи
                 </h3>
-                <div className="w-12 h-12 rounded-full bg-blue-500 bg-opacity-30 dark:bg-opacity-40 flex items-center justify-center shadow-inner">
-                  <Users className="text-blue-500 w-7 h-7 drop-shadow-lg" />
+                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center shadow-inner">
+                  <Users className="text-white w-7 h-7" />
                 </div>
               </div>
               <div>
-                <p className="text-4xl font-bold mb-2 text-white">
+                <p className="text-4xl font-bold mb-2 text-gray-800">
                   <CountUp end={activeUsersCount} />
                 </p>
-                <p className="text-sm text-white">взяли книги</p>
-                <div className="mt-3 text-sm text-white">
+                <p className="text-sm text-gray-500">взяли книги</p>
+                <div className="mt-3 text-sm text-gray-500">
                   {totalUsersCount ? Math.round(activeUsersCount / totalUsersCount * 100) : 0}% от общего числа
                 </div>
               </div>
-              <span className="mt-4 text-white hover:text-emerald-300 text-sm font-medium flex items-center cursor-pointer">
+              <span className="mt-4 text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
                 Подробная статистика
                 <ArrowRight className="w-4 h-4 ml-1" />
               </span>
             </div>
           </PinContainer>
           <PinContainer title="Резервирования" href="/admin/statistics" containerClassName="h-full w-full" className="h-full w-full">
-            <div className="flex flex-col justify-between h-full w-full">
+            <div className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <CalendarIcon className="text-emerald-400 w-7 h-7 drop-shadow-lg" />
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <CalendarIcon className="text-blue-500 w-7 h-7" />
                   Резервирования
                 </h3>
-                <div className="w-12 h-12 rounded-full bg-emerald-400 bg-opacity-30 dark:bg-opacity-40 flex items-center justify-center shadow-inner">
-                  <CalendarIcon className="text-emerald-400 w-7 h-7 drop-shadow-lg" />
+                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center shadow-inner">
+                  <CalendarIcon className="text-white w-7 h-7" />
                 </div>
               </div>
               <div>
-                <p className="text-4xl font-bold mb-2 text-white">
+                <p className="text-4xl font-bold mb-2 text-gray-800">
                   <CountUp end={reservations.length} />
                 </p>
-                <p className="text-sm text-white">всего заявок</p>
-                <div className="mt-3 text-sm text-white flex items-center">
-                  <span className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full bg-emerald-400">
+                <p className="text-sm text-gray-500">всего заявок</p>
+                <div className="mt-3 text-sm text-gray-500 flex items-center">
+                  <span className="inline-block px-2 py-0.5 text-xs font-medium text-green-800 rounded-full bg-green-100">
                     {pendingReservations}
                   </span>
                   <span className="ml-2">в обработке</span>
                 </div>
               </div>
-              <span className="mt-4 text-white hover:text-emerald-300 text-sm font-medium flex items-center cursor-pointer">
+              <span className="mt-4 text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
                 Подробная статистика
                 <ArrowRight className="w-4 h-4 ml-1" />
               </span>
@@ -676,24 +672,23 @@ export default function DashboardPage() {
             {!showRangeModal ? <>
                 <div className="flex flex-col md:flex-row gap-2 mb-4 w-full max-w-2xl">
                   <div className="flex flex-col gap-1 w-full md:w-56">
-                    {quickRanges.map((range, idx) => <button key={range.label} onClick={() => setSelectedRange(range.getRange())} className="text-left px-3 py-2 rounded-lg hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-white font-medium transition-colors" style={{
+                    {quickRanges.map((range, idx) => <button key={range.label} onClick={() => setSelectedRange(range.getRange())} className="text-left px-3 py-2 rounded-lg hover:bg-blue-300 text-gray-800 font-medium transition-colors" style={{
                   width: '100%'
                 }}>
                         {range.label}
                       </button>)}
                   </div>
                   <div className="flex-1 flex justify-center">
-                    <DayPickerCalendar mode="range" selected={selectedRange} onSelect={setSelectedRange} className="w-full h-[340px] max-w-xl min-w-[340px] text-white" style={{
+                    <DayPickerCalendar mode="range" selected={selectedRange} onSelect={setSelectedRange} className="w-full h-[340px] max-w-xl min-w-[340px] text-gray-800" style={{
                   fontSize: '1.08rem',
-                  color: '#fff'
+                  color: '#1F2937'
                 }} classNames={{
-                  day_selected: "bg-emerald-500 text-white hover:bg-emerald-600 focus:bg-emerald-600",
-                  // зелёный фон для выбранных дат
-                  day_range_start: "bg-emerald-500 text-white rounded-l-lg",
-                  day_range_end: "bg-emerald-500 text-white rounded-r-lg",
-                  day_range_middle: "bg-emerald-200 text-emerald-900", // светло-зелёный для промежуточных дат
-                  nav_button_previous: "bg-emerald-500/50 hover:bg-emerald-500/40 text-white",
-                  nav_button_next: "bg-emerald-500/50 hover:bg-emerald-500/40 text-white",
+                  day_selected: "bg-blue-500 text-white hover:bg-blue-700",
+                  day_range_start: "bg-blue-500 text-white rounded-l-lg",
+                  day_range_end: "bg-blue-500 text-white rounded-r-lg",
+                  day_range_middle: "bg-blue-300 text-gray-800",
+                  nav_button_previous: "bg-blue-500 hover:bg-blue-700 text-white",
+                  nav_button_next: "bg-blue-500 hover:bg-blue-700 text-white",
                   caption_label: "uppercase"
                 } as Record<string, string>} />
                   </div>
@@ -701,23 +696,23 @@ export default function DashboardPage() {
                 {/* 3 ближайших события */}
                 <div className="w-full max-w-xl mb-4">
                   <div className="space-y-2">
-                    <h4 className="text-white text-lg font-semibold mb-2">Ближайшие события</h4>
-                    {upcomingEvents.length > 0 ? upcomingEvents.map(ev => <div key={ev.id} className="p-3 bg-green-600/40 dark:bg-green-900/40 backdrop-blur rounded-lg shadow text-white flex flex-col">
+                    <h4 className="text-gray-800 text-lg font-semibold mb-2">Ближайшие события</h4>
+                    {upcomingEvents.length > 0 ? upcomingEvents.map(ev => <div key={ev.id} className="p-3 bg-gray-100 rounded-lg shadow text-gray-800 flex flex-col border border-blue-500">
                           <span className="text-sm font-bold">{formatDate(ev.reservationDate)}</span>
                           <span className="text-base">{ev.bookTitle}</span>
                           <span className="text-sm">{ev.userName}</span>
                           <div className="mt-1">
                             <StatusBadge status={ev.status} />
                           </div>
-                        </div>) : <p className="text-center text-white/80">Нет ближайших событий</p>}
+                        </div>) : <p className="text-center text-gray-500">Нет ближайших событий</p>}
                   </div>
                 </div>
-                <button disabled={!selectedRange?.from || !selectedRange?.to} onClick={() => setShowRangeModal(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-xl px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed" style={{
+                <button disabled={!selectedRange?.from || !selectedRange?.to} onClick={() => setShowRangeModal(true)} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-xl px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed" style={{
               marginTop: 0
             }}>
                   Просмотр
                 </button>
-              </> : <motion.div className="w-full h-full max-w-xl min-w-[340px] bg-green-500/20 dark:bg-green-800/30 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 dark:border-gray-700/30 overflow-y-auto p-6 flex flex-col flex-1" initial={{
+              </> : <motion.div className="w-full h-full max-w-xl min-w-[340px] bg-white rounded-xl shadow-lg border-2 border-blue-500 overflow-y-auto p-6 flex flex-col flex-1" initial={{
             opacity: 0,
             y: 20
           }} animate={{
@@ -728,43 +723,41 @@ export default function DashboardPage() {
             y: 20
           }}>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-gray-800">
                     События с {selectedRange?.from?.toLocaleDateString("ru-RU")} по {selectedRange?.to?.toLocaleDateString("ru-RU")}
                   </h3>
                   <motion.button whileHover={{
                 scale: 1.1,
-                backgroundColor: "rgba(16, 185, 129, 0.1)"
+                backgroundColor: "#93C5FD"
               }} whileTap={{
                 scale: 0.9
-              }} onClick={() => setShowRangeModal(false)} className="p-2 rounded-full hover:bg-emerald-50/70 dark:hover:bg-emerald-900/30 text-emerald-200 shadow-sm">
+              }} onClick={() => setShowRangeModal(false)} className="p-2 rounded-full hover:bg-blue-300 text-blue-500 shadow-sm">
                     <X className="w-5 h-5" />
                   </motion.button>
                 </div>
                 <div className="space-y-3 flex-1 overflow-y-auto">
-                  {/* Ограничение высоты для 5 резервов, остальные с прокруткой */}
                   <div className="flex flex-col space-y-3 max-h-[620px] overflow-y-auto">
-                    {filteredEvents.length > 0 ? filteredEvents.map(event => <div key={event.id} className="p-3 bg-green-600/40 dark:bg-green-900/40 backdrop-blur rounded-lg shadow text-white">
+                    {filteredEvents.length > 0 ? filteredEvents.map(event => <div key={event.id} className="p-3 bg-gray-100 rounded-lg shadow text-gray-800 border border-blue-500">
                           <Link href={`/admin/reservations/${event.id}`} className="block">
-                            <h4 className="font-medium text-white">{event.bookTitle}</h4>
-                            <p className="text-sm text-white/90">{event.userName}</p>
-                            <p className="text-xs mt-1 text-white/80">Дата брони: {formatDate(event.reservationDate)}</p>
+                            <h4 className="font-medium text-gray-800">{event.bookTitle}</h4>
+                            <p className="text-sm text-gray-500">{event.userName}</p>
+                            <p className="text-xs mt-1 text-gray-500">Дата брони: {formatDate(event.reservationDate)}</p>
                             <div className="mt-2">
                               <StatusBadge status={event.status} />
                             </div>
                           </Link>
-                        </div>) : <p className="text-center text-white/80">Нет событий за этот период</p>}
+                        </div>) : <p className="text-center text-gray-500">Нет событий за этот период</p>}
                   </div>
                 </div>
               </motion.div>}
           </div>
           <div className="space-y-3 flex-1">
-            {/* Недавно добавленные книги */}
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-blue-500" />
               Недавно добавленные книги
             </h3>
             <div className="relative">
-              {recentBooks.length > 0 ? recentBooks.map((book, index) => <BookCard key={book.id} book={book} index={index} />) : <p className="text-white">Нет доступных книг</p>}
+              {recentBooks.length > 0 ? recentBooks.map((book, index) => <BookCard key={book.id} book={book} index={index} />) : <p className="text-gray-500">Нет доступных книг</p>}
             </div>
           </div>
         </div>

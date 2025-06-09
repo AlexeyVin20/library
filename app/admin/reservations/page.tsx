@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
+
 interface Reservation {
   id: string;
   userId: string;
@@ -64,14 +65,14 @@ const AnimatedTabsTrigger = ({
   isActive: boolean;
 }) => {
   return <TabsTrigger value={value} className={`relative transition-colors
-        ${isActive ? 'bg-transparent text-white shadow-md' : ''}
+        ${isActive ? 'bg-transparent text-gray-800 shadow-md' : ''}
         rounded-lg px-3 py-2
       `}>
       <div className="flex items-center gap-2">
-        <span className={isActive ? "text-emerald-300" : "text-gray-300 dark:text-gray-400"}>{icon}</span>
+        <span className={isActive ? "text-blue-700" : "text-gray-500"}>{icon}</span>
         <span>{label}</span>
       </div>
-      {isActive && <motion.div layoutId="activeReservationTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400" initial={{
+      {isActive && <motion.div layoutId="activeReservationTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" initial={{
       opacity: 0
     }} animate={{
       opacity: 1
@@ -80,31 +81,50 @@ const AnimatedTabsTrigger = ({
     }} />}
     </TabsTrigger>;
 };
+
 const StatusBadge = ({
   status
 }: {
   status: string;
 }) => {
-  const color = status === "Выполнена" || status === "Выдана" || status === "Возвращена" ? "bg-emerald-500" : status === "Обрабатывается" ? "bg-emerald-400" : status === "Истекла" ? "bg-yellow-500" : status === "Отклонена" || status === "Отменена" // Добавим "Отменена" для полноты, если используется
-  ? "bg-red-500" : "bg-gray-500";
-  const label = status === "Выполнена" ? "Одобрено" : status === "Обрабатывается" ? "В обработке" : status === "Отклонена" || status === "Отменена" ? "Отклонено" : status === "Истекла" ? "Истекла" : status === "Выдана" ? "Выдана" : status === "Возвращена" ? "Возвращена" : "Неизвестно";
-  return <span className={`inline-block px-2 py-1 text-xs font-semibold text-white rounded-full ${color} backdrop-blur-sm shadow`}>
+  const color = status === "Выполнена" || status === "Выдана" || status === "Возвращена" 
+    ? "bg-green-500" 
+    : status === "Обрабатывается" 
+    ? "bg-blue-500" 
+    : status === "Истекла" 
+    ? "bg-orange-500" 
+    : status === "Отклонена" || status === "Отменена"
+    ? "bg-red-500" 
+    : "bg-gray-500";
+
+  const label = status === "Выполнена" ? "Одобрено" 
+    : status === "Обрабатывается" ? "В обработке" 
+    : status === "Отклонена" || status === "Отменена" ? "Отклонено" 
+    : status === "Истекла" ? "Истекла" 
+    : status === "Выдана" ? "Выдана" 
+    : status === "Возвращена" ? "Возвращена" 
+    : "Неизвестно";
+
+  return <span className={`inline-block px-2 py-1 text-xs font-semibold text-white rounded-full ${color} shadow`}>
       {label}
     </span>;
 };
+
 export default function ReservationsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Обрабатывается");
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
   useEffect(() => {
     fetchReservations();
   }, []);
+
   const fetchReservations = async () => {
     try {
       setLoading(true);
-      setError(null); // Сброс ошибки перед новым запросом
+      setError(null);
       const response = await fetch(`${baseUrl}/api/Reservation`);
       if (!response.ok) throw new Error("Ошибка при загрузке резервирований");
       const baseReservations: Reservation[] = await response.json();
@@ -161,11 +181,12 @@ export default function ReservationsPage() {
       setReservations(displayedReservations);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке резервирований");
-      setReservations([]); // Очищаем резервирования в случае ошибки
+      setReservations([]);
     } finally {
       setLoading(false);
     }
   };
+
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       const reservation = reservations.find(r => r.id === id);
@@ -193,6 +214,7 @@ export default function ReservationsPage() {
       alert(err instanceof Error ? err.message : "Ошибка при обновлении статуса");
     }
   };
+
   const handleDelete = async (id: string) => {
     try {
       const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
@@ -206,6 +228,7 @@ export default function ReservationsPage() {
       alert(err instanceof Error ? err.message : "Ошибка при удалении резервирования");
     }
   };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ru-RU", {
       day: "2-digit",
@@ -215,49 +238,49 @@ export default function ReservationsPage() {
       minute: "2-digit"
     });
   };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "Выполнена":
-        return <CheckCircle className="w-5 h-5 text-emerald-500" />;
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
       case "Отменена":
-        return <XCircle className="w-5 h-5 text-red-500" />;
+        return <XCircle className="w-5 h-5 text-red-600" />;
       case "Обрабатывается":
-        return <Clock className="w-5 h-5 text-amber-500" />;
+        return <Clock className="w-5 h-5 text-blue-500" />;
       case "Выдана":
-        return <ArrowRight className="w-5 h-5 text-blue-500" />;
+        return <ArrowRight className="w-5 h-5 text-blue-700" />;
       case "Возвращена":
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case "Истекла":
-        return <Clock className="w-5 h-5 text-yellow-600" />;
+        return <Clock className="w-5 h-5 text-orange-500" />;
       default:
         return <Clock className="w-5 h-5 text-gray-500" />;
     }
   };
+
   const getCardGradient = (status: string) => {
     switch (status) {
       case "Выполнена":
-        return "border-l-4 border-emerald-500";
+        return "border-l-4 border-green-500";
       case "Отменена":
         return "border-l-4 border-red-500";
       case "Обрабатывается":
-        return "border-l-4 border-amber-500";
-      case "Выдана":
         return "border-l-4 border-blue-500";
+      case "Выдана":
+        return "border-l-4 border-blue-700";
       case "Возвращена":
         return "border-l-4 border-green-600";
       case "Истекла":
-        return "border-l-4 border-yellow-600";
+        return "border-l-4 border-orange-500";
       default:
         return "border-l-4 border-gray-500";
     }
   };
+
   const filteredReservations = activeTab === "all" ? reservations : reservations.filter(r => r.status === activeTab);
-  return <div className="min-h-screen relative">
-      {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl"></div>
-      <div className="container mx-auto p-6 relative z-10">
+
+  return <div className="min-h-screen bg-gray-200">
+      <div className="container mx-auto p-6">
         {/* Header */}
         <FadeInView>
           <div className="mb-8 flex items-center gap-4">
@@ -270,9 +293,9 @@ export default function ReservationsPage() {
           }} transition={{
             duration: 0.5
           }}>
-              <Link href="/admin" className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors">
+              <Link href="/admin" className="flex items-center gap-2 text-blue-500 hover:text-blue-700 transition-colors">
                 <ChevronLeft className="h-5 w-5" />
-                <span className="font-medium text-white">Назад</span>
+                <span className="font-medium text-gray-800">Назад</span>
               </Link>
             </motion.div>
 
@@ -285,7 +308,7 @@ export default function ReservationsPage() {
           }} transition={{
             duration: 0.5,
             delay: 0.1
-          }} className="text-3xl font-bold text-white">
+          }} className="text-3xl font-bold text-gray-800">
               Резервирования
             </motion.h1>
           </div>
@@ -295,11 +318,11 @@ export default function ReservationsPage() {
         <FadeInView delay={0.2}>
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-emerald-500" />
-              <h2 className="text-xl font-semibold text-white">Фильтр</h2>
+              <Filter className="h-5 w-5 text-blue-500" />
+              <h2 className="text-xl font-semibold text-gray-800">Фильтр</h2>
             </div>
             <Link href="/admin/reservations/create">
-              <motion.button className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md backdrop-blur-md" whileHover={{
+              <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
               y: -3,
               boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
             }} whileTap={{
@@ -317,12 +340,12 @@ export default function ReservationsPage() {
         }} animate={{
           opacity: 1,
           y: 0
-        }} className="backdrop-blur-xl bg-red-500/20 border border-red-200/50 dark:border-red-800/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-6">
+        }} className="bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded-lg mb-6">
               {error}
             </motion.div>}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-            <TabsList className="bg-transparent backdrop-blur-md p-1 rounded-xl border border-white/20 dark:border-gray-700/30 shadow-md text-white">
+            <TabsList className="bg-white p-1 rounded-xl border border-gray-300 shadow-md text-gray-800">
               <AnimatedTabsTrigger value="all" icon={<Filter className="w-4 h-4" />} label="Все" isActive={activeTab === "all"} />
               <AnimatedTabsTrigger value="Обрабатывается" icon={<Clock className="w-4 h-4" />} label="В обработке" isActive={activeTab === "Обрабатывается"} />
               <AnimatedTabsTrigger value="Выполнена" icon={<CheckCircle className="w-4 h-4" />} label="Одобрены" isActive={activeTab === "Выполнена"} />
@@ -341,17 +364,17 @@ export default function ReservationsPage() {
                   duration: 1.5,
                   repeat: Number.POSITIVE_INFINITY,
                   ease: "linear"
-                }} className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full" />
+                }} className="w-12 h-12 border-4 border-gray-300 border-t-blue-500 rounded-full" />
                   </div> : filteredReservations.length === 0 ? <motion.div initial={{
                 opacity: 0,
                 y: 20
               }} animate={{
                 opacity: 1,
                 y: 0
-              }} className="backdrop-blur-xl bg-yellow-500/20 border border-yellow-200/50 dark:border-yellow-800/30 text-white px-4 py-3 rounded-lg">
+              }} className="bg-orange-100 border border-orange-300 text-orange-800 px-4 py-3 rounded-lg">
                     Резервирования не найдены
                   </motion.div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredReservations.map(reservation => <motion.div key={reservation.id} className={`backdrop-blur-xl bg-green-500/20 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 dark:border-gray-700/30 ${getCardGradient(reservation.status)}`} whileHover={{
+                    {filteredReservations.map(reservation => <motion.div key={reservation.id} className={`bg-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-300 ${getCardGradient(reservation.status)}`} whileHover={{
                   y: -5,
                   boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -5px rgba(0, 0, 0, 0.05)"
                 }} whileTap={{
@@ -371,7 +394,7 @@ export default function ReservationsPage() {
                             {getStatusIcon(reservation.status)}
                             <StatusBadge status={reservation.status} />
                           </div>
-                          <span className="text-sm text-white">
+                          <span className="text-sm text-gray-500">
                             {reservation.id.split('-')[0].toUpperCase()}
                           </span>
                         </div>
@@ -384,10 +407,10 @@ export default function ReservationsPage() {
                             </div>}
                           
                           <div className="flex-grow">
-                            <h3 className="text-lg font-bold mb-2 text-white line-clamp-2">
+                            <h3 className="text-lg font-bold mb-2 text-gray-800 line-clamp-2">
                               {reservation.book?.title || "Книга не указана"}
                             </h3>
-                            <p className="text-sm text-white mb-3 line-clamp-1">
+                            <p className="text-sm text-gray-500 mb-3 line-clamp-1">
                               Автор: {reservation.book?.authors || "Не указан"}
                             </p>
                           </div>
@@ -395,14 +418,14 @@ export default function ReservationsPage() {
 
                         <div className="flex flex-col gap-2 mb-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-emerald-300">Читатель:</span>
-                            <span className="text-white line-clamp-1">
+                            <span className="text-blue-500">Читатель:</span>
+                            <span className="text-gray-800 line-clamp-1">
                               {reservation.user?.fullName || "Не указан"}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-emerald-300">Дата:</span>
-                            <span className="text-white">
+                            <span className="text-blue-500">Дата:</span>
+                            <span className="text-gray-800">
                               {formatDate(reservation.reservationDate)}
                             </span>
                           </div>
@@ -410,21 +433,21 @@ export default function ReservationsPage() {
 
                         <div className="flex justify-between items-center mt-4 gap-2">
                           <div className="flex gap-2">
-                            {reservation.status !== "Выполнена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Выполнена")} className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white p-2 rounded-md" whileHover={{
+                            {reservation.status !== "Выполнена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Выполнена")} className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-md" whileHover={{
                         y: -2
                       }} whileTap={{
                         scale: 0.95
                       }}>
                                 <CheckCircle className="w-4 h-4" />
                               </motion.button>}
-                            {reservation.status !== "Отменена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Отменена")} className="bg-red-500/90 hover:bg-red-600/90 text-white p-2 rounded-md" whileHover={{
+                            {reservation.status !== "Отменена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Отменена")} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md" whileHover={{
                         y: -2
                       }} whileTap={{
                         scale: 0.95
                       }}>
                                 <XCircle className="w-4 h-4" />
                               </motion.button>}
-                            <motion.button onClick={() => handleDelete(reservation.id)} className="bg-red-600/90 hover:bg-red-700/90 text-white p-2 rounded-md" whileHover={{
+                            <motion.button onClick={() => handleDelete(reservation.id)} className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md" whileHover={{
                         y: -2
                       }} whileTap={{
                         scale: 0.95
@@ -433,7 +456,7 @@ export default function ReservationsPage() {
                             </motion.button>
                           </div>
                           <Link href={`/admin/reservations/${reservation.id}`}>
-                            <motion.button className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white px-3 py-2 rounded-md flex items-center gap-2" whileHover={{
+                            <motion.button className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-2 rounded-md flex items-center gap-2" whileHover={{
                         y: -2
                       }} whileTap={{
                         scale: 0.95

@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { FontSizeProvider } from "@/components/FontSizeProvider";
 import { cn } from "@/lib/utils";
 
 const geistSans = Geist({
@@ -32,15 +33,17 @@ export default function RootLayout({
       <body
         className={cn(
           `${geistSans.variable} ${geistMono.variable} antialiased`,
-          "min-h-screen bg-[url('/images/bg2.jpg')] bg-cover bg-center bg-fixed bg-no-repeat"
+          "min-h-screen bg-gray-200"
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
-            <div className="flex flex-col min-h-screen">
-              <main className="flex-1">{children}</main>
-            </div>
-            <Toaster />
+            <FontSizeProvider>
+              <div className="flex flex-col min-h-screen">
+                <main className="flex-1">{children}</main>
+              </div>
+              <Toaster />
+            </FontSizeProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -655,12 +655,8 @@ export default function ShelfsPage() {
     setSelectedItemPosition(position);
     setShowBookInfoModal(true);
   };
-  return <div className="min-h-screen relative">
-      {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl"></div>
-      <div className="container mx-auto p-6 relative z-10">
+  return <div className="min-h-screen bg-gray-200">
+      <div className="container mx-auto p-6">
         {/* Header */}
         <FadeInView>
           <div className="mb-8 flex items-center gap-4">
@@ -673,7 +669,7 @@ export default function ShelfsPage() {
           }} transition={{
             duration: 0.5
           }}>
-              <Link href="/admin" className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors">
+              <Link href="/admin" className="flex items-center gap-2 text-blue-700 hover:text-blue-500 transition-colors">
                 <ChevronLeft className="h-5 w-5" />
                 <span className="font-medium">Назад</span>
               </Link>
@@ -688,7 +684,7 @@ export default function ShelfsPage() {
           }} transition={{
             duration: 0.5,
             delay: 0.1
-          }} className="text-3xl font-bold text-white">
+          }} className="text-3xl font-bold text-gray-800">
               Управление полками библиотеки
             </motion.h1>
           </div>
@@ -704,7 +700,7 @@ export default function ShelfsPage() {
             }} animate={{
               opacity: 1,
               y: 0
-            }} className="backdrop-blur-xl bg-red-50/50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4 flex items-center">
+            }} className="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center">
                   <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
                   <span>{error}</span>
                   <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setError(null)}>
@@ -714,7 +710,7 @@ export default function ShelfsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex-1">
-                  {!showAddForm ? <motion.button onClick={() => setShowAddForm(true)} className="backdrop-blur-xl bg-emerald-500/30 hover:bg-emerald-600/90 text-white font-medium rounded-lg px-4 py-3 flex items-center gap-2 shadow-md" whileHover={{
+                  {!showAddForm ? <motion.button onClick={() => setShowAddForm(true)} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-3 flex items-center gap-2 shadow-md" whileHover={{
                   y: -3,
                   boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
                 }} whileTap={{
@@ -728,38 +724,38 @@ export default function ShelfsPage() {
                 }} animate={{
                   opacity: 1,
                   y: 0
-                }} className="backdrop-blur-xl bg-emerald-600/30 dark:bg-emerald-800/40 rounded-xl p-6 shadow-lg border border-white/20 dark:border-gray-700/30">
+                }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
                       <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-white">Добавить новую полку</h2>
+                        <h2 className="text-xl font-bold text-gray-800">Добавить новую полку</h2>
                         <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
                       <form onSubmit={addShelf} className="space-y-4">
                         <div>
-                          <Label htmlFor="category" className="text-white/60">
+                          <Label htmlFor="category" className="text-gray-500">
                             Рубрика
                           </Label>
-                          <Input id="category" name="category" placeholder="Рубрика (например, Фантастика)" value={newShelf.category} onChange={handleNewShelfChange} className="backdrop-blur-sm bg-emerald-600/30 dark:bg-emerald-800/60 border border-white/20 dark:border-gray-700/30" required />
+                          <Input id="category" name="category" placeholder="Рубрика (например, Фантастика)" value={newShelf.category} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200" required />
                         </div>
 
                         <div>
-                          <Label htmlFor="capacity" className="text-white/60">
+                          <Label htmlFor="capacity" className="text-gray-500">
                             Количество мест
                           </Label>
-                          <Input id="capacity" type="number" name="capacity" placeholder="Количество мест для книг/журналов" value={newShelf.capacity} onChange={handleNewShelfChange} className="backdrop-blur-sm bg-emerald-600/50 dark:bg-emerald-800/60 border border-white/20 dark:border-gray-700/30" min="1" required />
+                          <Input id="capacity" type="number" name="capacity" placeholder="Количество мест для книг/журналов" value={newShelf.capacity} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200" min="1" required />
                         </div>
                         <div>
-                          <Label htmlFor="shelfNumber" className="text-white/60">
+                          <Label htmlFor="shelfNumber" className="text-gray-500">
                             Номер полки
                           </Label>
-                          <Input id="shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={newShelf.shelfNumber} onChange={handleNewShelfChange} className="backdrop-blur-sm bg-emerald-600/50 dark:bg-emerald-800/60 border border-white/20 dark:border-gray-700/30" min="1" required />
+                          <Input id="shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={newShelf.shelfNumber} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200" min="1" required />
                         </div>
                         <div className="flex justify-end gap-3 pt-2">
                           <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
                             Отмена
                           </Button>
-                          <Button type="submit" disabled={loading} className="bg-emerald-500/90 hover:bg-emerald-600/90">
+                          <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-700">
                             {loading ? <>
                                 <motion.div animate={{
                             rotate: 360
@@ -778,8 +774,8 @@ export default function ShelfsPage() {
 
                 <div className="flex-1">
                   <div className="relative">
-                    <Input type="text" placeholder="Поиск книг по названию или автору..." className="backdrop-blur-sm bg-emerald-600/50 dark:bg-emerald-800/60 border border-white/20 dark:border-gray-700/30 w-full pl-10" value={searchTerm} onChange={handleSearch} onFocus={() => searchTerm.length > 1 && setShowSearchDropdown(true)} onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)} />
-                    <Search className="absolute left-3 top-2.5 text-white/80" size={18} />
+                    <Input type="text" placeholder="Поиск книг по названию или автору..." className="bg-gray-100 border border-gray-200 w-full pl-10" value={searchTerm} onChange={handleSearch} onFocus={() => searchTerm.length > 1 && setShowSearchDropdown(true)} onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)} />
+                    <Search className="absolute left-3 top-2.5 text-gray-500" size={18} />
                   </div>
 
                   <AnimatePresence>
@@ -797,7 +793,7 @@ export default function ShelfsPage() {
                     scale: 0.95
                   }} transition={{
                     duration: 0.2
-                  }} className="absolute z-50 mt-1 w-full backdrop-blur-xl bg-emerald-600/80 dark:bg-emerald-800/80 rounded-lg shadow-lg max-h-60 overflow-auto border border-white/20 dark:border-gray-700/30">
+                  }} className="absolute z-50 mt-1 w-full bg-white rounded-lg shadow-lg max-h-60 overflow-auto border border-gray-200">
                         {filteredBooks.map((book, index) => <motion.div key={book.id} initial={{
                       opacity: 0,
                       x: -5
@@ -807,9 +803,9 @@ export default function ShelfsPage() {
                     }} transition={{
                       delay: index * 0.05,
                       duration: 0.2
-                    }} className="px-4 py-2 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 cursor-pointer" onMouseDown={() => animateHighlightedBook(book.id)}>
-                            <div className="font-medium text-white">{book.title}</div>
-                            <div className="text-sm text-white/90">{book.authors || "Автор не указан"}</div>
+                    }} className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => animateHighlightedBook(book.id)}>
+                            <div className="font-medium text-gray-800">{book.title}</div>
+                            <div className="text-sm text-gray-500">{book.authors || "Автор не указан"}</div>
                           </motion.div>)}
                       </motion.div>}
                   </AnimatePresence>
@@ -822,9 +818,9 @@ export default function ShelfsPage() {
             }} animate={{
               opacity: 1,
               y: 0
-            }} className="backdrop-blur-xl bg-emerald-600/30 dark:bg-emerald-800/40 rounded-xl p-6 shadow-lg border border-white/20 dark:border-gray-700/30">
+            }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">Редактировать полку #{editingShelf.id}</h2>
+                    <h2 className="text-xl font-bold text-gray-800">Редактировать полку #{editingShelf.id}</h2>
                     <Button variant="ghost" size="sm" onClick={() => setEditingShelf(null)}>
                       <X className="h-4 w-4" />
                     </Button>
@@ -832,29 +828,29 @@ export default function ShelfsPage() {
                   <form onSubmit={updateShelf} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="edit-category" className="text-white/60">
+                        <Label htmlFor="edit-category" className="text-gray-500">
                           Рубрика
                         </Label>
-                        <Input id="edit-category" name="category" placeholder="Рубрика" value={editShelfData.category} onChange={handleEditShelfChange} className="backdrop-blur-sm bg-emerald-600/50 dark:bg-emerald-800/60 border border-white/20 dark:border-gray-700/30" required />
+                        <Input id="edit-category" name="category" placeholder="Рубрика" value={editShelfData.category} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200" required />
                       </div>
                       <div>
-                        <Label htmlFor="edit-capacity" className="text-white/60">
+                        <Label htmlFor="edit-capacity" className="text-gray-500">
                           Количество мест
                         </Label>
-                        <Input id="edit-capacity" type="number" name="capacity" placeholder="Кол-во мест" value={editShelfData.capacity} onChange={handleEditShelfChange} className="backdrop-blur-sm bg-emerald-600/50 dark:bg-emerald-800/60 border border-white/20 dark:border-gray-700/30" min="1" required />
+                        <Input id="edit-capacity" type="number" name="capacity" placeholder="Кол-во мест" value={editShelfData.capacity} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200" min="1" required />
                       </div>
                       <div>
-                        <Label htmlFor="edit-shelfNumber" className="text-white/60">
+                        <Label htmlFor="edit-shelfNumber" className="text-gray-500">
                           Номер полки
                         </Label>
-                        <Input id="edit-shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={editShelfData.shelfNumber} onChange={handleEditShelfChange} className="backdrop-blur-sm bg-emerald-600/50 dark:bg-emerald-800/60 border border-white/20 dark:border-gray-700/30" min="1" required />
+                        <Input id="edit-shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={editShelfData.shelfNumber} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200" min="1" required />
                       </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
                       <Button type="button" variant="outline" onClick={() => setEditingShelf(null)}>
                         Отмена
                       </Button>
-                      <Button type="submit" disabled={loading} className="bg-emerald-500/90 hover:bg-emerald-600/90">
+                      <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-700">
                         {loading ? <>
                             <motion.div animate={{
                         rotate: 360
@@ -878,14 +874,14 @@ export default function ShelfsPage() {
               y: 0
             }} transition={{
               delay: 0.3
-            }} className="backdrop-blur-xl bg-emerald-600/30 dark:bg-emerald-800/40 rounded-xl shadow-lg border border-white/20 dark:border-gray-700/30 overflow-hidden">
-                <div className="p-4 border-b border-white/20 dark:border-gray-700/30 flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Library className="h-5 w-5 text-emerald-500" />
+            }} className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <Library className="h-5 w-5 text-blue-500" />
                     Визуальное расположение полок
                   </h2>
                   <div className="flex gap-2">
-                    <motion.button onClick={toggleEditMode} className={`backdrop-blur-sm ${isEditMode ? "bg-yellow-500/40 dark:bg-yellow-500/20" : "bg-emerald-600/50 dark:bg-emerald-800/60"} border border-white/20 dark:border-gray-700/30 text-white rounded-lg p-2 flex items-center justify-center`} whileHover={{
+                    <motion.button onClick={toggleEditMode} className={`${isEditMode ? "bg-yellow-400" : "bg-blue-500"} border border-gray-200 text-white rounded-lg p-2 flex items-center justify-center`} whileHover={{
                     y: -2,
                     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
                   }} whileTap={{
@@ -907,28 +903,28 @@ export default function ShelfsPage() {
               y: 0
             }} transition={{
               delay: 0.4
-            }} className="backdrop-blur-xl bg-emerald-600/30 dark:bg-emerald-800/40 rounded-xl p-6 shadow-lg border border-white/20 dark:border-gray-700/30">
-                <h3 className="font-semibold text-white mb-4">Обозначения:</h3>
+            }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                <h3 className="font-semibold text-gray-800 mb-4">Обозначения:</h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="flex items-center">
-                    <div className="w-6 h-8 bg-emerald-500 mr-3 rounded"></div>
-                    <span className="text-white/60">Книга доступна</span>
+                    <div className="w-6 h-8 bg-green-500 mr-3 rounded"></div>
+                    <span className="text-gray-500">Книга доступна</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-6 h-8 bg-red-500 mr-3 rounded"></div>
-                    <span className="text-white/60">Книга недоступна</span>
+                    <span className="text-gray-500">Книга недоступна</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-6 h-8 bg-blue-500 mr-3 rounded"></div>
-                    <span className="text-white/60">Журнал</span>
+                    <span className="text-gray-500">Журнал</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-6 h-8 bg-gray-200 dark:bg-gray-700 mr-3 rounded"></div>
-                    <span className="text-white/60">Пустое место</span>
+                    <div className="w-6 h-8 bg-gray-200 mr-3 rounded"></div>
+                    <span className="text-gray-500">Пустое место</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-6 h-8 bg-yellow-400 mr-3 rounded animate-pulse"></div>
-                    <span className="text-white/60">Найденная книга</span>
+                    <span className="text-gray-500">Найденная книга</span>
                   </div>
                 </div>
               </motion.div>
@@ -940,11 +936,11 @@ export default function ShelfsPage() {
           }} animate={{
             opacity: 1,
             y: 0
-          }} className="backdrop-blur-xl bg-emerald-600/30 dark:bg-emerald-800/40 rounded-xl p-6 shadow-lg border border-white/20 dark:border-gray-700/30">
+          }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
                 <div className="flex justify-between items-center mb-4">
                 </div>
                 <div className="space-y-4">
-                  <Textarea rows={8} value={jsonData} onChange={e => setJsonData(e.target.value)} placeholder='{"Id": 11, "Category": "Фантастика", ...}' className="backdrop-blur-sm bg-emerald-600/50 dark:bg-emerald-800/60 border border-white/20 dark:border-gray-700/30 font-mono text-sm" />
+                  <Textarea rows={8} value={jsonData} onChange={e => setJsonData(e.target.value)} placeholder='{"Id": 11, "Category": "Фантастика", ...}' className="bg-gray-100 border border-gray-200 font-mono text-sm" />
                   <div className="flex justify-end gap-3">
                     <Button variant="outline" onClick={() => setShowJsonImport(false)}>
                       Отмена

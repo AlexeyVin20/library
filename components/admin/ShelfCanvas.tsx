@@ -188,16 +188,16 @@ const ShelfCanvas = ({
                 // Highlight the book if it matches the highlighted ID
                 const isHighlighted = book.id === highlightedBookId
                 if (isHighlighted) {
-                  return "bg-yellow-400 border-2 border-yellow-600 shadow-yellow-300/50 shadow-lg animate-pulse"
+                  return "bg-yellow-400 border-2 border-yellow-600 shadow-lg animate-pulse"
                 }
                 return book.availableCopies && book.availableCopies > 0
-                  ? "bg-emerald-500 hover:scale-105 hover:shadow-md"
+                  ? "bg-green-500 hover:scale-105 hover:shadow-md"
                   : "bg-red-500 hover:scale-105 hover:shadow-md"
               } else {
                 return "bg-blue-500 hover:scale-105 hover:shadow-md" // Journals
               }
             }
-            return "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            return "bg-gray-200 hover:bg-gray-300"
           }
 
           return (
@@ -227,13 +227,13 @@ const ShelfCanvas = ({
   }
 
   return (
-    <div className="relative h-[600px] overflow-hidden rounded-xl border border-white/20 dark:border-gray-700/30">
+    <div className="relative h-[600px] overflow-hidden rounded-xl border border-gray-100">
       {/* Navigation controls */}
-      <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 bg-emerald-600/30 backdrop-blur-md p-2 rounded-lg border border-white/20">
+      <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-lg">
         <Button
           variant="ghost"
           size="icon"
-          className="bg-emerald-700/50 hover:bg-emerald-700/70 text-white"
+          className="bg-blue-500 hover:bg-blue-700 text-white"
           onClick={handleZoomIn}
           title="Увеличить"
         >
@@ -242,17 +242,17 @@ const ShelfCanvas = ({
         <Button
           variant="ghost"
           size="icon"
-          className="bg-emerald-700/50 hover:bg-emerald-700/70 text-white"
+          className="bg-blue-500 hover:bg-blue-700 text-white"
           onClick={handleZoomOut}
           title="Уменьшить"
         >
           <ZoomOut size={18} />
         </Button>
-        <div className="h-px bg-white/20 my-1"></div>
+        <div className="h-px bg-gray-200 my-1"></div>
         <Button
           variant="ghost"
           size="icon"
-          className="bg-emerald-700/50 hover:bg-emerald-700/70 text-white"
+          className="bg-blue-500 hover:bg-blue-700 text-white"
           onClick={() => handleMove("up")}
           title="Вверх"
         >
@@ -262,7 +262,7 @@ const ShelfCanvas = ({
           <Button
             variant="ghost"
             size="icon"
-            className="bg-emerald-700/50 hover:bg-emerald-700/70 text-white"
+            className="bg-blue-500 hover:bg-blue-700 text-white"
             onClick={() => handleMove("left")}
             title="Влево"
           >
@@ -271,7 +271,7 @@ const ShelfCanvas = ({
           <Button
             variant="ghost"
             size="icon"
-            className="bg-emerald-700/50 hover:bg-emerald-700/70 text-white"
+            className="bg-blue-500 hover:bg-blue-700 text-white"
             onClick={() => handleMove("right")}
             title="Вправо"
           >
@@ -281,17 +281,17 @@ const ShelfCanvas = ({
         <Button
           variant="ghost"
           size="icon"
-          className="bg-emerald-700/50 hover:bg-emerald-700/70 text-white"
+          className="bg-blue-500 hover:bg-blue-700 text-white"
           onClick={() => handleMove("down")}
           title="Вниз"
         >
           <ArrowDown size={18} />
         </Button>
-        <div className="h-px bg-white/20 my-1"></div>
+        <div className="h-px bg-gray-200 my-1"></div>
         <Button
           variant="ghost"
           size="icon"
-          className="bg-emerald-700/50 hover:bg-emerald-700/70 text-white"
+          className="bg-blue-500 hover:bg-blue-700 text-white"
           onClick={handleResetView}
           title="Сбросить вид"
         >
@@ -300,7 +300,7 @@ const ShelfCanvas = ({
         <Button
           variant="ghost"
           size="icon"
-          className="bg-emerald-700/50 hover:bg-emerald-700/70 text-white"
+          className="bg-blue-500 hover:bg-blue-700 text-white"
           onClick={toggleFullscreen}
           title={isFullscreen ? "Выйти из полноэкранного режима" : "Полноэкранный режим"}
         >
@@ -312,7 +312,7 @@ const ShelfCanvas = ({
       <div
         ref={canvasRef}
         id="shelf-editor"
-        className="relative w-full h-full bg-emerald-200/10 cursor-grab active:cursor-grabbing overflow-hidden"
+        className="relative w-full h-full bg-gray-100 cursor-grab active:cursor-grabbing overflow-hidden"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={(e) => {
           handleCanvasMouseMove(e)
@@ -332,7 +332,7 @@ const ShelfCanvas = ({
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-              className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full"
+              className="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full"
             />
           </div>
         ) : (
@@ -349,7 +349,7 @@ const ShelfCanvas = ({
               className="absolute inset-0"
               style={{
                 backgroundImage:
-                  "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+                  "linear-gradient(to right, rgba(107, 114, 128, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(107, 114, 128, 0.1) 1px, transparent 1px)",
                 backgroundSize: "50px 50px",
               }}
             ></div>
@@ -359,7 +359,7 @@ const ShelfCanvas = ({
               <motion.div
                 key={shelf.id}
                 id={`shelf-${shelf.id}`}
-                className="backdrop-blur-xl bg-emerald-600/30 dark:bg-emerald-800/40 rounded-xl p-4 shadow-lg border border-white/20 dark:border-gray-700/30 absolute"
+                className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 absolute"
                 style={{
                   left: shelf.posX,
                   top: shelf.posY,
@@ -374,8 +374,8 @@ const ShelfCanvas = ({
               >
                 <div className="shelf-container">
                   <div className="flex justify-between items-center mb-3">
-                    <span className="font-semibold text-white">{shelf.category}</span>
-                    <span className="bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
+                    <span className="font-semibold text-gray-800">{shelf.category}</span>
+                    <span className="bg-blue-100 px-2 py-1 rounded-lg text-xs text-blue-800">
                       #{shelf.shelfNumber}
                     </span>
                   </div>
@@ -385,7 +385,7 @@ const ShelfCanvas = ({
                   <div className="mt-3 flex space-x-2">
                     <motion.button
                       onClick={() => onShelfEdit(shelf)}
-                      className="bg-amber-500/90 hover:bg-amber-600/90 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
+                      className="bg-yellow-400 hover:bg-yellow-600 text-gray-800 rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -395,7 +395,7 @@ const ShelfCanvas = ({
                       onClick={() => {
                         if (confirm("Вы уверены, что хотите удалить эту полку?")) onShelfDelete(shelf.id)
                       }}
-                      className="bg-red-500/90 hover:bg-red-600/90 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
+                      className="bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -409,7 +409,7 @@ const ShelfCanvas = ({
         )}
 
         {/* Help text */}
-        <div className="absolute bottom-4 left-4 text-xs text-white/70 bg-emerald-700/50 backdrop-blur-md p-2 rounded-lg border border-white/20">
+        <div className="absolute bottom-4 left-4 text-xs text-gray-500 bg-white p-2 rounded-lg border border-gray-200 shadow-md">
           <p>Используйте Alt + перетаскивание для навигации по холсту</p>
           <p>Используйте кнопки справа для масштабирования и перемещения</p>
         </div>

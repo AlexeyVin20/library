@@ -92,6 +92,23 @@ export interface ArticleShort {
 export interface ArticleCreateDto extends Omit<Article, "id"> {}
 export interface ArticleUpdateDto extends Partial<ArticleCreateDto> {}
 
+// Статистика
+export interface LibraryStats {
+  totalBooks: number;
+  totalUsers: number;
+  totalJournals: number;
+  activeUsers: number;
+  totalBorrowedBooks: number;
+  totalAvailableBooks: number;
+  categories: CategoryStats[];
+}
+
+export interface CategoryStats {
+  name: string;
+  count: number;
+  percentage: number;
+}
+
 // Клиент API для книг
 const books = {
   // Получить все книги
@@ -244,12 +261,85 @@ const articles = {
   },
 };
 
+// Клиент API для статистики
+const statistics = {
+  // Получить общую статистику библиотеки
+  getLibraryStats: async (): Promise<LibraryStats> => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+      const [booksResponse, usersResponse, journalsResponse, reservationsResponse] = await Promise.all([
+        fetch(`${baseUrl}/api/Books`),
+        fetch(`${baseUrl}/api/User`),
+        fetch(`${baseUrl}/api/Journals`),
+        fetch(`${baseUrl}/api/Reservation`)
+      ]);
+
+      // Проверяем успешность запросов
+      if (!booksResponse.ok || !usersResponse.ok || !journalsResponse.ok || !reservationsResponse.ok) {
+        throw new Error('Ошибка при загрузке данных с сервера');
+      }
+
+      const books = await booksResponse.json();
+      const users = await usersResponse.json();
+      const journals = await journalsResponse.json();
+      const reservations = await reservationsResponse.json();
+
+      // Подсчет статистики
+      const totalBooks = books.length;
+      const totalUsers = users.length;
+      const totalJournals = journals.length;
+      const activeUsers = users.filter((user: any) => user.borrowedBooksCount > 0).length;
+      const totalBorrowedBooks = users.reduce((total: number, user: any) => total + (user.borrowedBooksCount || 0), 0);
+      const totalAvailableBooks = books.reduce((sum: number, book: any) => sum + (book.availableCopies || 0), 0);
+
+      // Подсчет категорий
+      const categoryMap = new Map<string, number>();
+      books.forEach((book: any) => {
+        const category = book.genre || book.categorization || 'Другие';
+        categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+      });
+
+      const categories: CategoryStats[] = Array.from(categoryMap.entries())
+        .map(([name, count]) => ({
+          name,
+          count,
+          percentage: Math.round((count / totalBooks) * 100)
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5); // Топ 5 категорий
+
+      return {
+        totalBooks,
+        totalUsers,
+        totalJournals,
+        activeUsers,
+        totalBorrowedBooks,
+        totalAvailableBooks,
+        categories
+      };
+    } catch (error) {
+      console.error('Ошибка при получении статистики:', error);
+      // Возвращаем заглушечные данные при ошибке
+      return {
+        totalBooks: 0,
+        totalUsers: 0,
+        totalJournals: 0,
+        activeUsers: 0,
+        totalBorrowedBooks: 0,
+        totalAvailableBooks: 0,
+        categories: []
+      };
+    }
+  }
+};
+
 // Объединенный клиент API
 const api = {
   books,
   journals,
   issues,
   articles,
+  statistics,
 };
 
 export default api;
