@@ -8,6 +8,8 @@ import { Users, UserPlus, ChevronRight, ArrowRight, ChevronLeft, Shield } from "
 import { UsersPieChart } from "@/components/admin/UsersPieChart";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 import { FinesChart } from "@/components/admin/FinesChart";
+import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
+import { CreateUserDialog } from "@/components/ui/user-creation-modal";
 
 // CSS для анимации строк таблицы
 const fadeInAnimation = `
@@ -165,6 +167,7 @@ export default function AllUsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof User>("fullName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   // Вставка CSS анимации в DOM
@@ -234,7 +237,6 @@ export default function AllUsersPage() {
     reservations: reservations.filter(r => r.status === "Обрабатывается").length
   }), [users, reservations, totalBorrowed]);
   const handleDeleteUser = useCallback(async (id: string) => {
-    if (!confirm("Вы уверены, что хотите удалить этого пользователя?")) return;
     try {
       const response = await fetch(`${baseUrl}/api/User/${id}`, {
         method: "DELETE"
@@ -245,6 +247,28 @@ export default function AllUsersPage() {
       alert(err instanceof Error ? err.message : "Ошибка при удалении пользователя");
     }
   }, [users, baseUrl]);
+
+  const handleCreateUser = useCallback(async (userData: any) => {
+    try {
+      const response = await fetch(`${baseUrl}/api/User`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Ошибка при создании пользователя");
+      }
+
+      const newUser = await response.json();
+      setUsers(prev => [...prev, newUser]);
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : "Ошибка при создании пользователя");
+    }
+  }, [baseUrl]);
   const handleSort = (field: keyof User) => {
     setSortField(field);
     setSortDirection(sortField === field && sortDirection === "asc" ? "desc" : "asc");
@@ -311,17 +335,20 @@ export default function AllUsersPage() {
                   Управление ролями
                 </motion.button>
               </Link>
-              <Link href="/admin/users/create">
-                <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
-                y: -3,
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-              }} whileTap={{
-                scale: 0.98
-              }}>
-                  <UserPlus className="h-4 w-4" />
-                  Добавить пользователя
-                </motion.button>
-              </Link>
+              <motion.button 
+                onClick={() => setCreateUserDialogOpen(true)}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" 
+                whileHover={{
+                  y: -3,
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+                }} 
+                whileTap={{
+                  scale: 0.98
+                }}
+              >
+                <UserPlus className="h-4 w-4" />
+                Добавить пользователя
+              </motion.button>
             </div>
           </div>
         </FadeInView>
@@ -383,13 +410,11 @@ export default function AllUsersPage() {
                             Подробнее
                           </motion.button>
                         </Link>
-                        <motion.button whileHover={{
-                      y: -2
-                    }} whileTap={{
-                      scale: 0.95
-                    }} onClick={() => handleDeleteUser(user.id)} className="bg-red-100 hover:bg-red-200 text-red-800 font-medium rounded-lg px-3 py-1 shadow-md border border-red-200">
-                          Удалить
-                        </motion.button>
+                        <ButtonHoldAndRelease 
+                          onAction={() => handleDeleteUser(user.id)}
+                          className="px-3 py-1 shadow-md"
+                          holdDuration={2000}
+                        />
                       </td>
                     </tr>)}
                 </tbody>
@@ -406,5 +431,11 @@ export default function AllUsersPage() {
             Нет пользователей, соответствующих критериям поиска
           </motion.div>}
       </main>
+
+      <CreateUserDialog 
+        open={createUserDialogOpen}
+        onOpenChange={setCreateUserDialogOpen}
+        onCreateUser={handleCreateUser}
+      />
     </div>;
 }

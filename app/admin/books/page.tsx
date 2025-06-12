@@ -9,6 +9,7 @@ import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMe
 import { CreditCard, Box, BookOpen, List, Plus, Search, ArrowUpDown, Edit, Trash2, BookMarked } from 'lucide-react';
 import BookCover from "@/components/BookCover";
 import { Book } from "@/components/ui/book";
+import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
 import ColorThief from "colorthief";
 
 /**
@@ -130,15 +131,14 @@ const CardsView = ({
                     <span className="text-sm">Редактировать</span>
                   </motion.button>
                 </Link>
-                <motion.button onClick={() => onDelete(book.id)} className="bg-red-100 hover:bg-red-100 text-red-800 border border-red-500 font-medium rounded-lg px-3 py-1.5 flex items-center gap-1 shadow-md" whileHover={{
-              y: -2,
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-            }} whileTap={{
-              scale: 0.98
-            }}>
+                <ButtonHoldAndRelease 
+                  onAction={() => onDelete(book.id)}
+                  className="px-3 py-1.5 shadow-md"
+                  holdDuration={2000}
+                >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span className="text-sm">Удалить</span>
-                </motion.button>
+                  <span className="text-sm ml-1">Удалить</span>
+                </ButtonHoldAndRelease>
               </div>
             </div>
           </motion.div>
@@ -234,15 +234,14 @@ const ThreeDBookView = ({
                   <span className="text-sm">Ред.</span>
                 </motion.button>
               </Link>
-              <motion.button onClick={() => onDelete(book.id)} className="bg-red-100 hover:bg-red-100 text-red-800 border border-red-500 font-medium rounded-lg px-3 py-1.5 flex items-center gap-1 shadow-md" whileHover={{
-            y: -2,
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-          }} whileTap={{
-            scale: 0.98
-          }}>
+              <ButtonHoldAndRelease 
+                onAction={() => onDelete(book.id)}
+                className="px-3 py-1.5 shadow-md"
+                holdDuration={2000}
+              >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span className="text-sm">Удал.</span>
-              </motion.button>
+                <span className="text-sm ml-1">Удал.</span>
+              </ButtonHoldAndRelease>
             </div>
           </div>
         </FadeInView>)}
@@ -316,15 +315,14 @@ const ListView = ({
                       <span className="text-sm">Ред.</span>
                     </motion.button>
                   </Link>
-                  <motion.button onClick={() => onDelete(book.id)} className="bg-red-100 hover:bg-red-100 text-red-800 border border-red-500 font-medium rounded-lg px-3 py-1.5 flex items-center gap-1 shadow-md" whileHover={{
-                y: -2,
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-              }} whileTap={{
-                scale: 0.98
-              }}>
+                  <ButtonHoldAndRelease 
+                    onAction={() => onDelete(book.id)}
+                    className="px-3 py-1.5 shadow-md"
+                    holdDuration={2000}
+                  >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span className="text-sm">Удал.</span>
-                  </motion.button>
+                    <span className="text-sm ml-1">Удал.</span>
+                  </ButtonHoldAndRelease>
                 </div>
               </td>
             </motion.tr>)}

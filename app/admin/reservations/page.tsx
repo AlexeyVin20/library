@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter, Trash2 } from 'lucide-react';
@@ -24,6 +24,7 @@ interface Reservation {
     title: string;
     authors?: string;
     cover?: string;
+    availableCopies?: number;
   };
 }
 
@@ -50,6 +51,54 @@ const FadeInView = ({
   }}>
       {children}
     </motion.div>;
+};
+
+// Компонент предупреждения о недоступности книги
+const BookUnavailableWarning = ({ 
+  reservation, 
+  expectedAvailableDate 
+}: { 
+  reservation: Reservation;
+  expectedAvailableDate: Date | null;
+}) => {
+  if (!reservation.book || (reservation.book.availableCopies && reservation.book.availableCopies > 0)) {
+    return null;
+  }
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("ru-RU", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3"
+    >
+      <div className="flex items-start gap-2">
+        <div className="flex-shrink-0 mt-0.5">
+          <svg className="w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 15.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <h4 className="text-sm font-medium text-orange-800">Книга недоступна</h4>
+          <p className="text-sm text-orange-700 mt-1">
+            Все экземпляры книги "{reservation.book?.title}" заняты. 
+            {expectedAvailableDate ? (
+              <span className="font-medium"> Ожидается возврат до {formatDate(expectedAvailableDate)}.</span>
+            ) : (
+              <span> Дата возврата неизвестна.</span>
+            )}
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
 };
 
 // Компонент для вкладок
@@ -87,23 +136,30 @@ const StatusBadge = ({
 }: {
   status: string;
 }) => {
-  const color = status === "Выполнена" || status === "Выдана" || status === "Возвращена" 
-    ? "bg-green-500" 
-    : status === "Обрабатывается" 
-    ? "bg-blue-500" 
-    : status === "Истекла" 
-    ? "bg-orange-500" 
-    : status === "Отклонена" || status === "Отменена"
-    ? "bg-red-500" 
-    : "bg-gray-500";
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "Обрабатывается":
+        return { color: "bg-blue-500", label: "В обработке" };
+      case "Одобрена":
+        return { color: "bg-green-500", label: "Одобрена" };
+      case "Отменена":
+        return { color: "bg-red-500", label: "Отменена" };
+      case "Истекла":
+        return { color: "bg-orange-500", label: "Истекла" };
+      case "Выдана":
+        return { color: "bg-blue-700", label: "Выдана" };
+      case "Возвращена":
+        return { color: "bg-green-600", label: "Возвращена" };
+      case "Просрочена":
+        return { color: "bg-red-600", label: "Просрочена" };
+      case "Отменена_пользователем":
+        return { color: "bg-gray-600", label: "Отменена пользователем" };
+      default:
+        return { color: "bg-gray-500", label: "Неизвестно" };
+    }
+  };
 
-  const label = status === "Выполнена" ? "Одобрено" 
-    : status === "Обрабатывается" ? "В обработке" 
-    : status === "Отклонена" || status === "Отменена" ? "Отклонено" 
-    : status === "Истекла" ? "Истекла" 
-    : status === "Выдана" ? "Выдана" 
-    : status === "Возвращена" ? "Возвращена" 
-    : "Неизвестно";
+  const { color, label } = getStatusConfig(status);
 
   return <span className={`inline-block px-2 py-1 text-xs font-semibold text-white rounded-full ${color} shadow`}>
       {label}
@@ -115,11 +171,31 @@ export default function ReservationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Обрабатывается");
+  const [bookAvailabilityDates, setBookAvailabilityDates] = useState<{[bookId: string]: Date}>({});
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   useEffect(() => {
     fetchReservations();
   }, []);
+
+  // Функция для вычисления ожидаемых дат возврата книг
+  const calculateBookAvailabilityDates = (reservations: Reservation[]) => {
+    const availabilityMap: {[bookId: string]: Date} = {};
+    
+    reservations.forEach(reservation => {
+      if (reservation.status === 'Выдана' && reservation.bookId) {
+        const expirationDate = new Date(reservation.expirationDate);
+        const currentDate = availabilityMap[reservation.bookId];
+        
+        // Берем самую позднюю дату возврата для каждой книги
+        if (!currentDate || expirationDate > currentDate) {
+          availabilityMap[reservation.bookId] = expirationDate;
+        }
+      }
+    });
+    
+    setBookAvailabilityDates(availabilityMap);
+  };
 
   const fetchReservations = async () => {
     try {
@@ -168,17 +244,27 @@ export default function ReservationsPage() {
         };
       }));
 
-      // Применяем логику "Истекла" статуса для отображения
+      // Применяем логику статусов для отображения
       const displayedReservations = enrichedReservations.map(r => {
-        if (new Date(r.expirationDate) < new Date() && (r.status === 'Обрабатывается' || r.status === 'Выполнена' || r.status === 'Выдана')) {
-          return {
-            ...r,
-            status: 'Истекла'
-          };
+        const now = new Date();
+        const expirationDate = new Date(r.expirationDate);
+        
+        // Если резервирование выдано и просрочено
+        if (expirationDate < now && r.status === 'Выдана') {
+          return { ...r, status: 'Просрочена' };
         }
+        
+        // Если резервирование не выдано и срок истек
+        if (expirationDate < now && (r.status === 'Обрабатывается' || r.status === 'Одобрена')) {
+          return { ...r, status: 'Истекла' };
+        }
+        
         return r;
       });
       setReservations(displayedReservations);
+      
+      // Вычисляем ожидаемые даты доступности книг
+      calculateBookAvailabilityDates(displayedReservations);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке резервирований");
       setReservations([]);
@@ -189,6 +275,12 @@ export default function ReservationsPage() {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
+      // Получаем токен авторизации
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден. Пожалуйста, войдите в систему заново.");
+      }
+
       const reservation = reservations.find(r => r.id === id);
       if (!reservation) throw new Error("Резервирование не найдено");
       const updatedReservation = {
@@ -200,11 +292,15 @@ export default function ReservationsPage() {
       const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(updatedReservation)
       });
-      if (!response.ok) throw new Error("Ошибка при обновлении статуса");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Ошибка при обновлении статуса");
+      }
       setReservations(reservations.map(r => r.id === id ? {
         ...r,
         status: newStatus
@@ -241,18 +337,22 @@ export default function ReservationsPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Выполнена":
+      case "Обрабатывается":
+        return <Clock className="w-5 h-5 text-blue-500" />;
+      case "Одобрена":
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case "Отменена":
         return <XCircle className="w-5 h-5 text-red-600" />;
-      case "Обрабатывается":
-        return <Clock className="w-5 h-5 text-blue-500" />;
+      case "Истекла":
+        return <Clock className="w-5 h-5 text-orange-500" />;
       case "Выдана":
         return <ArrowRight className="w-5 h-5 text-blue-700" />;
       case "Возвращена":
         return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case "Истекла":
-        return <Clock className="w-5 h-5 text-orange-500" />;
+      case "Просрочена":
+        return <XCircle className="w-5 h-5 text-red-600" />;
+      case "Отменена_пользователем":
+        return <XCircle className="w-5 h-5 text-gray-600" />;
       default:
         return <Clock className="w-5 h-5 text-gray-500" />;
     }
@@ -260,18 +360,22 @@ export default function ReservationsPage() {
 
   const getCardGradient = (status: string) => {
     switch (status) {
-      case "Выполнена":
+      case "Обрабатывается":
+        return "border-l-4 border-blue-500";
+      case "Одобрена":
         return "border-l-4 border-green-500";
       case "Отменена":
         return "border-l-4 border-red-500";
-      case "Обрабатывается":
-        return "border-l-4 border-blue-500";
+      case "Истекла":
+        return "border-l-4 border-orange-500";
       case "Выдана":
         return "border-l-4 border-blue-700";
       case "Возвращена":
         return "border-l-4 border-green-600";
-      case "Истекла":
-        return "border-l-4 border-orange-500";
+      case "Просрочена":
+        return "border-l-4 border-red-600";
+      case "Отменена_пользователем":
+        return "border-l-4 border-gray-600";
       default:
         return "border-l-4 border-gray-500";
     }
@@ -348,11 +452,13 @@ export default function ReservationsPage() {
             <TabsList className="bg-white p-1 rounded-xl border border-gray-300 shadow-md text-gray-800">
               <AnimatedTabsTrigger value="all" icon={<Filter className="w-4 h-4" />} label="Все" isActive={activeTab === "all"} />
               <AnimatedTabsTrigger value="Обрабатывается" icon={<Clock className="w-4 h-4" />} label="В обработке" isActive={activeTab === "Обрабатывается"} />
-              <AnimatedTabsTrigger value="Выполнена" icon={<CheckCircle className="w-4 h-4" />} label="Одобрены" isActive={activeTab === "Выполнена"} />
+              <AnimatedTabsTrigger value="Одобрена" icon={<CheckCircle className="w-4 h-4" />} label="Одобрены" isActive={activeTab === "Одобрена"} />
+              <AnimatedTabsTrigger value="Отменена" icon={<XCircle className="w-4 h-4" />} label="Отменены" isActive={activeTab === "Отменена"} />
+              <AnimatedTabsTrigger value="Истекла" icon={<Clock className="w-4 h-4" />} label="Истекшие" isActive={activeTab === "Истекла"} />
               <AnimatedTabsTrigger value="Выдана" icon={<ArrowRight className="w-4 h-4" />} label="Выданы" isActive={activeTab === "Выдана"} />
               <AnimatedTabsTrigger value="Возвращена" icon={<CheckCircle className="w-4 h-4" />} label="Возвращены" isActive={activeTab === "Возвращена"} />
-              <AnimatedTabsTrigger value="Истекла" icon={<Clock className="w-4 h-4" />} label="Истекшие" isActive={activeTab === "Истекла"} />
-              <AnimatedTabsTrigger value="Отменена" icon={<XCircle className="w-4 h-4" />} label="Отменены" isActive={activeTab === "Отменена"} />
+              <AnimatedTabsTrigger value="Просрочена" icon={<XCircle className="w-4 h-4" />} label="Просроченные" isActive={activeTab === "Просрочена"} />
+              <AnimatedTabsTrigger value="Отменена_пользователем" icon={<XCircle className="w-4 h-4" />} label="Отменены пользователем" isActive={activeTab === "Отменена_пользователем"} />
             </TabsList>
 
             <TabsContent value={activeTab} className="mt-6">
@@ -413,6 +519,10 @@ export default function ReservationsPage() {
                             <p className="text-sm text-gray-500 mb-3 line-clamp-1">
                               Автор: {reservation.book?.authors || "Не указан"}
                             </p>
+                            <BookUnavailableWarning 
+                              reservation={reservation} 
+                              expectedAvailableDate={bookAvailabilityDates[reservation.bookId] || null}
+                            />
                           </div>
                         </div>
 
@@ -433,13 +543,18 @@ export default function ReservationsPage() {
 
                         <div className="flex justify-between items-center mt-4 gap-2">
                           <div className="flex gap-2">
-                            {reservation.status !== "Выполнена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Выполнена")} className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-md" whileHover={{
-                        y: -2
-                      }} whileTap={{
-                        scale: 0.95
-                      }}>
+                            {reservation.status !== "Одобрена" && (
+                              <motion.button 
+                                onClick={() => handleStatusChange(reservation.id, "Одобрена")} 
+                                className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" 
+                                disabled={reservation.book?.availableCopies === 0}
+                                whileHover={{ y: -2 }} 
+                                whileTap={{ scale: 0.95 }}
+                                title={reservation.book?.availableCopies === 0 ? "Нет доступных экземпляров" : "Одобрить резервирование"}
+                              >
                                 <CheckCircle className="w-4 h-4" />
-                              </motion.button>}
+                              </motion.button>
+                            )}
                             {reservation.status !== "Отменена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Отменена")} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md" whileHover={{
                         y: -2
                       }} whileTap={{

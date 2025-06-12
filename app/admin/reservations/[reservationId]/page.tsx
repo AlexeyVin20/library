@@ -4,8 +4,8 @@ import React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText, Printer, Mail, Phone, BookOpen, Download, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText, Printer, Mail, Phone, BookOpen, ArrowRight, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 
@@ -31,6 +31,7 @@ interface Reservation {
     publishYear?: number;
     category?: string;
     cover?: string;
+    availableCopies?: number;
   };
 }
 
@@ -111,6 +112,171 @@ const AnimatedTabsTrigger = ({
       duration: 0.3
     }} />}
     </TabsTrigger>;
+};
+
+// Вспомогательные функции для статусов
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "Обрабатывается":
+      return <Clock className="w-5 h-5 text-blue-500" />;
+    case "Одобрена":
+      return <CheckCircle className="w-5 h-5 text-green-600" />;
+    case "Отменена":
+      return <XCircle className="w-5 h-5 text-red-600" />;
+    case "Истекла":
+      return <Clock className="w-5 h-5 text-orange-500" />;
+    case "Выдана":
+      return <ArrowRight className="w-5 h-5 text-blue-700" />;
+    case "Возвращена":
+      return <CheckCircle className="w-5 h-5 text-green-600" />;
+    case "Просрочена":
+      return <XCircle className="w-5 h-5 text-red-600" />;
+    case "Отменена_пользователем":
+      return <XCircle className="w-5 h-5 text-gray-600" />;
+    default:
+      return <Clock className="w-5 h-5 text-gray-500" />;
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "Обрабатывается":
+      return "bg-blue-500 hover:bg-blue-600";
+    case "Одобрена":
+      return "bg-green-500 hover:bg-green-600";
+    case "Отменена":
+      return "bg-red-500 hover:bg-red-600";
+    case "Истекла":
+      return "bg-orange-500 hover:bg-orange-600";
+    case "Выдана":
+      return "bg-blue-700 hover:bg-blue-800";
+    case "Возвращена":
+      return "bg-green-600 hover:bg-green-700";
+    case "Просрочена":
+      return "bg-red-600 hover:bg-red-700";
+    case "Отменена_пользователем":
+      return "bg-gray-600 hover:bg-gray-700";
+    default:
+      return "bg-gray-500 hover:bg-gray-600";
+  }
+};
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case "Обрабатывается":
+      return "В обработке";
+    case "Одобрена":
+      return "Одобрена";
+    case "Отменена":
+      return "Отменена";
+    case "Истекла":
+      return "Истекла";
+    case "Выдана":
+      return "Выдана";
+    case "Возвращена":
+      return "Возвращена";
+    case "Просрочена":
+      return "Просрочена";
+    case "Отменена_пользователем":
+      return "Отменена пользователем";
+    default:
+      return "Неизвестно";
+  }
+};
+
+// Компонент для переключения статусов
+const StatusSwitcher = ({ 
+  currentStatus, 
+  onStatusChange 
+}: { 
+  currentStatus: string; 
+  onStatusChange: (status: string) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Закрытие при клике вне элемента
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.status-switcher')) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const statusOptions = [
+    { value: "Обрабатывается", label: "В обработке", icon: <Clock className="w-4 h-4" />, color: "bg-blue-500" },
+    { value: "Одобрена", label: "Одобрена", icon: <CheckCircle className="w-4 h-4" />, color: "bg-green-500" },
+    { value: "Отменена", label: "Отменена", icon: <XCircle className="w-4 h-4" />, color: "bg-red-500" },
+    { value: "Истекла", label: "Истекла", icon: <Clock className="w-4 h-4" />, color: "bg-orange-500" },
+    { value: "Выдана", label: "Выдана", icon: <ArrowRight className="w-4 h-4" />, color: "bg-blue-700" },
+    { value: "Возвращена", label: "Возвращена", icon: <CheckCircle className="w-4 h-4" />, color: "bg-green-600" },
+    { value: "Просрочена", label: "Просрочена", icon: <XCircle className="w-4 h-4" />, color: "bg-red-600" },
+    { value: "Отменена_пользователем", label: "Отменена пользователем", icon: <XCircle className="w-4 h-4" />, color: "bg-gray-600" }
+  ];
+
+
+
+  return (
+    <div className="relative status-switcher">
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`${getStatusColor(currentStatus)} text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md`}
+        whileHover={{ y: -3 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        {getStatusIcon(currentStatus)}
+        <span>{getStatusLabel(currentStatus)}</span>
+        <Settings className="w-4 h-4 ml-1" />
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[250px]"
+          >
+          <div className="p-2">
+            <div className="text-sm font-medium text-gray-600 px-3 py-2 border-b border-gray-200">
+              Изменить статус
+            </div>
+            {statusOptions.map((option) => (
+              <motion.button
+                key={option.value}
+                onClick={() => {
+                  onStatusChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 rounded-md flex items-center gap-2 hover:bg-gray-100 transition-colors ${
+                  option.value === currentStatus ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                }`}
+                whileHover={{ x: 5 }}
+              >
+                <span className={option.value === currentStatus ? "text-blue-700" : "text-gray-500"}>
+                  {option.icon}
+                </span>
+                <span className="text-sm">{option.label}</span>
+                {option.value === currentStatus && (
+                  <CheckCircle className="w-4 h-4 text-blue-700 ml-auto" />
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };
 
 export default function ReservationDetailsPage({
@@ -206,6 +372,12 @@ export default function ReservationDetailsPage({
   const handleStatusChange = async (newStatus: string) => {
     if (!reservation) return;
     try {
+      // Получаем токен авторизации
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден. Пожалуйста, войдите в систему заново.");
+      }
+
       const updatedReservation = {
         ...reservation,
         reservationDate: new Date(reservation.reservationDate).toISOString(),
@@ -215,15 +387,23 @@ export default function ReservationDetailsPage({
       const response = await fetch(`${baseUrl}/api/Reservation/${reservation.id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(updatedReservation)
       });
-      if (!response.ok) throw new Error("Ошибка при обновлении статуса");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Ошибка при обновлении статуса");
+      }
+      
+      // Обновляем локальное состояние
       setReservation({
         ...reservation,
         status: newStatus
       });
+      
+      console.log(`Статус изменен с ${reservation.status} на ${newStatus}`);
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
       alert(err instanceof Error ? err.message : "Ошибка при обновлении статуса");
@@ -240,43 +420,7 @@ export default function ReservationDetailsPage({
     });
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Выполнена":
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case "Отменена":
-        return <XCircle className="w-5 h-5 text-red-600" />;
-      case "Обрабатывается":
-        return <Clock className="w-5 h-5 text-blue-500" />;
-      case "Выдана":
-        return <ArrowRight className="w-5 h-5 text-blue-700" />;
-      case "Возвращена":
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case "Истекла":
-        return <Clock className="w-5 h-5 text-orange-500" />;
-      default:
-        return <Clock className="w-5 h-5 text-gray-500" />;
-    }
-  };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Выполнена":
-        return "bg-green-500 hover:bg-green-600";
-      case "Отменена":
-        return "bg-red-500 hover:bg-red-600";
-      case "Обрабатывается":
-        return "bg-blue-500 hover:bg-blue-600";
-      case "Выдана":
-        return "bg-blue-700 hover:bg-blue-800";
-      case "Возвращена":
-        return "bg-green-600 hover:bg-green-700";
-      case "Истекла":
-        return "bg-orange-500 hover:bg-orange-600";
-      default:
-        return "bg-gray-500 hover:bg-gray-600";
-    }
-  };
 
   // Функция для генерации и скачивания HTML документа
   const generateFormular = async () => {
@@ -482,16 +626,20 @@ export default function ReservationDetailsPage({
     link.click();
     document.body.removeChild(link);
 
-    // Автоматическое изменение статуса на "Выдана" после печати, если текущий статус "Выполнена"
-    if (reservation.status === "Выполнена") {
+    // Автоматическое изменение статуса на "Выдана" после печати, если текущий статус "Одобрена"
+    if (reservation.status === "Одобрена") {
       handleStatusChange("Выдана");
     }
   };
 
-  // Отображаемый статус с учетом логики "Истекла"
+  // Отображаемый статус с учетом логики статусов
   let displayStatus = reservation?.status;
-  if (reservation && new Date(reservation.expirationDate) < new Date() && (reservation.status === 'Обрабатывается' || reservation.status === 'Выполнена' || reservation.status === 'Выдана')) {
-    displayStatus = 'Истекла';
+  if (reservation && new Date(reservation.expirationDate) < new Date()) {
+    if (reservation.status === 'Выдана') {
+      displayStatus = 'Просрочена';
+    } else if (reservation.status === 'Обрабатывается' || reservation.status === 'Одобрена') {
+      displayStatus = 'Истекла';
+    }
   }
 
   return <div className="min-h-screen bg-gray-200">
@@ -560,12 +708,40 @@ export default function ReservationDetailsPage({
             </motion.div> : <motion.div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-300" whileHover={{
           boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)"
         }}>
+                            {/* Предупреждение о недоступности книги */}
+              {reservation.book?.availableCopies === 0 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-base font-medium text-orange-800 mb-1">Книга недоступна для выдачи</h4>
+                      <p className="text-sm text-orange-700">
+                        Все экземпляры книги "{reservation.book?.title}" в настоящее время заняты. 
+                        Статусы "Одобрена" и "Выдана" нельзя установить до возврата хотя бы одного экземпляра.
+                      </p>
+                      <p className="text-xs text-orange-600 mt-2">
+                        💡 Совет: Проверьте список выданных книг для определения ожидаемой даты возврата.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between items-start mb-8">
                 <div className="flex items-center gap-3">
-                  <motion.div className={`${getStatusColor(displayStatus || reservation.status)} text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md`}>
-                    {getStatusIcon(displayStatus || reservation.status)}
-                    <span>{displayStatus || reservation.status}</span>
-                  </motion.div>
+                  <StatusSwitcher 
+                    currentStatus={reservation.status} 
+                    onStatusChange={handleStatusChange}
+                  />
+                  {displayStatus !== reservation.status && (
+                    <span className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                      Отображается как: {getStatusLabel(displayStatus || '')}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -577,41 +753,6 @@ export default function ReservationDetailsPage({
                     <Printer className="h-4 w-4" />
                     <span>Печать формуляра</span>
                   </motion.button>
-                  
-                  {reservation.status === "Выполнена" && <motion.button onClick={() => handleStatusChange("Выдана")} className="bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
-                y: -3
-              }} whileTap={{
-                scale: 0.98
-              }}>
-                      <ArrowRight className="h-4 w-4" />
-                      <span>Выдать книгу</span>
-                    </motion.button>}
-
-                  {reservation.status === "Выдана" && <motion.button onClick={() => handleStatusChange("Возвращена")} className="bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
-                y: -3
-              }} whileTap={{
-                scale: 0.98
-              }}>
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Принять возврат</span>
-                    </motion.button>}
-
-                  {reservation.status !== "Выполнена" && reservation.status !== "Выдана" && reservation.status !== "Возвращена" && reservation.status !== "Истекла" && <motion.button onClick={() => handleStatusChange("Выполнена")} className="bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
-                y: -3
-              }} whileTap={{
-                scale: 0.98
-              }}>
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Выполнить</span>
-                    </motion.button>}
-                  {reservation.status !== "Отменена" && reservation.status !== "Возвращена" && reservation.status !== "Истекла" && <motion.button onClick={() => handleStatusChange("Отменена")} className="bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
-                y: -3
-              }} whileTap={{
-                scale: 0.98
-              }}>
-                      <XCircle className="h-4 w-4" />
-                      <span>Отменить</span>
-                    </motion.button>}
                 </div>
               </div>
 

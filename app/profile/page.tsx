@@ -73,6 +73,7 @@ interface Book {
   id: string
   title: string
   authors: string
+  author?: string
   isbn: string
   genre?: string | null
   cover?: string | null
@@ -80,6 +81,8 @@ interface Book {
   publisher?: string | null
   dueDate?: string
   borrowDate?: string
+  returnDate?: string
+  isFromReservation?: boolean
 }
 
 // Reservation model interface
@@ -412,8 +415,12 @@ export default function ProfilePage() {
         ...(reservation.book!), 
         id: reservation.bookId, 
         title: reservation.bookTitle || reservation.book!.title,
+        author: reservation.book!.authors || "Автор не указан",
         dueDate: reservation.expirationDate, 
-        borrowDate: reservation.reservationDate, 
+        borrowDate: reservation.reservationDate,
+        returnDate: reservation.expirationDate,
+        cover: reservation.book!.cover,
+        isFromReservation: true,
       }));
 
     const allBooks = [...booksOnHold, ...booksFromReservations].filter(
@@ -423,69 +430,76 @@ export default function ProfilePage() {
 
     if (allBooks.length > 0) {
       return (
-        <div className="space-y-4">
-          {allBooks.map((book) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {allBooks.map((book, index) => (
             <motion.div
-              key={`book-${book.id}`}
-              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+              key={`book-${book.id}-${index}`}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 * index }}
+              className="p-3 max-w-xs bg-white rounded-lg border border-gray-200 flex items-start gap-3 mx-auto shadow-md"
               whileHover={{
                 y: -2,
-                boxShadow:
-                  "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
               }}
-              transition={{ duration: 0.2 }}
             >
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-16 h-24 relative">
-                  {book.cover ? (
-                    <Image
-                      src={book.cover || "/placeholder.svg"}
-                      alt={book.title}
-                      fill
-                      className="object-cover rounded-md"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-blue-300 rounded-md">
-                      <BookOpen className="h-8 w-8 text-blue-500" />
-                    </div>
+              <div className="w-14 h-20 relative flex-shrink-0 rounded-md overflow-hidden shadow-lg">
+                {book.cover ? (
+                  <Image
+                    src={book.cover}
+                    alt={book.title || "Книга"}
+                    fill
+                    style={{ objectFit: "cover" }}
+                    className="rounded-md"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-blue-300 rounded-md">
+                    <BookOpen className="h-8 w-8 text-blue-500" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-grow">
+                <h4 className="font-semibold text-gray-800 mb-1 line-clamp-2">{book.title}</h4>
+                <p className="text-sm text-gray-500 mb-1 line-clamp-1">
+                  Автор: {book.author || book.authors || "Автор не указан"}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  {book.genre && (
+                    <span className="text-blue-500">{book.genre}</span>
+                  )}
+                  {book.publicationYear && (
+                    <span className="text-gray-500">
+                      {book.publicationYear} г.
+                    </span>
+                  )}
+                  {book.publisher && (
+                    <span className="text-gray-500">{book.publisher}</span>
                   )}
                 </div>
-                <div className="flex-grow">
-                  <h4 className="font-medium text-gray-800">{book.title}</h4>
-                  <p className="text-sm text-gray-500">{book.authors}</p>
-                  <div className="mt-2 flex flex-wrap gap-4 text-xs">
-                    {book.genre && (
-                      <span className="text-blue-500">{book.genre}</span>
-                    )}
-                    {book.publicationYear && (
-                      <span className="text-gray-500">
-                        {book.publicationYear} г.
-                      </span>
-                    )}
-                    {book.publisher && (
-                      <span className="text-gray-500">{book.publisher}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex-shrink-0 text-right">
+                <div className="mt-2">
                   {book.borrowDate && (
                     <div className="text-xs text-gray-500">
                       Взята: {formatDate(book.borrowDate)}
                     </div>
                   )}
-                  {book.dueDate && (
+                  {(book.dueDate || book.returnDate) && (
                     <div
                       className={cn(
                         "text-xs font-medium mt-1",
-                        new Date(book.dueDate) < new Date()
+                        new Date(book.dueDate || book.returnDate || "") < new Date()
                           ? "text-red-800"
                           : "text-blue-500"
                       )}
                     >
-                      Вернуть до: {formatDate(book.dueDate)}
+                      Вернуть до: {formatDate(book.dueDate || book.returnDate || "")}
                     </div>
                   )}
                 </div>
+                {book.isFromReservation && (
+                  <span className="text-xs text-blue-500 mt-1 inline-block">
+                    Из резервации
+                  </span>
+                )}
               </div>
             </motion.div>
           ))}

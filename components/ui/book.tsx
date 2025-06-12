@@ -175,4 +175,4 @@ function Stack(props: StackProps) {
   );
 }
 
-export { Book, Stack };
+export { Stack };

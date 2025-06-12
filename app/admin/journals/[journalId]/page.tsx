@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -406,11 +406,13 @@ const JournalDetails = ({
 export default function JournalDetailPage({
   params
 }: {
-  params: {
+  params: Promise<{
     journalId: string;
-  };
+  }>;
 }) {
-  const journalId = params.journalId;
+  // Получаем params через React.use
+  const actualParams = React.use(params);
+  const journalId = actualParams.journalId;
   const [journal, setJournal] = useState<Journal | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();

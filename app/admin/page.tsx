@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Calendar as DayPickerCalendar } from "@/components/ui/calendar";
+import { Calendar as DayPickerCalendar } from "@/components/ui/calendar-range";
 import Link from "next/link";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { BookOpen, Users, AlertCircle, TrendingUp, CalendarIcon, ChevronRight, BarChart3, Layers, ArrowRight, Shield, ChevronDown, ChevronUp, Activity, Bookmark, PieChart, Sparkles, Clock, X, CheckCircle, XCircle } from "lucide-react";
