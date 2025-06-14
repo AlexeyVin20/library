@@ -26,6 +26,9 @@ import {
   CheckCircle2,
 } from "lucide-react"
 
+import Loader from "@/components/ui/3d-box-loader-animation"
+import { useImageUpload } from "@/components/ui/use-image-upload"
+
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -46,6 +49,8 @@ import {
 import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { Book, Journal } from "@/lib/types"
+import { Switch } from "@/components/ui/switch"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
 interface Position {
   x: number
@@ -176,6 +181,32 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
   const [geminiLoading, setGeminiLoading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [formSuccess, setFormSuccess] = useState<string | null>(null)
+  // Переключатель простого/расширенного режима
+  const [isAdvancedMode, setIsAdvancedMode] = useState(true)
+
+  // Хук для загрузки изображений
+  const imageUpload = useImageUpload({
+    onUpload: (url: string) => {
+      // Конвертируем blob URL в base64 для обработки
+      fetch(url)
+        .then(res => res.blob())
+        .then(blob => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              const base64String = reader.result.split(',')[1]
+              setGeminiImage(base64String)
+              setFormSuccess("Изображение загружено и отправлено на обработку")
+            }
+          }
+          reader.readAsDataURL(blob)
+        })
+        .catch(error => {
+          console.error('Ошибка при конвертации изображения:', error)
+          setFormError("Ошибка при обработке изображения")
+        })
+    }
+  })
 
   const {
     register,
@@ -243,6 +274,13 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
     }
   }, [formSuccess])
 
+  // Сброс активной вкладки, если выключен расширенный режим
+  useEffect(() => {
+    if (!isAdvancedMode && (activeTab === "details" || activeTab === "rare-fields")) {
+      setActiveTab("basic-info")
+    }
+  }, [isAdvancedMode, activeTab])
+
   const handleFetchByISBN = async () => {
     if (!isbn) {
       setFormError("Введите ISBN для поиска")
@@ -272,11 +310,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
         setValue("isbn", isbn)
         setValue("publisher", bookData.publisher || "")
         setValue("pageCount", bookData.pageCount || 0)
-        setValue("language", bookData.language || "")
-        setValue(
-          "publicationYear",
-          bookData.publishedDate ? Number.parseInt(bookData.publishedDate.substring(0, 4)) : new Date().getFullYear(),
-        )
         if (bookData.authors && bookData.authors.length > 0) setValue("authors", bookData.authors.join(", "))
         if (bookData.imageLinks?.thumbnail) setPreviewUrl(bookData.imageLinks.thumbnail)
 
@@ -358,123 +391,31 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
     setFormSuccess("Обложка книги удалена")
   }
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          const base64String = reader.result.split(",")[1]
-          resolve(base64String)
-        } else {
-          reject(new Error("Не удалось преобразовать файл в base64"))
-        }
-      }
-      reader.onerror = (error) => reject(error)
-    })
+  const GeminiFileUpload = () => {
+    return (
+      <motion.div
+        className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all bg-gray-100 border-gray-300 hover:bg-gray-200"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={imageUpload.handleThumbnailClick}
+      >
+        <input 
+          type="file" 
+          className="hidden" 
+          accept="image/*" 
+          ref={imageUpload.fileInputRef}
+          onChange={imageUpload.handleFileChange}
+        />
+        <Camera className="w-10 h-10 mb-2 text-gray-800" />
+        <p className="mb-2 text-sm text-center text-gray-800">
+          Перетащите файл сюда или нажмите для загрузки
+        </p>
+        {imageUpload.fileName && <p className="text-xs text-gray-800">{imageUpload.fileName}</p>}
+      </motion.div>
+    )
   }
 
-  const GeminiFileUpload = ({
-    onFileChange,
-  }: {
-    onFileChange: (base64: string) => void
-  }) => {
-    const [fileName, setFileName] = useState("")
-    const [dragActive, setDragActive] = useState(false)
-
-    const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (file) {
-        setFileName(file.name)
-        if (file.size > 10 * 1024 * 1024) {
-          setFormError("Размер файла не должен превышать 10 МБ")
-          toast({
-            title: "Ошибка",
-            description: "Размер файла не должен превышать 10 МБ",
-            variant: "destructive",
-          })
-          return
-        }
-        try {
-          const base64 = await fileToBase64(file)
-          onFileChange(base64)
-        } catch (error) {
-          setFormError("Ошибка при обработке файла")
-          toast({
-            title: "Ошибка",
-            description: "Не удалось обработать файл",
-            variant: "destructive",
-          })
-        }
-      }
-    }
-
-          const handleDrag = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        if (e.type === "dragenter" || e.type === "dragover") {
-          setDragActive(true)
-        } else if (e.type === "dragleave") {
-          setDragActive(false)
-        }
-      }
-
-      const handleDrop = async (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setDragActive(false)
-
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-          const file = e.dataTransfer.files[0]
-          setFileName(file.name)
-          if (file.size > 10 * 1024 * 1024) {
-            setFormError("Размер файла не должен превышать 10 МБ")
-            return
-          }
-          try {
-            const base64 = await fileToBase64(file)
-            onFileChange(base64)
-          } catch (error) {
-            setFormError("Ошибка при обработке файла")
-          }
-        }
-      }
-
-      return (
-        <motion.div
-          className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
-            dragActive
-              ? "bg-blue-300 border-blue-500"
-              : "bg-gray-100 border-gray-300 hover:bg-gray-200"
-          }`}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
-          <input type="file" className="hidden" accept="image/*" onChange={handleChange} id="gemini-file-input" />
-          <label
-            htmlFor="gemini-file-input"
-            className="flex flex-col items-center justify-center w-full h-full cursor-pointer"
-          >
-            <Camera className="w-10 h-10 mb-2 text-gray-800" />
-            <p className="mb-2 text-sm text-center text-gray-800">
-              Перетащите файл сюда или нажмите для загрузки
-            </p>
-            {fileName && <p className="text-xs text-gray-800">{fileName}</p>}
-          </label>
-        </motion.div>
-      )
-  }
-
-  const handleGeminiFileChange = (base64: string) => {
-    setGeminiImage(base64)
-    setFormSuccess("Изображение загружено и отправлено на обработку")
-  }
-
-  const handleGeminiUpload = async () => {
+  const handleGeminiUpload = async (useBackupModel = false) => {
     if (!geminiImage) return
 
     setGeminiLoading(true)
@@ -488,9 +429,11 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
         throw new Error("API ключ не настроен")
       }
 
+      const model = useBackupModel ? "google/gemma-3-27b-it:free" : "google/gemini-2.0-flash-exp:free"
+
       const requestBody = {
-        model: "google/gemini-2.0-flash-exp:free",
-        webSearch: true,
+        model,
+        webSearch: !useBackupModel, // Отключаем веб-поиск для резервной модели
         messages: [
           {
             role: "user",
@@ -521,6 +464,16 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
         body: JSON.stringify(requestBody),
       })
 
+      // Если получили ошибку 429 и еще не использовали резервную модель
+      if (res.status === 429 && !useBackupModel) {
+        console.log("Получена ошибка 429, переключаемся на резервную модель...")
+        toast({
+          title: "Переключение модели",
+          description: "Основная модель недоступна, используем резервную...",
+        })
+        return await handleGeminiUpload(true)
+      }
+
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
 
       const data = await res.json()
@@ -542,20 +495,34 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       // Заполнение полей формы данными из API
       fillFormWithApiData(parsedData, coverUrl)
 
-      setFormSuccess("Данные книги успешно получены из изображения")
+      const modelName = useBackupModel ? "резервной модели" : "основной модели"
+      setFormSuccess(`Данные книги успешно получены из изображения (${modelName})`)
       toast({
         title: "Данные получены",
-        description: "Информация о книге успешно извлечена из изображения",
+        description: `Информация о книге успешно извлечена из изображения с помощью ${modelName}`,
       })
 
       // Проверяем валидность полей после заполнения
       await trigger()
     } catch (error) {
       console.error("Ошибка при обработке изображения:", error)
-      setFormError("Ошибка при обработке изображения. Пожалуйста, попробуйте еще раз.")
+      const errorMessage = error instanceof Error ? error.message : "Неизвестная ошибка"
+      
+      if (errorMessage.includes("429") && !useBackupModel) {
+        console.log("Обнаружена ошибка 429 в catch блоке, переключаемся на резервную модель...")
+        toast({
+          title: "Переключение модели",
+          description: "Основная модель недоступна, используем резервную...",
+        })
+        return await handleGeminiUpload(true)
+      }
+
+      setFormError(`Ошибка при обработке изображения: ${errorMessage}`)
       toast({
         title: "Ошибка",
-        description: "Ошибка при вызове Gemini API.",
+        description: useBackupModel 
+          ? "Ошибка при вызове резервной модели API." 
+          : "Ошибка при вызове основной модели API.",
         variant: "destructive",
       })
     } finally {
@@ -717,11 +684,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
     }
   }
 
-
-
-  
-
-
   const onFormSubmit = async (values: z.infer<typeof bookSchema>) => {
     setFormError(null)
     try {
@@ -743,8 +705,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       })
     }
   }
-
-
 
   // Функция для импорта данных полки из JSON
   const importShelfFromJson = async (data: any) => {
@@ -899,7 +859,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
   }, [])
   return (
     <div className="min-h-screen bg-gray-200">
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-6 max-w-5xl">
         {/* Header */}
         <FadeInView>
           <motion.div
@@ -908,11 +868,18 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-blue-500" />
-              <h1 className="text-2xl font-bold text-gray-800">
-                {mode === "create" ? "Добавление новой книги" : "Редактирование книги"}
-              </h1>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-6 w-6 text-blue-500" />
+                <h1 className="text-2xl font-bold text-gray-800">
+                  {mode === "create" ? "Добавление новой книги" : "Редактирование книги"}
+                </h1>
+              </div>
+              {/* Переключатель режима */}
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-800 select-none">Расширенный режим</span>
+                <Switch checked={isAdvancedMode} onCheckedChange={setIsAdvancedMode} />
+              </div>
             </div>
           </motion.div>
         </FadeInView>
@@ -964,22 +931,21 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
             {/* Gemini AI Block */}
             <FadeInView delay={0.3}>
               <FormSection
-                title="Сканирование обложки книги"
+                title="Сканирование титульного листа"
                 icon={<Camera className="h-5 w-5 text-gray-800" />}
               >
                 <p className="text-sm text-gray-800 mb-3">
-                  Загрузите изображение обложки книги для автоматического заполнения информации
+                  Загрузите изображение титульного листа для автоматического заполнения информации
                 </p>
-                <GeminiFileUpload onFileChange={handleGeminiFileChange} />
+                <GeminiFileUpload />
                 {geminiLoading && (
-                  <div className="flex items-center mt-2 text-gray-800">
-                    <Loader2 className="h-5 w-5 animate-spin mr-2 text-gray-800" />
-                    <span>Обработка изображения...</span>
+                  <div className="flex items-center justify-center mt-4">
+                    <Loader />
                   </div>
                 )}
                 {geminiImage && !geminiLoading && (
                   <motion.button
-                    onClick={handleGeminiUpload}
+                    onClick={() => handleGeminiUpload()}
                     className="mt-2 bg-blue-500 hover:bg-blue-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.98 }}
@@ -993,26 +959,41 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
             {/* Form */}
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-8 mt-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-blue-300 p-1 rounded-xl border border-gray-200 shadow-md">
-                  <AnimatedTabsTrigger
-                    value="basic-info"
-                    icon={<BookmarkIcon className="w-4 h-4" />}
-                    label="Основная информация"
-                    isActive={activeTab === "basic-info"}
-                  />
-                  <AnimatedTabsTrigger
-                    value="details"
-                    icon={<FileText className="w-4 h-4" />}
-                    label="Детальная информация"
-                    isActive={activeTab === "details"}
-                  />
-                  <AnimatedTabsTrigger
-                    value="rare-fields"
-                    icon={<LayoutGrid className="w-4 h-4" />}
-                    label="Дополнительно"
-                    isActive={activeTab === "rare-fields"}
-                  />
-                </TabsList>
+                <div className="flex items-center justify-between w-full">
+                  <TabsList className="bg-blue-300 p-1 rounded-xl border border-gray-200 shadow-md">
+                    <AnimatedTabsTrigger
+                      value="basic-info"
+                      icon={<BookmarkIcon className="w-4 h-4" />}
+                      label="Основная информация"
+                      isActive={activeTab === "basic-info"}
+                    />
+                    {isAdvancedMode && (
+                      <>
+                        <AnimatedTabsTrigger
+                          value="details"
+                          icon={<FileText className="w-4 h-4" />}
+                          label="Детальная информация"
+                          isActive={activeTab === "details"}
+                        />
+                        <AnimatedTabsTrigger
+                          value="rare-fields"
+                          icon={<LayoutGrid className="w-4 h-4" />}
+                          label="Дополнительно"
+                          isActive={activeTab === "rare-fields"}
+                        />
+                      </>
+                    )}
+                  </TabsList>
+                  {/* Электронная книга компактно справа от табов */}
+                  <div className="flex items-center gap-2 ml-4">
+                    <span className="text-sm font-medium text-gray-700 select-none">Электронная книга</span>
+                    <Switch
+                      id="isEbook-tabs"
+                      checked={isEbook}
+                      onCheckedChange={(checked) => setValue("isEbook", checked === true)}
+                    />
+                  </div>
+                </div>
 
                 {/* Основная информация */}
                 <TabsContent value="basic-info" className="space-y-6 mt-6">
@@ -1036,7 +1017,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                         </FormField>
 
                         <FormField label="ISBN" error={errors.isbn?.message}>
-                          <div className="relative flex items-center">
+                          <div className="relative flex items-center gap-2">
                             <Input
                               id="isbn"
                               placeholder="000-0000000000"
@@ -1056,7 +1037,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                               type="button"
                               onClick={handleFetchByISBN}
                               disabled={isSearchLoading}
-                              className="absolute right-2 bg-blue-500 hover:bg-blue-700 text-white rounded-md px-3 py-1 flex items-center gap-1 transition-all"
+                              className="bg-blue-500 hover:bg-blue-700 text-white rounded-md px-3 py-1 flex items-center gap-1 transition-all"
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -1097,53 +1078,36 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                           />
                         </FormField>
 
-                        <div className="md:col-span-2">
-                          <div className="flex items-center space-x-2 mb-4">
-                            <Checkbox
-                              id="isEbook"
-                              checked={isEbook}
-                              onCheckedChange={(checked) => setValue("isEbook", checked === true)}
-                              className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
-                            />
-                            <label
-                              htmlFor="isEbook"
-                              className="text-base font-medium text-gray-800"
-                            >
-                              Электронная книга
-                            </label>
-                          </div>
-                        </div>
-
                         {!isEbook && (
-                          <>
-                            <FormField label="Доступные экземпляры" error={errors.availableCopies?.message}>
+                          <FormField label="Доступные экземпляры" error={errors.availableCopies?.message}>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                className="bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold border border-gray-300"
+                                onClick={() => setValue("availableCopies", Math.max(0, (formValues.availableCopies || 0) - 1))}
+                                tabIndex={-1}
+                              >
+                                -
+                              </button>
                               <Input
                                 type="number"
-                                placeholder="Введите количество доступных экземпляров"
+                                placeholder="Количество"
                                 min={0}
                                 {...register("availableCopies", { valueAsNumber: true })}
-                                className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                                value={formValues.availableCopies}
+                                className="w-20 text-center bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-2 text-gray-800 shadow-sm h-10 placeholder:text-gray-500"
+                                onChange={e => setValue("availableCopies", Math.max(0, Number(e.target.value)))}
                               />
-                            </FormField>
-
-                            <FormField label="Состояние книги" error={errors.condition?.message}>
-                              <Select
-                                onValueChange={(value) => setValue("condition", value)}
-                                defaultValue={initialData?.condition || ""}
+                              <button
+                                type="button"
+                                className="bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold border border-gray-300"
+                                onClick={() => setValue("availableCopies", (formValues.availableCopies || 0) + 1)}
+                                tabIndex={-1}
                               >
-                                <SelectTrigger className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12">
-                                  <SelectValue placeholder="Выберите состояние" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border border-gray-200">
-                                  <SelectItem value="Новое">Новое</SelectItem>
-                                  <SelectItem value="Б/У">Б/У</SelectItem>
-                                  <SelectItem value="Не определено">Не определено</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </FormField>
-
-                            
-                          </>
+                                +
+                              </button>
+                            </div>
+                          </FormField>
                         )}
 
                         <div className="md:col-span-2">
@@ -1185,13 +1149,16 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                               <div className="flex gap-2">
                                 <motion.button
                                   type="button"
-                                  onClick={() => document.getElementById("coverInput")?.click()}
+                                  onClick={() => {
+                                    setShowManualCoverInput(true)
+                                    setTimeout(() => document.getElementById("manualCoverInput")?.focus(), 0)
+                                  }}
                                   className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md"
                                   whileHover={{ y: -2 }}
                                   whileTap={{ scale: 0.98 }}
                                 >
                                   <Upload className="h-4 w-4" />
-                                  {previewUrl ? "Изменить обложку" : "Загрузить обложку"}
+                                  {previewUrl ? "Изменить URL обложки" : "Указать URL обложки"}
                                 </motion.button>
                                 <motion.button
                                   type="button"
@@ -1226,13 +1193,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                   Найти обложку
                                 </motion.button>
                               </div>
-                              <input
-                                id="coverInput"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleCoverChange}
-                                className="hidden"
-                              />
                             </div>
                             {showManualCoverInput && (
                               <div className="flex flex-col w-full max-w-xs">
@@ -1241,6 +1201,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                     Вставьте ссылку на обложку
                                   </label>
                                   <Input
+                                    id="manualCoverInput"
                                     placeholder="Ссылка на обложку"
                                     value={manualCoverUrl}
                                     onChange={(e) => {
@@ -1261,150 +1222,171 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                 </TabsContent>
 
                 {/* Детальная информация */}
-                <TabsContent value="details" className="space-y-6 mt-6">
-                  <Card className="bg-white border border-gray-200">
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2">
-                          <FormField label="Описание книги" error={errors.description?.message}>
+                {isAdvancedMode && (
+                  <TabsContent value="details" className="space-y-6 mt-6">
+                    <Card className="bg-white border border-gray-200">
+                      <CardContent className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="md:col-span-2">
+                            <FormField label="Описание книги" error={errors.description?.message}>
+                              <Textarea
+                                placeholder="Введите описание книги"
+                                {...register("description")}
+                                rows={7}
+                                className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-3 text-gray-800 shadow-sm resize-none placeholder:text-gray-500"
+                              />
+                            </FormField>
+                          </div>
+
+                          <FormField label="Количество страниц" error={errors.pageCount?.message}>
+                            <Input
+                              type="number"
+                              placeholder="Введите количество страниц"
+                              min={1}
+                              {...register("pageCount", { valueAsNumber: true })}
+                              className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                            />
+                          </FormField>
+
+                          <FormField label="Язык" error={errors.language?.message}>
+                            <Input
+                              placeholder="Введите язык книги"
+                              {...register("language")}
+                              className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                            />
+                          </FormField>
+
+                          <FormField label="Формат книги" error={errors.format?.message}>
+                            <Select
+                              onValueChange={(value) => setValue("format", value)}
+                              defaultValue={initialData?.format || ""}
+                            >
+                              <SelectTrigger className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12">
+                                <SelectValue placeholder="Выберите формат" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border border-gray-200">
+                                <SelectItem value="Твердый переплет">Твердый переплет</SelectItem>
+                                <SelectItem value="Мягкий переплет">Мягкий переплет</SelectItem>
+                                <SelectItem value="Электронный">Электронный</SelectItem>
+                                <SelectItem value="Аудиокнига">Аудиокнига</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormField>
+
+                          <FormField label="Цена" error={errors.price?.message}>
+                            <Input
+                              type="number"
+                              placeholder="Введите цену книги"
+                              min={0.00}
+                              step="0.01"
+                              {...register("price", { valueAsNumber: true })}
+                              className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                            />
+                          </FormField>
+
+                          {/* Accordion для классификации */}
+                          <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="classification">
+                              <AccordionTrigger className="text-base font-medium text-gray-800">Классификация</AccordionTrigger>
+                              <AccordionContent>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                  <FormField label="УДК" error={errors.udk?.message}>
+                                    <Input
+                                      placeholder="Введите УДК"
+                                      {...register("udk")}
+                                      className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                                    />
+                                  </FormField>
+                                  <FormField label="ББК" error={errors.bbk?.message}>
+                                    <Input
+                                      placeholder="Введите ББК"
+                                      {...register("bbk")}
+                                      className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                                    />
+                                  </FormField>
+                                  <FormField label="Категоризация" error={errors.categorization?.message}>
+                                    <Input
+                                      placeholder="Введите категоризацию"
+                                      {...register("categorization")}
+                                      className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                                    />
+                                  </FormField>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+
+                          {/* Состояние книги теперь в деталях */}
+                          {!isEbook && (
+                            <FormField label="Состояние книги" error={errors.condition?.message}>
+                              <Select
+                                onValueChange={(value) => setValue("condition", value)}
+                                defaultValue={initialData?.condition || ""}
+                              >
+                                <SelectTrigger className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12">
+                                  <SelectValue placeholder="Выберите состояние" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border border-gray-200">
+                                  <SelectItem value="Новое">Новое</SelectItem>
+                                  <SelectItem value="Б/У">Б/У</SelectItem>
+                                  <SelectItem value="Не определено">Не определено</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormField>
+                            
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                )}
+
+                {/* Дополнительные поля */}
+                {isAdvancedMode && (
+                  <TabsContent value="rare-fields" className="space-y-6 mt-6">
+                    <Card className="bg-white border border-gray-200">
+                      <CardContent className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FormField label="Оригинальное название" error={errors.originalTitle?.message}>
+                            <Input
+                              placeholder="Введите оригинальное название книги"
+                              {...register("originalTitle")}
+                              className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                            />
+                          </FormField>
+
+                          <FormField label="Оригинальный язык" error={errors.originalLanguage?.message}>
+                            <Input
+                              placeholder="Введите оригинальный язык книги"
+                              {...register("originalLanguage")}
+                              className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                            />
+                          </FormField>
+
+                          <FormField label="Издание" error={errors.edition?.message}>
+                            <Input
+                              placeholder="Введите информацию об издании"
+                              {...register("edition")}
+                              className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                            />
+                          </FormField>
+
+                          <FormField label="Резюме книги" error={errors.summary?.message}>
                             <Textarea
-                              placeholder="Введите описание книги"
-                              {...register("description")}
-                              rows={7}
+                              placeholder="Введите резюме книги"
+                              {...register("summary")}
+                              rows={5}
                               className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-3 text-gray-800 shadow-sm resize-none placeholder:text-gray-500"
                             />
                           </FormField>
                         </div>
-
-                        <FormField label="Количество страниц" error={errors.pageCount?.message}>
-                          <Input
-                            type="number"
-                            placeholder="Введите количество страниц"
-                            min={1}
-                            {...register("pageCount", { valueAsNumber: true })}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-
-                        <FormField label="Язык" error={errors.language?.message}>
-                          <Input
-                            placeholder="Введите язык книги"
-                            {...register("language")}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-
-                        <FormField label="Формат книги" error={errors.format?.message}>
-                          <Select
-                            onValueChange={(value) => setValue("format", value)}
-                            defaultValue={initialData?.format || ""}
-                          >
-                            <SelectTrigger className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12">
-                              <SelectValue placeholder="Выберите формат" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white border border-gray-200">
-                              <SelectItem value="Твердый переплет">Твердый переплет</SelectItem>
-                              <SelectItem value="Мягкий переплет">Мягкий переплет</SelectItem>
-                              <SelectItem value="Электронный">Электронный</SelectItem>
-                              <SelectItem value="Аудиокнига">Аудиокнига</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormField>
-
-                        <FormField label="Цена" error={errors.price?.message}>
-                          <Input
-                            type="number"
-                            placeholder="Введите цену книги"
-                            min={0.00}
-                            step="0.01"
-                            {...register("price", { valueAsNumber: true })}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-
-                        <FormField label="Категоризация" error={errors.categorization?.message}>
-                          <Input
-                            placeholder="Введите категоризацию"
-                            {...register("categorization")}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-
-                        <FormField label="УДК" error={errors.udk?.message}>
-                          <Input
-                            placeholder="Введите УДК"
-                            {...register("udk")}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-
-                        <FormField label="ББК" error={errors.bbk?.message}>
-                          <Input
-                            placeholder="Введите ББК"
-                            {...register("bbk")}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Дополнительные поля */}
-                <TabsContent value="rare-fields" className="space-y-6 mt-6">
-                  <Card className="bg-white border border-gray-200">
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField label="Оригинальное название" error={errors.originalTitle?.message}>
-                          <Input
-                            placeholder="Введите оригинальное название книги"
-                            {...register("originalTitle")}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-
-                        <FormField label="Оригинальный язык" error={errors.originalLanguage?.message}>
-                          <Input
-                            placeholder="Введите оригинальный язык книги"
-                            {...register("originalLanguage")}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-
-                        <FormField label="Издание" error={errors.edition?.message}>
-                          <Input
-                            placeholder="Введите информацию об издании"
-                            {...register("edition")}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                          />
-                        </FormField>
-
-                        <FormField label="Резюме книги" error={errors.summary?.message}>
-                          <Textarea
-                            placeholder="Введите резюме книги"
-                            {...register("summary")}
-                            rows={5}
-                            className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-3 text-gray-800 shadow-sm resize-none placeholder:text-gray-500"
-                          />
-                        </FormField>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                )}
               </Tabs>
 
               <div className="pt-4 border-t border-gray-200 flex flex-col md:flex-row gap-4">
-                <motion.button
-                  type="button"
-                  onClick={handleImportFromClipboard}
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 w-full md:w-1/3 flex items-center justify-center gap-2 shadow-md"
-                  whileHover={{ y: -3 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Download className="h-5 w-5" />
-                  Импорт из JSON
-                </motion.button>
-
                 <motion.button
                   type="button"
                   onClick={() => router.back()}
@@ -1418,7 +1400,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
 
                 <motion.button
                   type="submit"
-                  disabled={isSubmitting || (!isDirty && mode === "update")}
+                  disabled={isSubmitting}
                   className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 w-full md:w-2/3 flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                   whileHover={!isSubmitting ? { y: -3 } : {}}
                   whileTap={!isSubmitting ? { scale: 0.98 } : {}}

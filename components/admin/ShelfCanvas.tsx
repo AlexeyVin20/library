@@ -22,6 +22,8 @@ interface ShelfCanvasProps {
   onShelfDelete: (id: number) => void
   onItemClick: (item: Book | Journal | null, isJournal: boolean, shelfId: number, position: number) => void
   onEmptySlotClick: (shelfId: number, position: number) => void
+  overlappingShelfIds?: number[]
+  getShelfSize: (capacity: number) => { width: number; height: number }
 }
 
 const ShelfCanvas = ({
@@ -38,6 +40,8 @@ const ShelfCanvas = ({
   onShelfDelete,
   onItemClick,
   onEmptySlotClick,
+  overlappingShelfIds = [],
+  getShelfSize,
 }: ShelfCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -56,17 +60,17 @@ const ShelfCanvas = ({
     let maxY = 0
 
     shelves.forEach((shelf) => {
-      const shelfRight = shelf.posX + 250 // Approximate shelf width
-      const shelfBottom = shelf.posY + 150 // Approximate shelf height
-
-      if (shelfRight > maxX) maxX = shelfRight
-      if (shelfBottom > maxY) maxY = shelfBottom
+      const { width, height } = getShelfSize(shelf.capacity);
+      const shelfRight = shelf.posX + width;
+      const shelfBottom = shelf.posY + height;
+      if (shelfRight > maxX) maxX = shelfRight;
+      if (shelfBottom > maxY) maxY = shelfBottom;
     })
 
     // Add padding and set minimum size
     setCanvasSize({
-      width: Math.max(2000, maxX + 500),
-      height: Math.max(1500, maxY + 500),
+      width: Math.max(1200, maxX + 100),
+      height: Math.max(800, maxY + 100),
     })
   }, [shelves])
 
@@ -227,7 +231,7 @@ const ShelfCanvas = ({
   }
 
   return (
-    <div className="relative h-[600px] overflow-hidden rounded-xl border border-gray-100">
+    <div className="relative h-[600px] overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100">
       {/* Navigation controls */}
       <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-lg">
         <Button
@@ -355,56 +359,61 @@ const ShelfCanvas = ({
             ></div>
 
             {/* Shelves */}
-            {shelves.map((shelf) => (
-              <motion.div
-                key={shelf.id}
-                id={`shelf-${shelf.id}`}
-                className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 absolute"
-                style={{
-                  left: shelf.posX,
-                  top: shelf.posY,
-                  transition: "all 0.2s ease",
-                  zIndex: 10,
-                }}
-                whileHover={{
-                  boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)",
-                  scale: 1.02,
-                }}
-                onMouseDown={(e) => isEditMode && onDragStart(e, shelf)}
-              >
-                <div className="shelf-container">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-semibold text-gray-800">{shelf.category}</span>
-                    <span className="bg-blue-100 px-2 py-1 rounded-lg text-xs text-blue-800">
-                      #{shelf.shelfNumber}
-                    </span>
-                  </div>
+            {shelves.map((shelf) => {
+              const { width, height } = getShelfSize(shelf.capacity);
+              return (
+                <motion.div
+                  key={shelf.id}
+                  id={`shelf-${shelf.id}`}
+                  className={`bg-white rounded-xl p-4 shadow-lg border border-gray-100 absolute ${overlappingShelfIds.includes(shelf.id) ? 'border-4 border-red-500 animate-pulse' : ''}`}
+                  style={{
+                    left: shelf.posX,
+                    top: shelf.posY,
+                    width: width,
+                    height: height,
+                    transition: "all 0.2s ease",
+                    zIndex: 10,
+                  }}
+                  whileHover={{
+                    boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)",
+                    scale: 1.02,
+                  }}
+                  onMouseDown={(e) => isEditMode && onDragStart(e, shelf)}
+                >
+                  <div className="shelf-container">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="font-semibold text-gray-800">{shelf.category}</span>
+                      <span className="bg-blue-100 px-2 py-1 rounded-lg text-xs text-blue-800">
+                        #{shelf.shelfNumber}
+                      </span>
+                    </div>
 
-                  {renderShelfContent(shelf)}
+                    {renderShelfContent(shelf)}
 
-                  <div className="mt-3 flex space-x-2">
-                    <motion.button
-                      onClick={() => onShelfEdit(shelf)}
-                      className="bg-yellow-400 hover:bg-yellow-600 text-gray-800 rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Изменить
-                    </motion.button>
-                    <motion.button
-                      onClick={() => {
-                        if (confirm("Вы уверены, что хотите удалить эту полку?")) onShelfDelete(shelf.id)
-                      }}
-                      className="bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Удалить
-                    </motion.button>
+                    <div className="mt-3 flex space-x-2">
+                      <motion.button
+                        onClick={() => onShelfEdit(shelf)}
+                        className="bg-yellow-400 hover:bg-yellow-600 text-gray-800 rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        Изменить
+                      </motion.button>
+                      <motion.button
+                        onClick={() => {
+                          if (confirm("Вы уверены, что хотите удалить эту полку?")) onShelfDelete(shelf.id)
+                        }}
+                        className="bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        Удалить
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              )
+            })}
           </motion.div>
         )}
 

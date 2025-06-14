@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
-import { CreateReservationDialog } from "@/components/ui/reservation-creation-modal";
+import { CreateFineDialog } from "@/components/ui/fine-creation-modal";
 
 // Компонент для анимированного появления
 const FadeInView = ({
@@ -33,45 +33,55 @@ const FadeInView = ({
     </motion.div>;
 };
 
-export default function CreateReservationPage() {
+export default function CreateFinePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showCreateModal, setShowCreateModal] = useState(true);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
-  // Получаем bookId из query
-  const selectedBookId = searchParams.get("bookId") || undefined;
+  // Получаем userId из query
+  const selectedUserId = searchParams.get("userId") || undefined;
 
-  const handleCreateReservation = async (reservationData: any) => {
+  const handleCreateFine = async (fineData: any) => {
     try {
-      const response = await fetch(`${baseUrl}/api/Reservation`, {
+      const response = await fetch(`${baseUrl}/api/User/${fineData.userId}/fine`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(reservationData)
+        body: JSON.stringify({
+          amount: fineData.amount,
+          reason: fineData.reason,
+          fineType: fineData.fineType,
+          notes: fineData.notes,
+          reservationId: fineData.reservationId,
+          overdueDays: fineData.overdueDays
+        })
       });
       
-      if (!response.ok) throw new Error("Ошибка при создании резервирования");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Ошибка при начислении штрафа");
+      }
       
-      // Перенаправляем на страницу резервирований после успешного создания
-      router.push("/admin/reservations");
+      // Перенаправляем на страницу штрафов после успешного создания
+      router.push("/admin/fines");
     } catch (error) {
-      console.error("Ошибка при создании резервирования:", error);
+      console.error("Ошибка при начислении штрафа:", error);
       throw error; // Пробрасываем ошибку для обработки в модальном окне
     }
   };
 
   const handleModalClose = (open: boolean) => {
     if (!open) {
-      // Если модальное окно закрыто, возвращаемся к списку резервирований
-      router.push("/admin/reservations");
+      // Если модальное окно закрыто, возвращаемся к списку штрафов
+      router.push("/admin/fines");
     }
     setShowCreateModal(open);
   };
 
   return (
-    <div className="min-h-screen bg-gray-200">
+    <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto p-6">
         {/* Header */}
         <FadeInView>
@@ -85,9 +95,9 @@ export default function CreateReservationPage() {
             }} transition={{
               duration: 0.5
             }}>
-              <Link href="/admin/reservations" className="flex items-center gap-2 text-blue-500 hover:text-blue-700 transition-colors">
+              <Link href="/admin/fines" className="flex items-center gap-2 text-blue-500 hover:text-blue-700 transition-colors">
                 <ChevronLeft className="h-5 w-5" />
-                <span className="font-medium text-gray-800">Назад к резервированиям</span>
+                <span className="font-medium text-gray-800">Назад к штрафам</span>
               </Link>
             </motion.div>
 
@@ -101,7 +111,7 @@ export default function CreateReservationPage() {
               duration: 0.5,
               delay: 0.1
             }} className="text-3xl font-bold text-gray-800">
-              Создание резервирования
+              Начисление штрафа
             </motion.h1>
           </div>
         </FadeInView>
@@ -110,19 +120,19 @@ export default function CreateReservationPage() {
         <FadeInView delay={0.2}>
           <div className="text-center py-12">
             <p className="text-gray-600">
-              Модальное окно создания резервирования откроется автоматически...
+              Модальное окно начисления штрафа откроется автоматически...
             </p>
           </div>
         </FadeInView>
       </div>
 
-      {/* Модальное окно создания резервирования */}
-      <CreateReservationDialog
+      {/* Модальное окно создания штрафа */}
+      <CreateFineDialog
         open={showCreateModal}
         onOpenChange={handleModalClose}
-        onCreateReservation={handleCreateReservation}
-        selectedBookId={selectedBookId}
+        onCreateFine={handleCreateFine}
+        selectedUserId={selectedUserId}
       />
     </div>
   );
-}
+} 

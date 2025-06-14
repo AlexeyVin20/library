@@ -65,6 +65,154 @@ const LoadingSpinner = () => <div className="flex flex-col justify-center items-
       Загрузка данных...
     </motion.p>
   </div>;
+
+function UsersRolesTable() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [usersRes, rolesRes] = await Promise.all([
+          fetch(`${baseUrl}/api/User/users-with-roles`),
+          fetch(`${baseUrl}/api/User/roles`)
+        ]);
+        if (!usersRes.ok) throw new Error("Ошибка при загрузке пользователей");
+        if (!rolesRes.ok) throw new Error("Ошибка при загрузке ролей");
+        const usersData = await usersRes.json();
+        const rolesData = await rolesRes.json();
+        setUsers(usersData);
+        setRoles(rolesData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [baseUrl]);
+
+  const handleUserSelect = (userId: number) => {
+    setSelectedUserIds(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const handleAssignRole = async () => {
+    if (!selectedRoleId || selectedUserIds.length === 0) return;
+    try {
+      const response = await fetch(`${baseUrl}/api/User/assign-roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: selectedUserIds, roleId: Number(selectedRoleId) })
+      });
+      if (!response.ok) throw new Error("Ошибка при присвоении роли");
+      // обновить пользователей
+      const usersRes = await fetch(`${baseUrl}/api/User/users-with-roles`);
+      if (!usersRes.ok) throw new Error("Ошибка при обновлении пользователей");
+      const usersData = await usersRes.json();
+      setUsers(usersData);
+      setSelectedUserIds([]);
+      setSelectedRoleId("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Произошла ошибка при присвоении роли");
+    }
+  };
+
+  const handleRemoveRole = async () => {
+    if (!selectedRoleId || selectedUserIds.length === 0) return;
+    try {
+      const response = await fetch(`${baseUrl}/api/User/remove-roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: selectedUserIds, roleId: Number(selectedRoleId) })
+      });
+      if (!response.ok) throw new Error("Ошибка при удалении роли");
+      // обновить пользователей
+      const usersRes = await fetch(`${baseUrl}/api/User/users-with-roles`);
+      if (!usersRes.ok) throw new Error("Ошибка при обновлении пользователей");
+      const usersData = await usersRes.json();
+      setUsers(usersData);
+      setSelectedUserIds([]);
+      setSelectedRoleId("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Произошла ошибка при удалении роли");
+    }
+  };
+
+  if (loading) return <div className="py-8 text-center text-black">Загрузка пользователей...</div>;
+  if (error) return <div className="py-8 text-center text-red-500 text-black">{error}</div>;
+
+  return (
+    <div className="mt-8">
+      <div className="flex gap-2 mb-2 items-center">
+        <select
+          value={selectedRoleId}
+          onChange={e => setSelectedRoleId(e.target.value)}
+          className="border rounded p-2 text-black"
+        >
+          <option value="">Выберите роль</option>
+          {roles.map(role => (
+            <option key={role.id} value={role.id}>{role.name}</option>
+          ))}
+        </select>
+        <button
+          onClick={handleAssignRole}
+          className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+          disabled={!selectedRoleId || selectedUserIds.length === 0}
+        >
+          Присвоить роль выбранным
+        </button>
+        <button
+          onClick={handleRemoveRole}
+          className="bg-red-500 text-white px-4 py-2 rounded disabled:opacity-50"
+          disabled={!selectedRoleId || selectedUserIds.length === 0}
+        >
+          Удалить роль у выбранных
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white rounded shadow text-black">
+          <thead>
+            <tr>
+              <th></th>
+              <th className="px-4 py-2 text-black">ФИО</th>
+              <th className="px-4 py-2 text-black">Никнейм</th>
+              <th className="px-4 py-2 text-black">Почта</th>
+              <th className="px-4 py-2 text-black">Роли</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(user => (
+              <tr key={user.id} className="border-t">
+                <td className="px-2 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedUserIds.includes(user.id)}
+                    onChange={() => handleUserSelect(user.id)}
+                  />
+                </td>
+                <td className="px-4 py-2 text-black">{user.fullName}</td>
+                <td className="px-4 py-2 text-black">{user.username}</td>
+                <td className="px-4 py-2 text-black">{user.email}</td>
+                <td className="px-4 py-2 text-black">{user.roles && user.roles.map((r: any) => r.name).join(", ")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -353,6 +501,10 @@ export default function RolesPage() {
                   </motion.div>)}
               </div> : <p className="text-gray-500 text-center py-4">Роли не найдены</p>}
           </div>
+        </Section>
+
+        <Section title="Пользователи и роли" delay={0.4}>
+          <UsersRolesTable />
         </Section>
       </main>
     </div>;

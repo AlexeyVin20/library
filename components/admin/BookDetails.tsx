@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, BookOpen, Edit, ArrowLeft, Clock, Calendar, LanguagesIcon as Language, Hash, BookCopy, Bookmark } from "lucide-react";
+import { ChevronLeft, BookOpen, Edit, ArrowLeft, Clock, Calendar, LanguagesIcon as Language, Hash, BookCopy, Bookmark, Plus } from "lucide-react";
 import { Book } from "@/components/ui/book";
 interface Book {
   id: string;
@@ -289,6 +289,18 @@ export default function BookDetails({
               }}>
                   <Edit className="w-4 h-4" />
                   Редактировать
+                </motion.button>
+              </Link>
+              {/* Быстрое резервирование */}
+              <Link href={`/admin/reservations/create?bookId=${book.id}`}>
+                <motion.button className="bg-green-500 hover:bg-green-700 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md" whileHover={{
+                  y: -3,
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+                }} whileTap={{
+                  scale: 0.98
+                }}>
+                  <Plus className="w-4 h-4" />
+                  Быстрое резервирование
                 </motion.button>
               </Link>
               <Link href="/admin/books">

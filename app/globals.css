@@ -690,3 +690,44 @@
 .font-size-extra-large h1 { font-size: 3rem; }
 .font-size-extra-large h2 { font-size: 2.25rem; }
 .font-size-extra-large h3 { font-size: 2rem; }
+
+/* Book component styles */
+.shadow-book {
+  box-shadow: 
+    2px 0 8px 0 rgba(0,0,0,0.15),
+    0 2px 4px 0 rgba(0,0,0,0.1);
+}
+
+.bg-book-bind-bg {
+  background: linear-gradient(
+    180deg,
+    rgba(0,0,0,0.05) 0%,
+    rgba(0,0,0,0.1) 50%,
+    rgba(0,0,0,0.05) 100%
+  );
+}
+
+.bg-book-pages {
+  background: linear-gradient(
+    0deg,
+    #f8f8f8 0%,
+    #ffffff 15%,
+    #f8f8f8 30%,
+    #ffffff 45%,
+    #f8f8f8 60%,
+    #ffffff 75%,
+    #f8f8f8 90%,
+    #ffffff 100%
+  );
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+.book-bg {
+  box-shadow: 
+    -2px 0 4px 0 rgba(0,0,0,0.1),
+    0 2px 4px 0 rgba(0,0,0,0.05);
+}
+
+.bg-ali {
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E");
+}

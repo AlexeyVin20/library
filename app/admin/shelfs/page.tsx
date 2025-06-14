@@ -46,6 +46,44 @@ const FadeInView = ({
       {children}
     </motion.div>;
 };
+
+// Функция для проверки пересечения двух прямоугольников
+function isRectOverlap(a: {x: number, y: number, width: number, height: number}, b: {x: number, y: number, width: number, height: number}) {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+// Функция для вычисления ширины и высоты полки
+function getShelfSize(capacity: number) {
+  const width = Math.max(100, Math.min(40 * capacity + 30, 500));
+  const height = 150; // Можно сделать чуть больше для capacity > 10, если нужно
+  return { width, height };
+}
+
+// Функция для проверки всех полок на пересечение, возвращает массив id пересекающихся полок
+function getOverlappingShelfIds(shelves: Shelf[]): number[] {
+  const overlappingIds = new Set<number>();
+  for (let i = 0; i < shelves.length; i++) {
+    const a = shelves[i];
+    const sizeA = getShelfSize(a.capacity);
+    const rectA = { x: a.posX, y: a.posY, width: sizeA.width, height: sizeA.height };
+    for (let j = i + 1; j < shelves.length; j++) {
+      const b = shelves[j];
+      const sizeB = getShelfSize(b.capacity);
+      const rectB = { x: b.posX, y: b.posY, width: sizeB.width, height: sizeB.height };
+      if (isRectOverlap(rectA, rectB)) {
+        overlappingIds.add(a.id);
+        overlappingIds.add(b.id);
+      }
+    }
+  }
+  return Array.from(overlappingIds);
+}
+
 export default function ShelfsPage() {
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
@@ -107,6 +145,7 @@ export default function ShelfsPage() {
     posX: "",
     posY: ""
   });
+  const [overlappingShelfIds, setOverlappingShelfIds] = useState<number[]>([]);
   useEffect(() => {
     fetchShelves();
     fetchBooks();
@@ -398,6 +437,21 @@ export default function ShelfsPage() {
   const toggleEditMode = async () => {
     const newIsEditMode = !isEditMode;
     if (isEditMode) {
+      // Проверка на наложение полок
+      const overlapIds = getOverlappingShelfIds(shelves);
+      if (overlapIds.length > 0) {
+        setOverlappingShelfIds(overlapIds);
+        toast({
+          title: "Ошибка расположения полок",
+          description: "Обнаружено наложение полок друг на друга. Пожалуйста, раздвиньте полки так, чтобы они не пересекались.",
+          variant: "destructive",
+          duration: 7000
+        });
+        setError("Обнаружено наложение полок. Исправьте расположение.");
+        return;
+      } else {
+        setOverlappingShelfIds([]);
+      }
       // Turning OFF edit mode (current isEditMode is true)
       setIsEditMode(false); // Visually lock shelves immediately
       setLoading(true);
@@ -655,38 +709,79 @@ export default function ShelfsPage() {
     setSelectedItemPosition(position);
     setShowBookInfoModal(true);
   };
+
+  // Функция авто-расстановки полок по сетке
+  const autoArrangeShelves = () => {
+    const GAP_X = 10;
+    const GAP_Y = 10;
+    const EDGE_X = 10;
+    const EDGE_Y = 10;
+    const COLUMNS = 4;
+    let x = EDGE_X;
+    let y = EDGE_Y;
+    let maxRowHeight = 0;
+    // Сортировка по номеру полки
+    const sortedShelves = [...shelves].sort((a, b) => a.shelfNumber - b.shelfNumber);
+    const newShelves = sortedShelves.map((shelf, idx) => {
+      const { width, height } = getShelfSize(shelf.capacity);
+      if (idx % COLUMNS === 0 && idx !== 0) {
+        x = EDGE_X;
+        y += maxRowHeight + GAP_Y;
+        maxRowHeight = 0;
+      }
+      const pos = { ...shelf, posX: x, posY: y };
+      x += width + GAP_X;
+      if (height > maxRowHeight) maxRowHeight = height;
+      return pos;
+    });
+    setShelves(newShelves);
+    setOverlappingShelfIds([]);
+  };
+
   return <div className="min-h-screen bg-gray-200">
       <div className="container mx-auto p-6">
         {/* Header */}
         <FadeInView>
-          <div className="mb-8 flex items-center gap-4">
-            <motion.div initial={{
-            x: -20,
-            opacity: 0
-          }} animate={{
-            x: 0,
-            opacity: 1
-          }} transition={{
-            duration: 0.5
-          }}>
-              <Link href="/admin" className="flex items-center gap-2 text-blue-700 hover:text-blue-500 transition-colors">
-                <ChevronLeft className="h-5 w-5" />
-                <span className="font-medium">Назад</span>
-              </Link>
-            </motion.div>
-
-            <motion.h1 initial={{
-            opacity: 0,
-            y: -20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.5,
-            delay: 0.1
-          }} className="text-3xl font-bold text-gray-800">
-              Управление полками библиотеки
-            </motion.h1>
+          <div className="mb-8 flex items-center gap-4 justify-between">
+            <div className="flex items-center gap-4">
+              <motion.div initial={{
+                x: -20,
+                opacity: 0
+              }} animate={{
+                x: 0,
+                opacity: 1
+              }} transition={{
+                duration: 0.5
+              }}>
+                <Link href="/admin" className="flex items-center gap-2 text-blue-700 hover:text-blue-500 transition-colors">
+                  <ChevronLeft className="h-5 w-5" />
+                  <span className="font-medium">Назад</span>
+                </Link>
+              </motion.div>
+              <motion.h1 initial={{
+                opacity: 0,
+                y: -20
+              }} animate={{
+                opacity: 1,
+                y: 0
+              }} transition={{
+                duration: 0.5,
+                delay: 0.1
+              }} className="text-3xl font-bold text-gray-800">
+                Управление полками библиотеки
+              </motion.h1>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={autoArrangeShelves} variant="outline" className="text-black border-gray-300">Авто-расстановка</Button>
+              <motion.button onClick={toggleEditMode} className={`${isEditMode ? "bg-yellow-400 text-black" : "bg-blue-500 text-black"} border border-gray-200 rounded-lg p-2 flex items-center justify-center`} whileHover={{
+                y: -2,
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+              }} whileTap={{
+                scale: 0.95
+              }} title={isEditMode ? "Заблокировать перемещение" : "Разблокировать перемещение"}>
+                {isEditMode ? <Unlock size={18} /> : <Lock size={18} />}
+              </motion.button>
+            </div>
           </div>
         </FadeInView>
 
@@ -724,11 +819,12 @@ export default function ShelfsPage() {
                 }} animate={{
                   opacity: 1,
                   y: 0
-                }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 z-50 relative">
                       <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold text-gray-800">Добавить новую полку</h2>
-                        <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
-                          <X className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}
+                          className="text-gray-700 border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                          Отмена
                         </Button>
                       </div>
                       <form onSubmit={addShelf} className="space-y-4">
@@ -736,26 +832,27 @@ export default function ShelfsPage() {
                           <Label htmlFor="category" className="text-gray-500">
                             Рубрика
                           </Label>
-                          <Input id="category" name="category" placeholder="Рубрика (например, Фантастика)" value={newShelf.category} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200" required />
+                          <Input id="category" name="category" placeholder="Рубрика (например, Фантастика)" value={newShelf.category} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" required />
                         </div>
 
                         <div>
                           <Label htmlFor="capacity" className="text-gray-500">
                             Количество мест
                           </Label>
-                          <Input id="capacity" type="number" name="capacity" placeholder="Количество мест для книг/журналов" value={newShelf.capacity} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200" min="1" required />
+                          <Input id="capacity" type="number" name="capacity" placeholder="Количество мест для книг/журналов" value={newShelf.capacity} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" min="1" required />
                         </div>
                         <div>
                           <Label htmlFor="shelfNumber" className="text-gray-500">
                             Номер полки
                           </Label>
-                          <Input id="shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={newShelf.shelfNumber} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200" min="1" required />
+                          <Input id="shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={newShelf.shelfNumber} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" min="1" required />
                         </div>
                         <div className="flex justify-end gap-3 pt-2">
-                          <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
+                          <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}
+                            className="text-gray-700 border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
                             Отмена
                           </Button>
-                          <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-700">
+                          <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400">
                             {loading ? <>
                                 <motion.div animate={{
                             rotate: 360
@@ -774,8 +871,8 @@ export default function ShelfsPage() {
 
                 <div className="flex-1">
                   <div className="relative">
-                    <Input type="text" placeholder="Поиск книг по названию или автору..." className="bg-gray-100 border border-gray-200 w-full pl-10" value={searchTerm} onChange={handleSearch} onFocus={() => searchTerm.length > 1 && setShowSearchDropdown(true)} onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)} />
-                    <Search className="absolute left-3 top-2.5 text-gray-500" size={18} />
+                    <Input type="text" placeholder="Поиск книг по названию или автору..." className="bg-gray-100 border border-gray-200 w-full pl-10 text-black" value={searchTerm} onChange={handleSearch} onFocus={() => searchTerm.length > 1 && setShowSearchDropdown(true)} onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)} />
+                    <Search className="absolute left-3 top-2.5 text-black" size={18} />
                   </div>
 
                   <AnimatePresence>
@@ -793,7 +890,7 @@ export default function ShelfsPage() {
                     scale: 0.95
                   }} transition={{
                     duration: 0.2
-                  }} className="absolute z-50 mt-1 w-full bg-white rounded-lg shadow-lg max-h-60 overflow-auto border border-gray-200">
+                  }} className="absolute z-30 mt-1 w-full bg-white rounded-lg shadow-lg max-h-60 overflow-auto border border-gray-200">
                         {filteredBooks.map((book, index) => <motion.div key={book.id} initial={{
                       opacity: 0,
                       x: -5
@@ -818,11 +915,12 @@ export default function ShelfsPage() {
             }} animate={{
               opacity: 1,
               y: 0
-            }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+            }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 z-50 relative">
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-gray-800">Редактировать полку #{editingShelf.id}</h2>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingShelf(null)}>
-                      <X className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={() => setEditingShelf(null)}
+                      className="text-gray-700 border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                      Отмена
                     </Button>
                   </div>
                   <form onSubmit={updateShelf} className="space-y-4">
@@ -831,26 +929,27 @@ export default function ShelfsPage() {
                         <Label htmlFor="edit-category" className="text-gray-500">
                           Рубрика
                         </Label>
-                        <Input id="edit-category" name="category" placeholder="Рубрика" value={editShelfData.category} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200" required />
+                        <Input id="edit-category" name="category" placeholder="Рубрика" value={editShelfData.category} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" required />
                       </div>
                       <div>
                         <Label htmlFor="edit-capacity" className="text-gray-500">
                           Количество мест
                         </Label>
-                        <Input id="edit-capacity" type="number" name="capacity" placeholder="Кол-во мест" value={editShelfData.capacity} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200" min="1" required />
+                        <Input id="edit-capacity" type="number" name="capacity" placeholder="Кол-во мест" value={editShelfData.capacity} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" min="1" required />
                       </div>
                       <div>
                         <Label htmlFor="edit-shelfNumber" className="text-gray-500">
                           Номер полки
                         </Label>
-                        <Input id="edit-shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={editShelfData.shelfNumber} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200" min="1" required />
+                        <Input id="edit-shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={editShelfData.shelfNumber} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" min="1" required />
                       </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
-                      <Button type="button" variant="outline" onClick={() => setEditingShelf(null)}>
+                      <Button type="button" variant="outline" onClick={() => setEditingShelf(null)}
+                        className="text-gray-700 border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
                         Отмена
                       </Button>
-                      <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-700">
+                      <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400">
                         {loading ? <>
                             <motion.div animate={{
                         rotate: 360
@@ -880,19 +979,9 @@ export default function ShelfsPage() {
                     <Library className="h-5 w-5 text-blue-500" />
                     Визуальное расположение полок
                   </h2>
-                  <div className="flex gap-2">
-                    <motion.button onClick={toggleEditMode} className={`${isEditMode ? "bg-yellow-400" : "bg-blue-500"} border border-gray-200 text-white rounded-lg p-2 flex items-center justify-center`} whileHover={{
-                    y: -2,
-                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-                  }} whileTap={{
-                    scale: 0.95
-                  }} title={isEditMode ? "Заблокировать перемещение" : "Разблокировать перемещение"}>
-                      {isEditMode ? <Lock size={18} /> : <Unlock size={18} />}
-                    </motion.button>
-                  </div>
                 </div>
 
-                <ShelfCanvas shelves={shelves} books={books} journals={journals} loading={loading} isEditMode={isEditMode} highlightedBookId={highlightedBookId} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd} onShelfEdit={startEditShelf} onShelfDelete={deleteShelf} onItemClick={handleItemClick} onEmptySlotClick={handleEmptySlotClick} />
+                <ShelfCanvas shelves={shelves} books={books} journals={journals} loading={loading} isEditMode={isEditMode} highlightedBookId={highlightedBookId} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd} onShelfEdit={startEditShelf} onShelfDelete={deleteShelf} onItemClick={handleItemClick} onEmptySlotClick={handleEmptySlotClick} overlappingShelfIds={overlappingShelfIds} getShelfSize={getShelfSize} />
               </motion.div>
 
               <motion.div initial={{

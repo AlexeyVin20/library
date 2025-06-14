@@ -166,13 +166,13 @@ const BookSelectorModal = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl bg-white border border-gray-100 rounded-xl shadow-lg p-0 overflow-hidden">
+      <DialogContent className="max-w-4xl bg-gray-200 border border-gray-100 rounded-2xl shadow-lg p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <BookCopy className="h-6 w-6 text-blue-500" />
             Выберите элемент для добавления на полку
             {shelfCategory && (
-              <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800 border-blue-500">
+              <Badge variant="outline" className="ml-2 bg-blue-300 text-blue-700 border-blue-500">
                 {shelfCategory}
               </Badge>
             )}
@@ -182,11 +182,11 @@ const BookSelectorModal = ({
         <div className="p-6 pt-4">
           <Tabs defaultValue="books" onValueChange={setActiveTab} className="w-full">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-              <TabsList className="bg-gray-100">
-                <TabsTrigger value="books" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-800">
+              <TabsList className="bg-gray-100 rounded-lg">
+                <TabsTrigger value="books" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-800 rounded-lg">
                   Книги
                 </TabsTrigger>
-                <TabsTrigger value="journals" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-800">
+                <TabsTrigger value="journals" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-800 rounded-lg">
                   Журналы
                 </TabsTrigger>
               </TabsList>
@@ -200,7 +200,7 @@ const BookSelectorModal = ({
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Поиск..."
-                    className="pl-10 bg-gray-100 border-gray-200 text-gray-800 placeholder:text-gray-500"
+                    className="pl-10 bg-gray-100 border-gray-200 text-gray-800 placeholder:text-gray-500 rounded-lg"
                   />
                   {searchTerm && (
                     <button
@@ -215,12 +215,12 @@ const BookSelectorModal = ({
                 {/* Sort dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="bg-gray-100 border-gray-200 text-gray-800">
+                    <Button variant="outline" className="bg-white border-blue-500 text-blue-500 rounded-lg hover:bg-gray-100">
                       {sortOrder === "asc" ? <SortAsc size={18} /> : <SortDesc size={18} />}
                       <span className="ml-2 hidden sm:inline">Сортировка</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-white border-gray-200 text-gray-800">
+                  <DropdownMenuContent className="bg-white border-gray-200 text-gray-800 rounded-lg">
                     <DropdownMenuLabel>Сортировать по</DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-gray-200" />
                     <DropdownMenuItem
@@ -259,22 +259,22 @@ const BookSelectorModal = ({
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="outline"
-                        className={`bg-emerald-700/50 border-emerald-500/50 text-white ${
+                        className={`bg-blue-500 border-blue-500 text-white rounded-lg hover:bg-blue-700 ${
                           filters.available || selectedGenres.length > 0 || selectedYears.length > 0
-                            ? "ring-2 ring-emerald-400"
+                            ? "ring-2 ring-blue-300"
                             : ""
                         }`}
                       >
                         <Filter size={18} />
                         <span className="ml-2 hidden sm:inline">Фильтры</span>
                         {(filters.available || selectedGenres.length > 0 || selectedYears.length > 0) && (
-                          <Badge className="ml-2 bg-emerald-500">
+                          <Badge className="ml-2 bg-blue-300 text-blue-700">
                             {filters.available + selectedGenres.length + selectedYears.length}
                           </Badge>
                         )}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-emerald-700/90 backdrop-blur-md border-emerald-500/50 text-white">
+                    <DropdownMenuContent className="bg-white border-blue-500/50 text-gray-800 rounded-lg">
                       <DropdownMenuLabel>Фильтры</DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-white/20" />
                       <DropdownMenuItem
@@ -347,14 +347,14 @@ const BookSelectorModal = ({
             </div>
 
             <TabsContent value="books" className="mt-2">
-              <div className="bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
                 {filteredBooks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                     <BookOpen className="h-16 w-16 mb-4 text-gray-400" />
                     <p className="text-lg font-medium">Книги не найдены</p>
                     <p className="text-sm mt-2">Попробуйте изменить параметры поиска или фильтры</p>
                     {(searchTerm || filters.available || selectedGenres.length > 0 || selectedYears.length > 0) && (
-                      <Button variant="outline" className="mt-4 text-gray-800 border-gray-200" onClick={resetFilters}>
+                      <Button variant="outline" className="mt-4 text-blue-500 border-blue-500 rounded-lg hover:bg-gray-100" onClick={resetFilters}>
                         Сбросить все фильтры
                       </Button>
                     )}
@@ -365,13 +365,13 @@ const BookSelectorModal = ({
                       {filteredBooks.map((book) => (
                         <motion.div
                           key={book.id}
-                          className="bg-white hover:bg-gray-50 border border-gray-200 rounded-lg overflow-hidden shadow-md transition-all"
-                          whileHover={{ y: -4, boxShadow: "0 12px 20px -5px rgba(0, 0, 0, 0.2)" }}
+                          className="bg-white hover:bg-blue-300 border border-gray-200 rounded-xl overflow-hidden shadow transition-all cursor-pointer"
+                          whileHover={{ y: -4, boxShadow: "0 4px 16px rgba(59,130,246,0.10)" }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => onSelect(book.id, false)}
                         >
                           <div className="flex p-3">
-                            <div className="w-16 h-24 bg-emerald-700/50 rounded-md overflow-hidden flex-shrink-0 mr-3">
+                            <div className="w-16 h-24 bg-blue-300 rounded-md overflow-hidden flex-shrink-0 mr-3">
                               {book.cover ? (
                                 <img
                                   src={book.cover || "/placeholder.svg"}
@@ -383,28 +383,28 @@ const BookSelectorModal = ({
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                  <BookOpen className="h-8 w-8 text-white/50" />
+                                  <BookOpen className="h-8 w-8 text-blue-500/50" />
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-white truncate" title={book.title}>
+                              <h3 className="font-medium text-gray-800 truncate" title={book.title}>
                                 {book.title}
                               </h3>
-                              <p className="text-sm text-white/80 truncate" title={book.authors || ""}>
+                              <p className="text-sm text-gray-500 truncate" title={book.authors || ""}>
                                 {book.authors || "Автор не указан"}
                               </p>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {book.genre && (
-                                  <Badge className="bg-emerald-700/70 text-white text-xs">{book.genre}</Badge>
+                                  <Badge className="bg-blue-300 text-blue-700 text-xs">{book.genre}</Badge>
                                 )}
                                 {book.publicationYear && (
-                                  <Badge className="bg-emerald-800/70 text-white text-xs">{book.publicationYear}</Badge>
+                                  <Badge className="bg-blue-500 text-white text-xs">{book.publicationYear}</Badge>
                                 )}
                                 {book.availableCopies && book.availableCopies > 0 ? (
-                                  <Badge className="bg-green-600/70 text-white text-xs">Доступна</Badge>
+                                  <Badge className="bg-green-100 text-green-800 text-xs border-l-4 border-green-500">Доступна</Badge>
                                 ) : (
-                                  <Badge className="bg-red-600/70 text-white text-xs">Недоступна</Badge>
+                                  <Badge className="bg-red-100 text-red-800 text-xs border-l-4 border-red-500">Недоступна</Badge>
                                 )}
                               </div>
                             </div>
@@ -418,14 +418,14 @@ const BookSelectorModal = ({
             </TabsContent>
 
             <TabsContent value="journals" className="mt-2">
-              <div className="bg-emerald-700/30 backdrop-blur-md rounded-lg border border-emerald-500/30 overflow-hidden">
+              <div className="bg-blue-300 rounded-xl border border-blue-500/30 overflow-hidden">
                 {filteredJournals.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-white/80">
-                    <BookOpen className="h-16 w-16 mb-4 text-white/50" />
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                    <BookOpen className="h-16 w-16 mb-4 text-blue-500/50" />
                     <p className="text-lg font-medium">Журналы не найдены</p>
                     <p className="text-sm mt-2">Попробуйте изменить параметры поиска</p>
                     {searchTerm && (
-                      <Button variant="outline" className="mt-4 text-white" onClick={() => setSearchTerm("")}>
+                      <Button variant="outline" className="mt-4 text-blue-500 border-blue-500 rounded-lg hover:bg-gray-100" onClick={() => setSearchTerm("")}>
                         Сбросить поиск
                       </Button>
                     )}
@@ -436,13 +436,13 @@ const BookSelectorModal = ({
                       {filteredJournals.map((journal) => (
                         <motion.div
                           key={journal.id}
-                          className="bg-blue-600/40 hover:bg-blue-600/60 border border-blue-500/30 rounded-lg overflow-hidden shadow-md transition-all"
-                          whileHover={{ y: -4, boxShadow: "0 12px 20px -5px rgba(0, 0, 0, 0.2)" }}
+                          className="bg-white hover:bg-blue-300 border border-blue-500/30 rounded-xl overflow-hidden shadow transition-all cursor-pointer"
+                          whileHover={{ y: -4, boxShadow: "0 4px 16px rgba(59,130,246,0.10)" }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => onSelect(journal.id.toString(), true)}
                         >
                           <div className="flex p-3">
-                            <div className="w-16 h-24 bg-blue-700/50 rounded-md overflow-hidden flex-shrink-0 mr-3">
+                            <div className="w-16 h-24 bg-blue-300 rounded-md overflow-hidden flex-shrink-0 mr-3">
                               {journal.coverImageUrl ? (
                                 <img
                                   src={journal.coverImageUrl || "/placeholder.svg"}
@@ -454,23 +454,23 @@ const BookSelectorModal = ({
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                  <BookOpen className="h-8 w-8 text-white/50" />
+                                  <BookOpen className="h-8 w-8 text-blue-500/50" />
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-white truncate" title={journal.title}>
+                              <h3 className="font-medium text-gray-800 truncate" title={journal.title}>
                                 {journal.title}
                               </h3>
-                              <p className="text-sm text-white/80 truncate" title={journal.publisher || ""}>
+                              <p className="text-sm text-gray-500 truncate" title={journal.publisher || ""}>
                                 {journal.publisher || "Издатель не указан"}
                               </p>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {journal.issn && (
-                                  <Badge className="bg-blue-700/70 text-white text-xs">ISSN: {journal.issn}</Badge>
+                                  <Badge className="bg-blue-500 text-white text-xs">ISSN: {journal.issn}</Badge>
                                 )}
                                 {journal.publicationDate && (
-                                  <Badge className="bg-blue-800/70 text-white text-xs">
+                                  <Badge className="bg-blue-700 text-white text-xs">
                                     {new Date(journal.publicationDate).getFullYear()}
                                   </Badge>
                                 )}
@@ -487,14 +487,14 @@ const BookSelectorModal = ({
           </Tabs>
         </div>
 
-        <DialogFooter className="bg-gray-100 p-4 border-t border-gray-200">
+        <DialogFooter className="bg-gray-100 p-4 border-t border-gray-200 rounded-b-2xl">
           <div className="flex justify-between w-full items-center">
             <div className="text-gray-500 text-sm">
               {activeTab === "books"
                 ? `Найдено книг: ${filteredBooks.length} из ${books.length}`
                 : `Найдено журналов: ${filteredJournals.length} из ${journals.length}`}
             </div>
-            <Button variant="outline" onClick={handleClose} className="text-gray-800 border-gray-200">
+            <Button variant="outline" onClick={handleClose} className="text-blue-500 border-blue-500 rounded-lg hover:bg-gray-100">
               Закрыть
             </Button>
           </div>

@@ -16,6 +16,7 @@ interface Reservation {
   reservationDate: string;
   expirationDate: string;
   status: string;
+  originalStatus?: string; // Оригинальный статус для операций
   notes?: string;
   user?: {
     fullName: string;
@@ -184,13 +185,193 @@ const getStatusLabel = (status: string) => {
   }
 };
 
+// Функции для определения типа статуса
+const isSystemStatus = (status: string): boolean => {
+  const systemStatuses = [
+    "Обрабатывается",    // Устанавливается при создании резервирования
+    "Истекла",           // Устанавливается автоматически при истечении срока бронирования
+    "Просрочена",        // Устанавливается автоматически при просрочке возврата
+    "Отменена_пользователем" // Устанавливается пользователем через интерфейс
+  ];
+  return systemStatuses.includes(status);
+};
+
+const isAdministrativeStatus = (status: string): boolean => {
+  const administrativeStatuses = [
+    "Одобрена",          // Библиотекарь одобряет резервирование
+    "Отменена",          // Библиотекарь отменяет резервирование
+    "Выдана",            // Библиотекарь выдает книгу
+    "Возвращена"         // Библиотекарь принимает возврат
+  ];
+  return administrativeStatuses.includes(status);
+};
+
+// Компонент кнопки помощи для статусов
+const StatusHelpButton = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Закрытие при клике вне элемента
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.status-help-button')) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="relative status-help-button mb-8">
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-sm border border-blue-300"
+        whileHover={{ y: -2 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Справка по статусам</span>
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[500px] max-w-[600px]"
+          >
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h4 className="text-lg font-semibold text-gray-800">Типы статусов резервирования</h4>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h5 className="font-medium text-green-700 mb-3 flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
+                    Административные статусы
+                  </h5>
+                  <ul className="space-y-2">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-green-700">Одобрена</strong>
+                        <p className="text-xs text-gray-600">Библиотекарь одобряет резервирование</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-red-700">Отменена</strong>
+                        <p className="text-xs text-gray-600">Библиотекарь отменяет резервирование</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <ArrowRight className="w-4 h-4 text-blue-700 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-blue-700">Выдана</strong>
+                        <p className="text-xs text-gray-600">Библиотекарь выдает книгу</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-green-700">Возвращена</strong>
+                        <p className="text-xs text-gray-600">Библиотекарь принимает возврат</p>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h5 className="font-medium text-orange-700 mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Системные статусы
+                  </h5>
+                  <ul className="space-y-2">
+                    <li className="flex items-start gap-2">
+                      <Clock className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-blue-700">В обработке</strong>
+                        <p className="text-xs text-gray-600">При создании резервирования</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Clock className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-orange-700">Истекла</strong>
+                        <p className="text-xs text-gray-600">Автоматически при истечении срока</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-red-700">Просрочена</strong>
+                        <p className="text-xs text-gray-600">Автоматически при просрочке возврата</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <XCircle className="w-4 h-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-gray-700">Отменена пользователем</strong>
+                        <p className="text-xs text-gray-600">Пользователь отменил резервирование</p>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-3 border-t border-gray-200 space-y-3">
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-xs text-blue-600">
+                    <strong>Важно:</strong> Системные статусы устанавливаются автоматически и не могут быть изменены вручную. 
+                    Только административные статусы доступны для ручного изменения библиотекарем.
+                  </p>
+                </div>
+                
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                  <p className="text-xs text-red-600">
+                    <strong>Штрафы:</strong> За просроченные резервирования начисляется штраф 10 рублей за каждый день просрочки. 
+                    Начисление штрафа НЕ означает автоматический возврат книги - это отдельные операции.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // Компонент для переключения статусов
 const StatusSwitcher = ({ 
   currentStatus, 
-  onStatusChange 
+  onStatusChange,
+  availableCopies = 1 // По умолчанию считаем что книга доступна
 }: { 
   currentStatus: string; 
   onStatusChange: (status: string) => void;
+  availableCopies?: number;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -212,18 +393,25 @@ const StatusSwitcher = ({
     };
   }, [isOpen]);
 
-  const statusOptions = [
-    { value: "Обрабатывается", label: "В обработке", icon: <Clock className="w-4 h-4" />, color: "bg-blue-500" },
+  // Только административные статусы доступны для ручного изменения
+  const administrativeStatusOptions = [
     { value: "Одобрена", label: "Одобрена", icon: <CheckCircle className="w-4 h-4" />, color: "bg-green-500" },
     { value: "Отменена", label: "Отменена", icon: <XCircle className="w-4 h-4" />, color: "bg-red-500" },
-    { value: "Истекла", label: "Истекла", icon: <Clock className="w-4 h-4" />, color: "bg-orange-500" },
     { value: "Выдана", label: "Выдана", icon: <ArrowRight className="w-4 h-4" />, color: "bg-blue-700" },
-    { value: "Возвращена", label: "Возвращена", icon: <CheckCircle className="w-4 h-4" />, color: "bg-green-600" },
-    { value: "Просрочена", label: "Просрочена", icon: <XCircle className="w-4 h-4" />, color: "bg-red-600" },
-    { value: "Отменена_пользователем", label: "Отменена пользователем", icon: <XCircle className="w-4 h-4" />, color: "bg-gray-600" }
+    { value: "Возвращена", label: "Возвращена", icon: <CheckCircle className="w-4 h-4" />, color: "bg-green-600" }
   ];
 
-
+  // Все статусы для отображения информации
+  const allStatusOptions = [
+    { value: "Обрабатывается", label: "В обработке", icon: <Clock className="w-4 h-4" />, color: "bg-blue-500", type: "system" },
+    { value: "Одобрена", label: "Одобрена", icon: <CheckCircle className="w-4 h-4" />, color: "bg-green-500", type: "admin" },
+    { value: "Отменена", label: "Отменена", icon: <XCircle className="w-4 h-4" />, color: "bg-red-500", type: "admin" },
+    { value: "Истекла", label: "Истекла", icon: <Clock className="w-4 h-4" />, color: "bg-orange-500", type: "system" },
+    { value: "Выдана", label: "Выдана", icon: <ArrowRight className="w-4 h-4" />, color: "bg-blue-700", type: "admin" },
+    { value: "Возвращена", label: "Возвращена", icon: <CheckCircle className="w-4 h-4" />, color: "bg-green-600", type: "admin" },
+    { value: "Просрочена", label: "Просрочена", icon: <XCircle className="w-4 h-4" />, color: "bg-red-600", type: "system" },
+    { value: "Отменена_пользователем", label: "Отменена пользователем", icon: <XCircle className="w-4 h-4" />, color: "bg-gray-600", type: "system" }
+  ];
 
   return (
     <div className="relative status-switcher">
@@ -235,6 +423,11 @@ const StatusSwitcher = ({
       >
         {getStatusIcon(currentStatus)}
         <span>{getStatusLabel(currentStatus)}</span>
+        {isSystemStatus(currentStatus) && (
+          <span className="text-xs bg-white bg-opacity-20 px-2 py-0.5 rounded-full ml-1">
+            Системный
+          </span>
+        )}
         <Settings className="w-4 h-4 ml-1" />
       </motion.button>
 
@@ -244,33 +437,96 @@ const StatusSwitcher = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[250px]"
+            className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[280px]"
           >
           <div className="p-2">
             <div className="text-sm font-medium text-gray-600 px-3 py-2 border-b border-gray-200">
               Изменить статус
             </div>
-            {statusOptions.map((option) => (
-              <motion.button
-                key={option.value}
-                onClick={() => {
-                  onStatusChange(option.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2 rounded-md flex items-center gap-2 hover:bg-gray-100 transition-colors ${
-                  option.value === currentStatus ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                }`}
-                whileHover={{ x: 5 }}
-              >
-                <span className={option.value === currentStatus ? "text-blue-700" : "text-gray-500"}>
-                  {option.icon}
-                </span>
-                <span className="text-sm">{option.label}</span>
-                {option.value === currentStatus && (
-                  <CheckCircle className="w-4 h-4 text-blue-700 ml-auto" />
-                )}
-              </motion.button>
-            ))}
+            
+            {/* Административные статусы */}
+            <div className="px-3 py-2">
+              <div className="text-xs font-medium text-green-600 mb-2 flex items-center gap-1">
+                <Settings className="w-3 h-3" />
+                Административные статусы
+              </div>
+              {administrativeStatusOptions.map((option) => {
+                // Проверяем, заблокирован ли статус "Выдана" из-за отсутствия экземпляров
+                const isBlocked = option.value === "Выдана" && availableCopies === 0;
+                
+                return (
+                  <motion.button
+                    key={option.value}
+                    onClick={() => {
+                      if (!isBlocked) {
+                        onStatusChange(option.value);
+                        setIsOpen(false);
+                      }
+                    }}
+                    disabled={isBlocked}
+                    className={`w-full text-left px-3 py-2 rounded-md flex items-center gap-2 transition-colors ${
+                      isBlocked 
+                        ? 'cursor-not-allowed opacity-50 bg-gray-50' 
+                        : option.value === currentStatus 
+                          ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' 
+                          : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    whileHover={!isBlocked ? { x: 5 } : {}}
+                  >
+                    <span className={
+                      isBlocked 
+                        ? "text-gray-400" 
+                        : option.value === currentStatus 
+                          ? "text-blue-700" 
+                          : "text-gray-500"
+                    }>
+                      {option.icon}
+                    </span>
+                    <span className="text-sm flex-1">{option.label}</span>
+                    {isBlocked && (
+                      <span className="text-xs text-red-500 bg-red-100 px-2 py-0.5 rounded-full">
+                        Нет экземпляров
+                      </span>
+                    )}
+                    {option.value === currentStatus && !isBlocked && (
+                      <CheckCircle className="w-4 h-4 text-blue-700 ml-auto" />
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Разделитель */}
+            <div className="border-t border-gray-200 my-2"></div>
+
+            {/* Системные статусы (только для информации) */}
+            <div className="px-3 py-2">
+              <div className="text-xs font-medium text-orange-600 mb-2 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Системные статусы (автоматические)
+              </div>
+              {allStatusOptions
+                .filter(option => option.type === "system")
+                .map((option) => (
+                  <div
+                    key={option.value}
+                    className={`w-full text-left px-3 py-2 rounded-md flex items-center gap-2 ${
+                      option.value === currentStatus ? 'bg-orange-50 text-orange-700' : 'text-gray-500'
+                    } cursor-not-allowed opacity-75`}
+                  >
+                    <span className={option.value === currentStatus ? "text-orange-700" : "text-gray-400"}>
+                      {option.icon}
+                    </span>
+                    <span className="text-sm">{option.label}</span>
+                    {option.value === currentStatus && (
+                      <CheckCircle className="w-4 h-4 text-orange-700 ml-auto" />
+                    )}
+                  </div>
+                ))}
+              <div className="text-xs text-gray-500 mt-2 px-3">
+                💡 Системные статусы устанавливаются автоматически
+              </div>
+            </div>
           </div>
         </motion.div>
         )}
@@ -347,6 +603,7 @@ export default function ReservationDetailsPage({
         // 4. Объединяем все данные
         finalReservation = {
           ...baseReservation,
+          originalStatus: baseReservation.status, // Сохраняем оригинальный статус
           book: bookDetails ? {
             ...baseReservation.book,
             ...bookDetails
@@ -360,7 +617,11 @@ export default function ReservationDetailsPage({
         console.error(`Ошибка при дозагрузке данных для резервирования ${reservationId}:`, err);
         // Если дозагрузка не удалась, показываем хотя бы базовые данные
       }
-      setReservation(finalReservation);
+      // Устанавливаем резервирование с правильным отображаемым статусом
+      setReservation({
+        ...finalReservation,
+        status: getDisplayStatus(finalReservation)
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке резервирования");
       setReservation(null);
@@ -371,6 +632,19 @@ export default function ReservationDetailsPage({
 
   const handleStatusChange = async (newStatus: string) => {
     if (!reservation) return;
+    
+    // Проверяем, что новый статус является административным
+    if (isSystemStatus(newStatus)) {
+      alert("Нельзя вручную установить системный статус. Системные статусы устанавливаются автоматически.");
+      return;
+    }
+    
+    // Проверяем доступность экземпляров для статуса "Выдана"
+    if (newStatus === "Выдана" && (reservation.book?.availableCopies || 0) === 0) {
+      alert("Нельзя выдать книгу: все экземпляры заняты. Дождитесь возврата хотя бы одного экземпляра.");
+      return;
+    }
+    
     try {
       // Получаем токен авторизации
       const token = localStorage.getItem("token");
@@ -397,10 +671,14 @@ export default function ReservationDetailsPage({
         throw new Error(errorText || "Ошибка при обновлении статуса");
       }
       
-      // Обновляем локальное состояние
-      setReservation({
+      // Обновляем локальное состояние с пересчетом отображаемого статуса
+      const reservationWithNewStatus = {
         ...reservation,
-        status: newStatus
+        originalStatus: newStatus
+      };
+      setReservation({
+        ...reservationWithNewStatus,
+        status: getDisplayStatus({ ...reservationWithNewStatus, status: newStatus })
       });
       
       console.log(`Статус изменен с ${reservation.status} на ${newStatus}`);
@@ -423,6 +701,66 @@ export default function ReservationDetailsPage({
 
 
   // Функция для генерации и скачивания HTML документа
+  // Функция начисления штрафа
+  const handleFineCalculation = async () => {
+    if (!reservation) return;
+    
+    const now = new Date();
+    const expirationDate = new Date(reservation.expirationDate);
+    
+    // Проверяем, что книга действительно просрочена
+    if (expirationDate >= now) {
+      alert("Штраф можно начислить только за просроченные резервирования.");
+      return;
+    }
+    
+    // Вычисляем количество дней просрочки
+    const overdueDays = Math.ceil((now.getTime() - expirationDate.getTime()) / (1000 * 60 * 60 * 24));
+    const fineAmount = overdueDays * 10; // 10 рублей за день
+    
+    const confirmMessage = `Начислить штраф пользователю ${reservation.user?.fullName}?\n\nПросрочка: ${overdueDays} дней\nСумма штрафа: ${fineAmount} рублей\n\nВнимание: Начисление штрафа НЕ означает автоматический возврат книги. Для возврата книги нужно отдельно изменить статус на "Возвращена".`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден. Пожалуйста, войдите в систему заново.");
+      }
+
+      // Отправляем запрос на начисление штрафа согласно новой API документации
+      const response = await fetch(`${baseUrl}/api/users/${reservation.userId}/fine`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reservationId: reservation.id,
+          amount: fineAmount,
+          reason: `Просрочка возврата книги "${reservation.book?.title}" на ${overdueDays} дней`,
+          overdueDays: overdueDays,
+          fineType: "Overdue",
+          notes: "Начислено автоматически через интерфейс администратора"
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Ошибка при начислении штрафа");
+      }
+
+      const result = await response.json();
+      alert(`Штраф успешно начислен!\nСумма: ${result.amount}₽\nОбщая задолженность пользователя: ${result.totalFineAmount}₽\n\nПримечание: Для возврата книги необходимо отдельно изменить статус резервирования на "Возвращена".`);
+      
+    } catch (err) {
+      console.error("Ошибка при начислении штрафа:", err);
+      alert(err instanceof Error ? err.message : "Ошибка при начислении штрафа");
+    }
+  };
+
   const generateFormular = async () => {
     if (!reservation) return;
 
@@ -632,15 +970,30 @@ export default function ReservationDetailsPage({
     }
   };
 
-  // Отображаемый статус с учетом логики статусов
-  let displayStatus = reservation?.status;
-  if (reservation && new Date(reservation.expirationDate) < new Date()) {
-    if (reservation.status === 'Выдана') {
-      displayStatus = 'Просрочена';
-    } else if (reservation.status === 'Обрабатывается' || reservation.status === 'Одобрена') {
-      displayStatus = 'Истекла';
+  // Функция для определения приоритетного статуса с учетом просрочки
+  const getDisplayStatus = (reservation: Reservation) => {
+    const now = new Date();
+    const expirationDate = new Date(reservation.expirationDate);
+    const actualStatus = reservation.originalStatus || reservation.status;
+    
+    // Если срок истек, приоритет у просроченных статусов
+    if (expirationDate < now) {
+      // Если книга была выдана и просрочена
+      if (actualStatus === 'Выдана') {
+        return 'Просрочена';
+      }
+      // Если резервирование не было выдано и срок истек
+      if (actualStatus === 'Обрабатывается' || actualStatus === 'Одобрена') {
+        return 'Истекла';
+      }
+      // Для уже завершенных статусов (Возвращена, Отменена и т.д.) оставляем как есть
     }
-  }
+    
+    return actualStatus;
+  };
+
+  // Отображаемый статус с учетом логики статусов
+  const displayStatus = reservation ? getDisplayStatus(reservation) : null;
 
   return <div className="min-h-screen bg-gray-200">
       <div className="container mx-auto p-6">
@@ -708,7 +1061,7 @@ export default function ReservationDetailsPage({
             </motion.div> : <motion.div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-300" whileHover={{
           boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)"
         }}>
-                            {/* Предупреждение о недоступности книги */}
+                            {/* Предупреждение о недоступности книги для выдачи */}
               {reservation.book?.availableCopies === 0 && (
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
                   <div className="flex items-start gap-3">
@@ -718,33 +1071,62 @@ export default function ReservationDetailsPage({
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-base font-medium text-orange-800 mb-1">Книга недоступна для выдачи</h4>
+                      <h4 className="text-base font-medium text-orange-800 mb-1">Книга недоступна для физической выдачи</h4>
                       <p className="text-sm text-orange-700">
                         Все экземпляры книги "{reservation.book?.title}" в настоящее время заняты. 
-                        Статусы "Одобрена" и "Выдана" нельзя установить до возврата хотя бы одного экземпляра.
+                        Статус "Выдана" нельзя установить до возврата хотя бы одного экземпляра.
                       </p>
                       <p className="text-xs text-orange-600 mt-2">
-                        💡 Совет: Проверьте список выданных книг для определения ожидаемой даты возврата.
+                        💡 Резервирование можно одобрить, но выдать книгу физически пока нельзя.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-between items-start mb-8">
-                <div className="flex items-center gap-3">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-3 flex-wrap">
                   <StatusSwitcher 
-                    currentStatus={reservation.status} 
+                    currentStatus={reservation.originalStatus || reservation.status} 
                     onStatusChange={handleStatusChange}
+                    availableCopies={reservation.book?.availableCopies || 0}
                   />
                   {displayStatus !== reservation.status && (
                     <span className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
                       Отображается как: {getStatusLabel(displayStatus || '')}
                     </span>
                   )}
+                  {(displayStatus === 'Просрочена' || displayStatus === 'Истекла') && (
+                    <motion.div 
+                      className="bg-red-100 border border-red-300 px-3 py-2 rounded-lg flex items-center gap-2"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Clock className="h-4 w-4 text-red-600" />
+                      <span className="text-sm font-medium text-red-800">
+                        Просрочено на {Math.ceil((new Date().getTime() - new Date(reservation.expirationDate).getTime()) / (1000 * 60 * 60 * 24))} дней
+                      </span>
+                    </motion.div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
+                  {/* Кнопка начисления штрафа - показывается только для просроченных резервирований */}
+                  {(displayStatus === 'Просрочена' || displayStatus === 'Истекла') && (
+                    <motion.button 
+                      onClick={handleFineCalculation} 
+                      className="bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" 
+                      whileHover={{ y: -3 }} 
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                      <span>Начислить штраф</span>
+                    </motion.button>
+                  )}
+                  
                   <motion.button onClick={generateFormular} className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
                 y: -3
               }} whileTap={{
@@ -755,6 +1137,9 @@ export default function ReservationDetailsPage({
                   </motion.button>
                 </div>
               </div>
+
+              {/* Кнопка помощи для информации о статусах */}
+              <StatusHelpButton />
 
               <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
                 <TabsList className="bg-white p-1 rounded-xl border border-gray-300 shadow-md text-gray-800">
@@ -772,6 +1157,24 @@ export default function ReservationDetailsPage({
                         <InfoField label="ID резервирования" value={reservation.id} icon={<FileText className="h-4 w-4 text-blue-500" />} />
                         <InfoField label="Дата резервирования" value={formatDate(reservation.reservationDate)} icon={<Calendar className="h-4 w-4 text-blue-500" />} />
                         <InfoField label="Дата окончания" value={formatDate(reservation.expirationDate)} icon={<Calendar className="h-4 w-4 text-blue-500" />} />
+                        {(displayStatus === 'Просрочена' || displayStatus === 'Истекла') && (
+                          <motion.div 
+                            className="bg-red-50 rounded-xl p-3 border border-red-200 shadow-sm" 
+                            whileHover={{
+                              y: -3,
+                              boxShadow: "0 10px 25px -5px rgba(220, 38, 38, 0.1), 0 8px 10px -6px rgba(220, 38, 38, 0.05)"
+                            }} 
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Clock className="h-4 w-4 text-red-500" />
+                              <span className="font-medium text-red-800">Просрочено</span>
+                            </div>
+                            <span className="text-red-700 font-semibold">
+                              {Math.ceil((new Date().getTime() - new Date(reservation.expirationDate).getTime()) / (1000 * 60 * 60 * 24))} дней
+                            </span>
+                          </motion.div>
+                        )}
                         {reservation.book?.isbn && <InfoField label="ISBN" value={reservation.book.isbn} icon={<BookOpen className="h-4 w-4 text-blue-500" />} />}
                         {reservation.book?.publishYear && <InfoField label="Год издания" value={reservation.book.publishYear.toString()} icon={<Calendar className="h-4 w-4 text-blue-500" />} />}
                         {reservation.book?.category && <InfoField label="Категория" value={reservation.book.category} icon={<Book className="h-4 w-4 text-blue-500" />} />}

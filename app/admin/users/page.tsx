@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Users, UserPlus, ChevronRight, ArrowRight, ChevronLeft, Shield } from "lucide-react";
+import { Users, UserPlus, ChevronRight, ArrowRight, ChevronLeft, Shield, BookOpen } from "lucide-react";
 import { UsersPieChart } from "@/components/admin/UsersPieChart";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 import { FinesChart } from "@/components/admin/FinesChart";
@@ -324,6 +324,17 @@ export default function AllUsersPage() {
             </motion.h1>
 
             <div className="ml-auto flex gap-3">
+              <Link href="/admin/users/quick-overview">
+                <motion.button className="bg-green-500 hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
+                y: -3,
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+              }} whileTap={{
+                scale: 0.98
+              }}>
+                  <BookOpen className="h-4 w-4" />
+                  Быстрый просмотр
+                </motion.button>
+              </Link>
               <Link href="/admin/roles">
                 <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
                 y: -3,

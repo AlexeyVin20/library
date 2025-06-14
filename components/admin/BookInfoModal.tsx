@@ -37,7 +37,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
       <>
         <div className="flex flex-col md:flex-row gap-6">
           <div className="w-full md:w-1/3 flex flex-col items-center">
-            <div className="w-48 h-64 bg-gray-100 rounded-lg overflow-hidden shadow-lg mb-4">
+            <div className="w-48 h-64 bg-gray-100 rounded-xl overflow-hidden shadow-lg mb-4">
               {book.cover ? (
                 <img
                   src={book.cover || "/placeholder.svg"}
@@ -55,14 +55,14 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
             </div>
 
             <div className="space-y-2 w-full">
-              <div className="bg-gray-100 rounded-lg p-3 text-center">
+              <div className="bg-gray-100 rounded-xl p-3 text-center border-l-4 border-blue-500">
                 <p className="text-gray-500 text-sm">Статус</p>
                 <p className="text-lg font-medium text-gray-800">
                   {book.availableCopies && book.availableCopies > 0 ? "Доступна" : "Недоступна"}
                 </p>
               </div>
 
-              <div className="bg-gray-100 rounded-lg p-3 text-center">
+              <div className="bg-gray-100 rounded-xl p-3 text-center border-l-4 border-blue-500">
                 <p className="text-gray-500 text-sm">Расположение</p>
                 <p className="text-lg font-medium text-gray-800">
                   Полка #{shelfId}, Позиция {position + 1}
@@ -73,65 +73,59 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
 
           <div className="w-full md:w-2/3">
             <Tabs defaultValue="info" onValueChange={setActiveTab} className="w-full">
-              <TabsList className="bg-emerald-700/50 w-full">
-                <TabsTrigger value="info" className="flex-1 data-[state=active]:bg-emerald-500 text-white">
-                  Информация
-                </TabsTrigger>
-                <TabsTrigger value="description" className="flex-1 data-[state=active]:bg-emerald-500 text-white">
-                  Описание
-                </TabsTrigger>
-                <TabsTrigger value="details" className="flex-1 data-[state=active]:bg-emerald-500 text-white">
-                  Детали
-                </TabsTrigger>
+              <TabsList className="bg-blue-300 w-full rounded-xl">
+                <TabsTrigger value="info" className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white text-blue-500 rounded-xl">Информация</TabsTrigger>
+                <TabsTrigger value="description" className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white text-blue-500 rounded-xl">Описание</TabsTrigger>
+                <TabsTrigger value="details" className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white text-blue-500 rounded-xl">Детали</TabsTrigger>
               </TabsList>
 
               <TabsContent value="info" className="mt-4">
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <User className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <User className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-white/80 text-sm">Автор</p>
-                      <p className="text-white font-medium">{book.authors || "Не указан"}</p>
+                      <p className="text-gray-500 text-sm">Автор</p>
+                      <p className="text-gray-800 font-medium">{book.authors || "Не указан"}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <Calendar className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-white/80 text-sm">Год публикации</p>
-                      <p className="text-white font-medium">{book.publicationYear || "Не указан"}</p>
+                      <p className="text-gray-500 text-sm">Год публикации</p>
+                      <p className="text-gray-800 font-medium">{'Нет данных'}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Hash className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <Hash className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-white/80 text-sm">ISBN</p>
-                      <p className="text-white font-medium">{book.isbn || "Не указан"}</p>
+                      <p className="text-gray-500 text-sm">ISBN</p>
+                      <p className="text-gray-800 font-medium">{book.isbn || "Не указан"}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <BookCopy className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <BookCopy className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-white/80 text-sm">Издательство</p>
-                      <p className="text-white font-medium">{book.publisher || "Не указано"}</p>
+                      <p className="text-gray-500 text-sm">Издательство</p>
+                      <p className="text-gray-800 font-medium">{'Нет данных'}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Languages className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <Languages className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-white/80 text-sm">Язык</p>
-                      <p className="text-white font-medium">{book.language || "Не указан"}</p>
+                      <p className="text-gray-500 text-sm">Язык</p>
+                      <p className="text-gray-800 font-medium">{'Нет данных'}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Bookmark className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <Bookmark className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-white/80 text-sm">Жанр</p>
-                      <p className="text-white font-medium">{book.genre || "Не указан"}</p>
+                      <p className="text-gray-500 text-sm">Жанр</p>
+                      <p className="text-gray-800 font-medium">{book.genre || "Не указан"}</p>
                     </div>
                   </div>
                 </div>
@@ -139,16 +133,10 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
 
               <TabsContent value="description" className="mt-4">
                 <ScrollArea className="h-[300px] pr-4">
-                  {book.description ? (
-                    <div className="text-white space-y-4">
-                      <p>{book.description}</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full py-8 text-white/80">
-                      <FileText className="h-12 w-12 mb-2 text-white/50" />
-                      <p>Описание отсутствует</p>
-                    </div>
-                  )}
+                  <div className="flex flex-col items-center justify-center h-full py-8 text-gray-500">
+                    <FileText className="h-12 w-12 mb-2 text-gray-400" />
+                    <p>Описание отсутствует</p>
+                  </div>
                 </ScrollArea>
               </TabsContent>
 
@@ -156,61 +144,21 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                 <ScrollArea className="h-[300px] pr-4">
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-emerald-700/30 p-3 rounded-lg">
-                        <p className="text-white/80 text-sm">Количество страниц</p>
-                        <p className="text-white font-medium">{book.pageCount || "Не указано"}</p>
+                      <div className="bg-white p-3 rounded-xl border-l-4 border-blue-500 shadow">
+                        <p className="text-gray-500 text-sm">Количество страниц</p>
+                        <p className="text-gray-800 font-medium">{'Нет данных'}</p>
                       </div>
 
-                      <div className="bg-emerald-700/30 p-3 rounded-lg">
-                        <p className="text-white/80 text-sm">Формат</p>
-                        <p className="text-white font-medium">{book.format || "Не указан"}</p>
+                      <div className="bg-white p-3 rounded-xl border-l-4 border-blue-500 shadow">
+                        <p className="text-gray-500 text-sm">Формат</p>
+                        <p className="text-gray-800 font-medium">{'Нет данных'}</p>
                       </div>
 
-                      <div className="bg-emerald-700/30 p-3 rounded-lg">
-                        <p className="text-white/80 text-sm">Доступные экземпляры</p>
-                        <p className="text-white font-medium">{book.availableCopies || 0}</p>
+                      <div className="bg-white p-3 rounded-xl border-l-4 border-blue-500 shadow">
+                        <p className="text-gray-500 text-sm">Доступные экземпляры</p>
+                        <p className="text-gray-800 font-medium">{book.availableCopies || 0}</p>
                       </div>
-
-                      <div className="bg-emerald-700/30 p-3 rounded-lg">
-                        <p className="text-white/80 text-sm">Электронная книга</p>
-                        <p className="text-white font-medium">{book.isEbook ? "Да" : "Нет"}</p>
-                      </div>
-
-                      {book.udk && (
-                        <div className="bg-emerald-700/30 p-3 rounded-lg">
-                          <p className="text-white/80 text-sm">УДК</p>
-                          <p className="text-white font-medium">{book.udk}</p>
-                        </div>
-                      )}
-
-                      {book.bbk && (
-                        <div className="bg-emerald-700/30 p-3 rounded-lg">
-                          <p className="text-white/80 text-sm">ББК</p>
-                          <p className="text-white font-medium">{book.bbk}</p>
-                        </div>
-                      )}
-
-                      {book.originalTitle && (
-                        <div className="bg-emerald-700/30 p-3 rounded-lg">
-                          <p className="text-white/80 text-sm">Оригинальное название</p>
-                          <p className="text-white font-medium">{book.originalTitle}</p>
-                        </div>
-                      )}
-
-                      {book.originalLanguage && (
-                        <div className="bg-emerald-700/30 p-3 rounded-lg">
-                          <p className="text-white/80 text-sm">Оригинальный язык</p>
-                          <p className="text-white font-medium">{book.originalLanguage}</p>
-                        </div>
-                      )}
                     </div>
-
-                    {book.summary && (
-                      <div className="bg-emerald-700/30 p-3 rounded-lg">
-                        <p className="text-white/80 text-sm mb-2">Резюме</p>
-                        <p className="text-white">{book.summary}</p>
-                      </div>
-                    )}
                   </div>
                 </ScrollArea>
               </TabsContent>
@@ -227,7 +175,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
       <>
         <div className="flex flex-col md:flex-row gap-6">
           <div className="w-full md:w-1/3 flex flex-col items-center">
-            <div className="w-48 h-64 bg-blue-700/50 rounded-lg overflow-hidden shadow-lg mb-4">
+            <div className="w-48 h-64 bg-blue-300 rounded-xl overflow-hidden shadow-lg mb-4">
               {journal.coverImageUrl ? (
                 <img
                   src={journal.coverImageUrl || "/placeholder.svg"}
@@ -239,15 +187,15 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <BookOpen className="h-16 w-16 text-white/50" />
+                  <BookOpen className="h-16 w-16 text-blue-500/50" />
                 </div>
               )}
             </div>
 
             <div className="space-y-2 w-full">
-              <div className="bg-blue-700/40 rounded-lg p-3 text-center">
-                <p className="text-white/80 text-sm">Расположение</p>
-                <p className="text-lg font-medium text-white">
+              <div className="bg-blue-300 rounded-xl p-3 text-center border-l-4 border-blue-500">
+                <p className="text-blue-700 text-sm">Расположение</p>
+                <p className="text-lg font-medium text-gray-800">
                   Полка #{shelfId}, Позиция {position + 1}
                 </p>
               </div>
@@ -257,39 +205,28 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
           <div className="w-full md:w-2/3">
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <BookCopy className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                <BookCopy className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-white/80 text-sm">Издатель</p>
-                  <p className="text-white font-medium">{journal.publisher || "Не указан"}</p>
+                  <p className="text-gray-500 text-sm">Издатель</p>
+                  <p className="text-gray-800 font-medium">{journal.publisher || "Не указан"}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                <Calendar className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-white/80 text-sm">Дата публикации</p>
-                  <p className="text-white font-medium">
-                    {journal.publicationDate ? new Date(journal.publicationDate).toLocaleDateString() : "Не указана"}
-                  </p>
+                  <p className="text-gray-500 text-sm">Дата публикации</p>
+                  <p className="text-gray-800 font-medium">Нет данных</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Hash className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                <Hash className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-white/80 text-sm">ISSN</p>
-                  <p className="text-white font-medium">{journal.issn || "Не указан"}</p>
+                  <p className="text-gray-500 text-sm">ISSN</p>
+                  <p className="text-gray-800 font-medium">{journal.issn || "Не указан"}</p>
                 </div>
               </div>
-
-              {journal.description && (
-                <div className="bg-blue-700/30 p-4 rounded-lg mt-4">
-                  <p className="text-white/80 text-sm mb-2">Описание</p>
-                  <ScrollArea className="h-[200px] pr-4">
-                    <p className="text-white">{journal.description}</p>
-                  </ScrollArea>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -300,12 +237,12 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl bg-white border border-gray-100 rounded-xl shadow-lg p-0 overflow-hidden"
+        className="max-w-4xl bg-gray-200 border border-gray-100 rounded-2xl shadow-lg p-0 overflow-hidden"
       >
         <DialogHeader className="p-6 pb-4">
           <div className="flex items-start justify-between">
             <DialogTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <BookOpen className={`h-6 w-6 ${isJournal ? "text-blue-500" : "text-blue-500"}`} />
+              <BookOpen className={`h-6 w-6 text-blue-500`} />
               {item.title}
             </DialogTitle>
             <Button
@@ -319,37 +256,37 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
             {isJournal ? (
-              <Badge className="bg-blue-100 text-blue-800">Журнал</Badge>
+              <Badge className="bg-blue-300 text-blue-700 rounded-xl">Журнал</Badge>
             ) : (
-              <Badge className="bg-blue-100 text-blue-800">Книга</Badge>
+              <Badge className="bg-blue-300 text-blue-700 rounded-xl">Книга</Badge>
             )}
             {!isJournal && (item as Book).genre && (
-              <Badge className="bg-gray-100 text-gray-800">{(item as Book).genre}</Badge>
+              <Badge className="bg-gray-100 text-blue-500 border-l-4 border-blue-500 rounded-xl">{(item as Book).genre}</Badge>
             )}
           </div>
         </DialogHeader>
 
         <div className="p-6 pt-0">{isJournal ? renderJournalContent() : renderBookContent()}</div>
 
-        <DialogFooter className="bg-gray-100 p-4 border-t border-gray-200">
+        <DialogFooter className="bg-gray-100 p-4 border-t border-gray-200 rounded-b-2xl">
           <div className="flex justify-between w-full">
             <Button
               variant="destructive"
               onClick={handleRemove}
-              className="bg-red-500 hover:bg-red-700 text-white"
+              className="bg-red-100 hover:bg-red-800 text-red-800 border-l-4 border-red-500 rounded-lg"
             >
               Удалить с полки
             </Button>
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="text-gray-800 border-gray-200"
+                className="bg-white text-blue-500 border-2 border-blue-500 rounded-lg hover:bg-gray-100"
                 onClick={() => window.open(`/admin/books/${item.id}`, "_blank")}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Открыть карточку
               </Button>
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="text-gray-800 border-gray-200">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="bg-white text-blue-500 border-2 border-blue-500 rounded-lg hover:bg-gray-100">
                 Закрыть
               </Button>
             </div>
@@ -361,3 +298,4 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
 }
 
 export default BookInfoModal
+

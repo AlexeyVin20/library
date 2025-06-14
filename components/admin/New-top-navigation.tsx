@@ -119,11 +119,32 @@ const generateBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     const isLast = index === segments.length - 1
     
     // Проверяем, есть ли маппинг для этого пути
-    const label = pathMapping[currentPath] || 
-                  // Если это ID (только цифры), показываем как "Просмотр"
-                  (/^\d+$/.test(segment) ? 'Просмотр' : 
-                  // Иначе капитализируем первую букву
-                  segment.charAt(0).toUpperCase() + segment.slice(1))
+    let label = pathMapping[currentPath]
+    
+    if (!label) {
+      // Если это GUID (формат ASP.NET: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx), показываем иконку в зависимости от родительского пути
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)) {
+        const parentPath = currentPath.replace(`/${segment}`, '')
+        if (parentPath === '/books') {
+          label = '📖' // Иконка книги для книг
+        } else if (parentPath === '/users') {
+          label = '👤' // Иконка человека для пользователей
+        } else if (parentPath === '/shelfs') {
+          label = '📚' // Иконка полки для полок
+        } else if (parentPath === '/reservations') {
+          label = '📅' // Иконка календаря для резерваций
+        } else {
+          label = '📄' // Общая иконка для остальных
+        }
+      } else {
+        // Иначе капитализируем первую букву и заменяем "Update" на "Редакт."
+        if (segment.toLowerCase() === 'update') {
+          label = 'Редакт.'
+        } else {
+          label = segment.charAt(0).toUpperCase() + segment.slice(1)
+        }
+      }
+    }
 
     breadcrumbs.push({
       label,
@@ -185,7 +206,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   // Мега-меню структура с изображениями
   const megaMenuSections: MegaMenuSection[] = [
     {
-      title: "Управление контентом",
+      title: "Управление фондом",
       items: [
         {
           title: "Все книги",
@@ -231,7 +252,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
       ],
     },
     {
-      title: "Резервации и отчеты",
+      title: "Резервирования и статистика",
       items: [
         {
           title: "Резервирования",
@@ -766,7 +787,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             <motion.span
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className="text-white hover:text-blue-100 hover:bg-white/20 text-lg font-bold transition-all duration-300 px-2 py-1 rounded-lg"
+                              className="text-white hover:text-blue-100 hover:bg-white/20 text-xl font-bold transition-all duration-300 px-3 py-1.5 rounded-lg"
                             >
                               {item.label}
                             </motion.span>
@@ -776,7 +797,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: index * 0.1 + 0.5 }}
-                            className="text-white text-lg font-semibold px-2 py-1 rounded-lg bg-white/25 backdrop-blur-sm shadow-lg"
+                            className="text-white text-xl font-semibold px-3 py-1.5 rounded-lg bg-white/25 backdrop-blur-sm shadow-lg"
                           >
                             {item.label}
                           </motion.span>
@@ -806,7 +827,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             <motion.span
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className="text-sm font-medium text-white/90 hover:text-white hover:bg-white/15 transition-all duration-300 px-2 py-1 rounded-lg truncate max-w-[120px]"
+                              className="text-base font-medium text-white/90 hover:text-white hover:bg-white/15 transition-all duration-300 px-3 py-1.5 rounded-lg truncate max-w-[180px]"
                             >
                               {item.label}
                             </motion.span>
@@ -816,7 +837,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: index * 0.1 + 0.5 }}
-                            className="text-sm font-semibold text-white px-2 py-1 rounded-lg bg-white/25 backdrop-blur-sm shadow-lg truncate max-w-[120px]"
+                            className="text-base font-semibold text-white px-3 py-1.5 rounded-lg bg-white/25 backdrop-blur-sm shadow-lg truncate max-w-[160px]"
                           >
                             {item.label}
                           </motion.span>

@@ -1,7 +1,7 @@
 "use client"
 
 import { TrendingUp, Calendar, BarChart3 } from "lucide-react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from "recharts"
 import { useMemo, useState } from "react"
 import { motion } from "framer-motion"
 
@@ -29,40 +29,28 @@ const monthNames = [
 
 const statusConfig = {
   processing: {
-    label: "В обработке",
-    color: "#fbbf24",
-    bgColor: "rgba(251, 191, 36, 0.1)",
+    label: "Обрабатывается",
+    color: "#e5f012",
+    bgColor: "rgba(229, 240, 18, 0.35)",
     statuses: ["Обрабатывается"],
   },
-  approved: {
-    label: "Одобрены",
-    color: "#10b981",
-    bgColor: "rgba(16, 185, 129, 0.1)",
-    statuses: ["Выполнена"],
+  cancelled: {
+    label: "Отменена",
+    color: "#1563e1",
+    bgColor: "rgba(21, 99, 225, 0.35)",
+    statuses: ["Отменена"],
   },
   issued: {
-    label: "Выданы",
-    color: "#3b82f6",
-    bgColor: "rgba(59, 130, 246, 0.1)",
+    label: "Выдана",
+    color: "#46e11b",
+    bgColor: "rgba(32, 226, 21, 0.35)",
     statuses: ["Выдана"],
   },
-  returned: {
-    label: "Возвращены",
-    color: "#8b5cf6",
-    bgColor: "rgba(139, 92, 246, 0.1)",
-    statuses: ["Возвращена"],
-  },
-  expired: {
-    label: "Истекшие",
-    color: "#f59e0b",
-    bgColor: "rgba(245, 158, 11, 0.1)",
-    statuses: ["Истекла"],
-  },
-  cancelled: {
-    label: "Отменены",
-    color: "#ef4444",
-    bgColor: "rgba(239, 68, 68, 0.1)",
-    statuses: ["Отменена", "Отклонена"],
+  overdue: {
+    label: "Просрочена",
+    color: "#f11216",
+    bgColor: "rgba(241, 18, 22, 0.35)",
+    statuses: ["Просрочена"],
   },
 }
 
@@ -175,20 +163,16 @@ export function ReservationsChart({ reservations }: ReservationsChartProps) {
       month: monthNames[i],
       shortMonth: monthNames[i].slice(0, 3),
       processing: 0,
-      approved: 0,
-      issued: 0,
-      returned: 0,
-      expired: 0,
       cancelled: 0,
+      issued: 0,
+      overdue: 0,
     }))
 
     const stats = {
       processing: 0,
-      approved: 0,
-      issued: 0,
-      returned: 0,
-      expired: 0,
       cancelled: 0,
+      issued: 0,
+      overdue: 0,
     }
 
     reservations.forEach((r) => {
@@ -224,7 +208,7 @@ export function ReservationsChart({ reservations }: ReservationsChartProps) {
             <BarChart3 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-800">Статистика резерваций</h3>
+            <h3 className="text-xl font-bold text-gray-800">Статистика резервирований</h3>
             <p className="text-gray-500 text-sm">Динамика по месяцам и статусам</p>
           </div>
         </div>
@@ -250,7 +234,7 @@ export function ReservationsChart({ reservations }: ReservationsChartProps) {
       </div>
 
       {/* Статистические карточки */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {Object.entries(statusConfig).map(([key, config], index) => (
           <StatCard
             key={key}
@@ -266,16 +250,7 @@ export function ReservationsChart({ reservations }: ReservationsChartProps) {
       {/* График */}
       <div className="h-[400px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-            <defs>
-              {Object.entries(statusConfig).map(([key, config]) => (
-                <linearGradient key={key} id={`gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={config.color} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={config.color} stopOpacity={0.05} />
-                </linearGradient>
-              ))}
-            </defs>
-
+          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
 
             <XAxis
@@ -294,30 +269,22 @@ export function ReservationsChart({ reservations }: ReservationsChartProps) {
             />
 
             <Tooltip content={<CustomTooltip />} />
+            <Legend content={<CustomLegend />} />
 
             {Object.entries(statusConfig).map(([key, config]) => (
-              <Area
+              <Bar
                 key={key}
-                type="monotone"
                 dataKey={key}
-                stackId="1"
-                stroke={config.color}
-                fill={`url(#gradient-${key})`}
-                strokeWidth={2}
+                fill={config.color}
                 name={config.label}
+                radius={[4, 4, 0, 0]}
+                maxBarSize={40}
+                opacity={0.8}
               />
             ))}
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
       </div>
-
-      {/* Легенда */}
-      <CustomLegend
-        payload={Object.entries(statusConfig).map(([key, config]) => ({
-          value: config.label,
-          color: config.color,
-        }))}
-      />
 
       {/* Футер с общей статистикой */}
       <motion.div
@@ -329,7 +296,7 @@ export function ReservationsChart({ reservations }: ReservationsChartProps) {
         <div className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-blue-500" />
           <span className="text-gray-800 font-medium">
-            Всего резерваций за {selectedYear}: <CountUp end={totalReservations} />
+            Всего резервирований за {selectedYear}: <CountUp end={totalReservations} />
           </span>
         </div>
       </motion.div>

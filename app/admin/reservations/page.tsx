@@ -3,9 +3,14 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter, Trash2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import Image from "next/image";
+import Filters, { Filter as FilterType, FilterType as FilterTypeEnum, FilterOperator, Status, Priority } from "@/components/ui/filters";
+import { CreateReservationDialog } from "@/components/ui/reservation-creation-modal";
 
 interface Reservation {
   id: string;
@@ -14,6 +19,7 @@ interface Reservation {
   reservationDate: string;
   expirationDate: string;
   status: string;
+  originalStatus?: string; // Оригинальный статус для операций
   notes?: string;
   user?: {
     fullName: string;
@@ -101,35 +107,7 @@ const BookUnavailableWarning = ({
   );
 };
 
-// Компонент для вкладок
-const AnimatedTabsTrigger = ({
-  value,
-  icon,
-  label,
-  isActive
-}: {
-  value: string;
-  icon: React.ReactNode;
-  label: string;
-  isActive: boolean;
-}) => {
-  return <TabsTrigger value={value} className={`relative transition-colors
-        ${isActive ? 'bg-transparent text-gray-800 shadow-md' : ''}
-        rounded-lg px-3 py-2
-      `}>
-      <div className="flex items-center gap-2">
-        <span className={isActive ? "text-blue-700" : "text-gray-500"}>{icon}</span>
-        <span>{label}</span>
-      </div>
-      {isActive && <motion.div layoutId="activeReservationTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" initial={{
-      opacity: 0
-    }} animate={{
-      opacity: 1
-    }} transition={{
-      duration: 0.3
-    }} />}
-    </TabsTrigger>;
-};
+
 
 const StatusBadge = ({
   status
@@ -170,13 +148,38 @@ export default function ReservationsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("Обрабатывается");
+
   const [bookAvailabilityDates, setBookAvailabilityDates] = useState<{[bookId: string]: Date}>({});
+  const [filters, setFilters] = useState<FilterType[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   useEffect(() => {
     fetchReservations();
   }, []);
+
+  // Функция для определения приоритетного статуса с учетом просрочки
+  const getDisplayStatus = (reservation: Reservation) => {
+    const now = new Date();
+    const expirationDate = new Date(reservation.expirationDate);
+    
+    // Если срок истек, приоритет у просроченных статусов
+    if (expirationDate < now) {
+      // Если книга была выдана и просрочена
+      if ((reservation.originalStatus || reservation.status) === 'Выдана') {
+        return 'Просрочена';
+      }
+      // Если резервирование не было выдано и срок истек
+      if ((reservation.originalStatus || reservation.status) === 'Обрабатывается' || 
+          (reservation.originalStatus || reservation.status) === 'Одобрена') {
+        return 'Истекла';
+      }
+      // Для уже завершенных статусов (Возвращена, Отменена и т.д.) оставляем как есть
+    }
+    
+    return reservation.originalStatus || reservation.status;
+  };
 
   // Функция для вычисления ожидаемых дат возврата книг
   const calculateBookAvailabilityDates = (reservations: Reservation[]) => {
@@ -245,22 +248,11 @@ export default function ReservationsPage() {
       }));
 
       // Применяем логику статусов для отображения
-      const displayedReservations = enrichedReservations.map(r => {
-        const now = new Date();
-        const expirationDate = new Date(r.expirationDate);
-        
-        // Если резервирование выдано и просрочено
-        if (expirationDate < now && r.status === 'Выдана') {
-          return { ...r, status: 'Просрочена' };
-        }
-        
-        // Если резервирование не выдано и срок истек
-        if (expirationDate < now && (r.status === 'Обрабатывается' || r.status === 'Одобрена')) {
-          return { ...r, status: 'Истекла' };
-        }
-        
-        return r;
-      });
+      const displayedReservations = enrichedReservations.map(r => ({
+        ...r,
+        status: getDisplayStatus(r),
+        originalStatus: r.status // Сохраняем оригинальный статус для операций
+      }));
       setReservations(displayedReservations);
       
       // Вычисляем ожидаемые даты доступности книг
@@ -283,12 +275,20 @@ export default function ReservationsPage() {
 
       const reservation = reservations.find(r => r.id === id);
       if (!reservation) throw new Error("Резервирование не найдено");
+      
+      // Используем оригинальный статус для отправки на сервер, но обновляем его
       const updatedReservation = {
         ...reservation,
         reservationDate: new Date(reservation.reservationDate).toISOString(),
         expirationDate: new Date(reservation.expirationDate).toISOString(),
         status: newStatus
       };
+      
+      // Удаляем поля, которые не нужны для API
+      delete updatedReservation.originalStatus;
+      delete updatedReservation.user;
+      delete updatedReservation.book;
+      
       const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
         method: "PUT",
         headers: {
@@ -301,10 +301,18 @@ export default function ReservationsPage() {
         const errorText = await response.text();
         throw new Error(errorText || "Ошибка при обновлении статуса");
       }
-      setReservations(reservations.map(r => r.id === id ? {
-        ...r,
-        status: newStatus
-      } : r));
+      
+      // Обновляем локальное состояние с пересчетом отображаемого статуса
+      setReservations(reservations.map(r => {
+        if (r.id === id) {
+          const updatedReservation = { ...r, originalStatus: newStatus };
+          return {
+            ...updatedReservation,
+            status: getDisplayStatus({ ...updatedReservation, status: newStatus })
+          };
+        }
+        return r;
+      }));
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
       alert(err instanceof Error ? err.message : "Ошибка при обновлении статуса");
@@ -322,6 +330,27 @@ export default function ReservationsPage() {
     } catch (err) {
       console.error("Ошибка при удалении резервирования:", err);
       alert(err instanceof Error ? err.message : "Ошибка при удалении резервирования");
+    }
+  };
+
+  const handleCreateReservation = async (reservationData: any) => {
+    try {
+      const response = await fetch(`${baseUrl}/api/Reservation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(reservationData)
+      });
+      
+      if (!response.ok) throw new Error("Ошибка при создании резервирования");
+      
+      // Обновляем список резервирований
+      await fetchReservations();
+      alert("Резервирование успешно создано");
+    } catch (error) {
+      console.error("Ошибка при создании резервирования:", error);
+      throw error; // Пробрасываем ошибку для обработки в модальном окне
     }
   };
 
@@ -381,7 +410,163 @@ export default function ReservationsPage() {
     }
   };
 
-  const filteredReservations = activeTab === "all" ? reservations : reservations.filter(r => r.status === activeTab);
+  // Добавляем фильтр по датам
+  const addDateFilter = (type: FilterTypeEnum, period: string) => {
+    setFilters(prev => {
+      // Ищем существующий фильтр этого типа
+      const existingFilterIndex = prev.findIndex(f => f.type === type);
+      
+      if (existingFilterIndex !== -1) {
+        // Если фильтр уже существует, добавляем значение к существующему
+        const updatedFilters = [...prev];
+        const existingFilter = updatedFilters[existingFilterIndex];
+        if (!existingFilter.value.includes(period)) {
+          updatedFilters[existingFilterIndex] = {
+            ...existingFilter,
+            value: [...existingFilter.value, period],
+            operator: existingFilter.value.length > 0 ? FilterOperator.IS_ANY_OF : FilterOperator.IS
+          };
+        }
+        return updatedFilters;
+      } else {
+        // Создаем новый фильтр
+        const filterId = `${type}-${Date.now()}`;
+        const newFilter: FilterType = {
+          id: filterId,
+          type: type,
+          operator: FilterOperator.IS,
+          value: [period]
+        };
+        return [...prev, newFilter];
+      }
+    });
+    setShowFilters(true);
+  };
+
+  // Добавляем фильтр по статусу
+  const addStatusFilter = (status: string) => {
+    setFilters(prev => {
+      // Ищем существующий фильтр статуса
+      const existingFilterIndex = prev.findIndex(f => f.type === FilterTypeEnum.STATUS);
+      
+      if (existingFilterIndex !== -1) {
+        // Если фильтр уже существует, добавляем статус к существующему
+        const updatedFilters = [...prev];
+        const existingFilter = updatedFilters[existingFilterIndex];
+        if (!existingFilter.value.includes(status)) {
+          updatedFilters[existingFilterIndex] = {
+            ...existingFilter,
+            value: [...existingFilter.value, status],
+            operator: existingFilter.value.length > 0 ? FilterOperator.IS_ANY_OF : FilterOperator.IS
+          };
+        }
+        return updatedFilters;
+      } else {
+        // Создаем новый фильтр
+        const filterId = `status-${Date.now()}`;
+        const newFilter: FilterType = {
+          id: filterId,
+          type: FilterTypeEnum.STATUS,
+          operator: FilterOperator.IS,
+          value: [status]
+        };
+        return [...prev, newFilter];
+      }
+    });
+    setShowFilters(true);
+  };
+
+  // Функция применения фильтров
+  const applyFilters = (reservations: Reservation[]) => {
+    let filtered = reservations;
+
+    filters.forEach(filter => {
+      switch (filter.type) {
+        case FilterTypeEnum.STATUS:
+          if (filter.operator === FilterOperator.IS || filter.operator === FilterOperator.IS_ANY_OF) {
+            filtered = filtered.filter(r => filter.value.includes(r.status));
+          } else if (filter.operator === FilterOperator.IS_NOT) {
+            filtered = filtered.filter(r => !filter.value.includes(r.status));
+          }
+          break;
+        
+        case FilterTypeEnum.CREATED_DATE:
+        case FilterTypeEnum.UPDATED_DATE:
+        case FilterTypeEnum.DUE_DATE:
+          const now = new Date();
+          
+          // Создаем массив резервирований, которые соответствуют хотя бы одному из периодов
+          const matchingReservations = new Set<string>();
+          
+          filter.value.forEach(period => {
+            let startDate = new Date();
+            let endDate = new Date();
+            
+            switch (period) {
+              case "24 hours from now":
+                startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                endDate = now;
+                break;
+              case "3 days from now":
+                startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+                endDate = now;
+                break;
+              case "1 week from now":
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                endDate = now;
+                break;
+              case "1 month from now":
+                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                endDate = now;
+                break;
+              default:
+                return;
+            }
+
+            // Для периодов "истекает в течение..." меняем логику
+            if (period.includes("Истекает")) {
+              startDate = now;
+              if (period.includes("24 часов")) {
+                endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+              } else if (period.includes("3 дней")) {
+                endDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+              } else if (period.includes("недели")) {
+                endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+              } else if (period.includes("месяца")) {
+                endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+              }
+            }
+
+            // Добавляем подходящие резервирования в множество
+            filtered.forEach(reservation => {
+              let dateToCheck: Date;
+              
+              if (filter.type === FilterTypeEnum.CREATED_DATE) {
+                dateToCheck = new Date(reservation.reservationDate);
+              } else if (filter.type === FilterTypeEnum.DUE_DATE) {
+                dateToCheck = new Date(reservation.expirationDate);
+              } else {
+                return;
+              }
+
+              if (dateToCheck >= startDate && dateToCheck <= endDate) {
+                matchingReservations.add(reservation.id);
+              }
+            });
+          });
+
+          // Фильтруем резервирования, оставляя только те, которые есть в множестве
+          if (filter.operator === FilterOperator.IS || filter.operator === FilterOperator.IS_ANY_OF) {
+            filtered = filtered.filter(r => matchingReservations.has(r.id));
+          }
+          break;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredReservations = applyFilters(reservations);
 
   return <div className="min-h-screen bg-gray-200">
       <div className="container mx-auto p-6">
@@ -421,22 +606,170 @@ export default function ReservationsPage() {
         {/* Main Content */}
         <FadeInView delay={0.2}>
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-blue-500" />
-              <h2 className="text-xl font-semibold text-gray-800">Фильтр</h2>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
+              >
+                <Filter className="h-4 w-4" />
+                Фильтры
+                {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+              
+              {/* Быстрые фильтры по статусу */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 text-gray-800 hover:text-gray-900">
+                    <CheckCircle className="h-4 w-4" />
+                    По статусу
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-0">
+                  <Command>
+                    <CommandInput placeholder="Поиск статуса..." />
+                    <CommandList>
+                      <CommandEmpty>Статус не найден</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem onSelect={() => addStatusFilter("Обрабатывается")}>
+                          <Clock className="h-4 w-4 mr-2 text-blue-500" />
+                          В обработке
+                        </CommandItem>
+                        <CommandItem onSelect={() => addStatusFilter("Одобрена")}>
+                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                          Одобрены
+                        </CommandItem>
+                        <CommandItem onSelect={() => addStatusFilter("Отменена")}>
+                          <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                          Отменены
+                        </CommandItem>
+                        <CommandItem onSelect={() => addStatusFilter("Истекла")}>
+                          <Clock className="h-4 w-4 mr-2 text-orange-500" />
+                          Истекшие
+                        </CommandItem>
+                        <CommandItem onSelect={() => addStatusFilter("Выдана")}>
+                          <ArrowRight className="h-4 w-4 mr-2 text-blue-700" />
+                          Выданы
+                        </CommandItem>
+                        <CommandItem onSelect={() => addStatusFilter("Возвращена")}>
+                          <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                          Возвращены
+                        </CommandItem>
+                        <CommandItem onSelect={() => addStatusFilter("Просрочена")}>
+                          <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                          Просроченные
+                        </CommandItem>
+                        <CommandItem onSelect={() => addStatusFilter("Отменена_пользователем")}>
+                          <XCircle className="h-4 w-4 mr-2 text-gray-600" />
+                          Отменены пользователем
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {/* Быстрые фильтры по датам */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 text-gray-800 hover:text-gray-900">
+                    <Clock className="h-4 w-4" />
+                    По датам
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0">
+                  <Command>
+                    <CommandInput placeholder="Поиск периода..." />
+                    <CommandList>
+                      <CommandEmpty>Период не найден</CommandEmpty>
+                      <CommandGroup heading="Дата создания">
+                        <CommandItem onSelect={() => addDateFilter(FilterTypeEnum.CREATED_DATE, "24 hours from now")}>
+                          Последние 24 часа
+                        </CommandItem>
+                        <CommandItem onSelect={() => addDateFilter(FilterTypeEnum.CREATED_DATE, "3 days from now")}>
+                          Последние 3 дня
+                        </CommandItem>
+                        <CommandItem onSelect={() => addDateFilter(FilterTypeEnum.CREATED_DATE, "1 week from now")}>
+                          Последняя неделя
+                        </CommandItem>
+                        <CommandItem onSelect={() => addDateFilter(FilterTypeEnum.CREATED_DATE, "1 month from now")}>
+                          Последний месяц
+                        </CommandItem>
+                      </CommandGroup>
+                      <CommandGroup heading="Срок действия">
+                        <CommandItem onSelect={() => addDateFilter(FilterTypeEnum.DUE_DATE, "Истекает в течение 24 часов")}>
+                          Истекает в течение 24 часов
+                        </CommandItem>
+                        <CommandItem onSelect={() => addDateFilter(FilterTypeEnum.DUE_DATE, "Истекает в течение 3 дней")}>
+                          Истекает в течение 3 дней
+                        </CommandItem>
+                        <CommandItem onSelect={() => addDateFilter(FilterTypeEnum.DUE_DATE, "Истекает в течение недели")}>
+                          Истекает в течение недели
+                        </CommandItem>
+                        <CommandItem onSelect={() => addDateFilter(FilterTypeEnum.DUE_DATE, "Истекает в течение месяца")}>
+                          Истекает в течение месяца
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
-            <Link href="/admin/reservations/create">
-              <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
-              y: -3,
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-            }} whileTap={{
-              scale: 0.98
-            }}>
-                <Plus className="h-4 w-4" />
-                Создать резервирование
-              </motion.button>
-            </Link>
+            
+            <motion.button 
+              onClick={() => setShowCreateModal(true)}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" 
+              whileHover={{
+                y: -3,
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+              }} 
+              whileTap={{
+                scale: 0.98
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Создать резервирование
+            </motion.button>
           </div>
+
+          {/* Раздел фильтров */}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-6 overflow-hidden"
+              >
+                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Активные фильтры</h3>
+                    {filters.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFilters([])}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        Очистить все
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {filters.length > 0 ? (
+                    <Filters filters={filters} setFilters={setFilters} />
+                  ) : (
+                    <p className="text-gray-500 text-sm">
+                      Фильтры не применены. Используйте быстрые фильтры выше или добавьте свои.
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {error && <motion.div initial={{
           opacity: 0,
@@ -448,20 +781,7 @@ export default function ReservationsPage() {
               {error}
             </motion.div>}
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-            <TabsList className="bg-white p-1 rounded-xl border border-gray-300 shadow-md text-gray-800">
-              <AnimatedTabsTrigger value="all" icon={<Filter className="w-4 h-4" />} label="Все" isActive={activeTab === "all"} />
-              <AnimatedTabsTrigger value="Обрабатывается" icon={<Clock className="w-4 h-4" />} label="В обработке" isActive={activeTab === "Обрабатывается"} />
-              <AnimatedTabsTrigger value="Одобрена" icon={<CheckCircle className="w-4 h-4" />} label="Одобрены" isActive={activeTab === "Одобрена"} />
-              <AnimatedTabsTrigger value="Отменена" icon={<XCircle className="w-4 h-4" />} label="Отменены" isActive={activeTab === "Отменена"} />
-              <AnimatedTabsTrigger value="Истекла" icon={<Clock className="w-4 h-4" />} label="Истекшие" isActive={activeTab === "Истекла"} />
-              <AnimatedTabsTrigger value="Выдана" icon={<ArrowRight className="w-4 h-4" />} label="Выданы" isActive={activeTab === "Выдана"} />
-              <AnimatedTabsTrigger value="Возвращена" icon={<CheckCircle className="w-4 h-4" />} label="Возвращены" isActive={activeTab === "Возвращена"} />
-              <AnimatedTabsTrigger value="Просрочена" icon={<XCircle className="w-4 h-4" />} label="Просроченные" isActive={activeTab === "Просрочена"} />
-              <AnimatedTabsTrigger value="Отменена_пользователем" icon={<XCircle className="w-4 h-4" />} label="Отменены пользователем" isActive={activeTab === "Отменена_пользователем"} />
-            </TabsList>
-
-            <TabsContent value={activeTab} className="mt-6">
+          <div className="mt-6">
               <AnimatePresence>
                 {loading ? <div className="flex justify-center items-center py-12">
                     <motion.div animate={{
@@ -539,11 +859,25 @@ export default function ReservationsPage() {
                               {formatDate(reservation.reservationDate)}
                             </span>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-blue-500">Срок до:</span>
+                            <span className="text-gray-800">
+                              {formatDate(reservation.expirationDate)}
+                            </span>
+                          </div>
+                          {(reservation.status === 'Просрочена' || reservation.status === 'Истекла') && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-red-500 font-medium">Просрочено:</span>
+                              <span className="text-red-600 font-medium">
+                                {Math.ceil((new Date().getTime() - new Date(reservation.expirationDate).getTime()) / (1000 * 60 * 60 * 24))} дней
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex justify-between items-center mt-4 gap-2">
                           <div className="flex gap-2">
-                            {reservation.status !== "Одобрена" && (
+                            {(reservation.originalStatus || reservation.status) !== "Одобрена" && (
                               <motion.button 
                                 onClick={() => handleStatusChange(reservation.id, "Одобрена")} 
                                 className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" 
@@ -555,7 +889,7 @@ export default function ReservationsPage() {
                                 <CheckCircle className="w-4 h-4" />
                               </motion.button>
                             )}
-                            {reservation.status !== "Отменена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Отменена")} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md" whileHover={{
+                            {(reservation.originalStatus || reservation.status) !== "Отменена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Отменена")} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md" whileHover={{
                         y: -2
                       }} whileTap={{
                         scale: 0.95
@@ -584,9 +918,15 @@ export default function ReservationsPage() {
                       </motion.div>)}
                   </div>}
               </AnimatePresence>
-            </TabsContent>
-          </Tabs>
+            </div>
         </FadeInView>
+
+        {/* Модальное окно создания резервирования */}
+        <CreateReservationDialog
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+          onCreateReservation={handleCreateReservation}
+        />
       </div>
     </div>;
 }
