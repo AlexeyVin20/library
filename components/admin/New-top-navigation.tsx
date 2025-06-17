@@ -32,6 +32,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge"
 import type React from "react"
 import { useAuth, type User } from "@/lib/auth"
+import { useNotifications } from "@/hooks/use-notifications"
+import { 
+  getNotificationIcon, 
+  formatRelativeTime, 
+  getPriorityColor,
+  getPriorityTextColor,
+  getNotificationTypeLabel
+} from "@/lib/notification-utils"
+import { Variants } from "framer-motion"
 
 // Интерфейсы для результатов поиска
 interface SearchResult {
@@ -49,14 +58,7 @@ interface SearchResultCategory {
   results: SearchResult[]
 }
 
-interface Notification {
-  id: string
-  title: string
-  message: string
-  time: string
-  read: boolean
-  type: "info" | "warning" | "success" | "error"
-}
+// Убираем локальный интерфейс, используем из types
 
 // Структура меню для мега-навигации
 interface MegaMenuItem {
@@ -172,33 +174,42 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   const headerRef = useRef<HTMLElement>(null)
   const [scrolled, setScrolled] = useState(false)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "1",
-      title: "Новая книга добавлена",
-      message: 'Книга "Война и мир" была добавлена в каталог',
-      time: "2 часа назад",
-      read: false,
-      type: "success",
-    },
-    {
-      id: "2",
-      title: "Обновление системы",
-      message: "Система была обновлена до версии 2.5.0",
-      time: "Вчера",
-      read: false,
-      type: "info",
-    },
-    {
-      id: "3",
-      title: "Просроченные книги",
-      message: "У 5 пользователей есть просроченные книги",
-      time: "3 дня назад",
-      read: true,
-      type: "warning",
-    },
-  ])
-  const [unreadCount, setUnreadCount] = useState(0)
+  
+  // Используем хук для работы с уведомлениями
+  const {
+    notifications,
+    unreadCount,
+    isLoading: notificationsLoading,
+    isConnected,
+    markAsRead,
+    markAllAsRead,
+    fetchNotifications
+  } = useNotifications()
+
+  // Добавляем состояние для отслеживания подключения
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+
+  // Обновляем статус подключения на основе isConnected
+  useEffect(() => {
+    if (isConnected) {
+      setConnectionStatus('connected')
+    } else {
+      // Если есть токен, показываем "connecting", иначе "disconnected"
+      const token = localStorage.getItem('token')
+      if (token) {
+        setConnectionStatus('connecting')
+        // Через некоторое время, если не подключились, показываем disconnected
+        const timeout = setTimeout(() => {
+          if (!isConnected) {
+            setConnectionStatus('disconnected')
+          }
+        }, 5000)
+        return () => clearTimeout(timeout)
+      } else {
+        setConnectionStatus('disconnected')
+      }
+    }
+  }, [isConnected])
 
   // Генерируем breadcrumbs на основе текущего пути
   const breadcrumbs = generateBreadcrumbs(pathname)
@@ -343,10 +354,8 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     }
   }, [handleKeyDown])
 
-  // Calculate unread notifications
-  useEffect(() => {
-    setUnreadCount(notifications.filter((n) => !n.read).length)
-  }, [notifications])
+  // Обновляем количество непрочитанных уведомлений при изменении списка
+  // (теперь это управляется хуком useNotifications)
 
   // Scroll effect for header
   useEffect(() => {
@@ -396,16 +405,13 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     }
   }
 
-  // Mark notification as read
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
-    )
+  // Функции для работы с уведомлениями теперь из хука
+  const handleMarkAsRead = async (id: string) => {
+    await markAsRead(id)
   }
 
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead()
   }
 
   // Search functionality
@@ -427,10 +433,16 @@ const TopNavigation = ({ user }: { user: User | null }) => {
       }
 
       try {
+        const token = localStorage.getItem('token')
+        const headers = {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        }
+
         // Используем правильные эндпоинты - оба должны быть в нижнем регистре
         const [usersResponse, booksResponse] = await Promise.all([
-          fetch(`${baseUrl}/api/User`),
-          fetch(`${baseUrl}/api/books`), // Изменено с /api/Books на /api/books
+          fetch(`${baseUrl}/api/User`, { headers }),
+          fetch(`${baseUrl}/api/books`, { headers }), // Изменено с /api/Books на /api/books
         ])
 
         if (usersResponse.ok) {
@@ -601,20 +613,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     performSearch(query)
   }
 
-  // Get notification icon
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "success":
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />
-      case "warning":
-        return <AlertCircle className="h-4 w-4 text-yellow-600" />
-      case "error":
-        return <AlertCircle className="h-4 w-4 text-red-600" />
-      case "info":
-      default:
-        return <Bell className="h-4 w-4 text-blue-500" />
-    }
-  }
+  // Функция getNotificationIcon теперь импортируется из utils
 
   // Animation variants
   const logoVariants = {
@@ -739,7 +738,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           {/* Logo and Breadcrumbs */}
           <div className="flex items-center gap-4 flex-1 min-w-0">
             <motion.div
-              variants={logoVariants}
+              variants={logoVariants as unknown as Variants}
               initial="initial"
               animate="animate"
               whileHover="hover"
@@ -869,7 +868,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 <NavigationMenuItem>
                   <motion.div
                     custom={0}
-                    variants={navItemVariants}
+                    variants={navItemVariants as unknown as Variants}
                     initial="initial"
                     animate="animate"
                     whileHover="hover"
@@ -894,7 +893,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 <NavigationMenuItem>
                   <motion.div
                     custom={1}
-                    variants={navItemVariants}
+                    variants={navItemVariants as unknown as Variants}
                     initial="initial"
                     animate="animate"
                     whileHover="hover"
@@ -979,7 +978,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 <NavigationMenuItem>
                   <motion.div
                     custom={2}
-                    variants={navItemVariants}
+                    variants={navItemVariants as unknown as Variants}
                     initial="initial"
                     animate="animate"
                     whileHover="hover"
@@ -1012,7 +1011,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                   <motion.div 
                     whileHover={{ scale: 1.1 }} 
                     whileTap={{ scale: 0.9 }}
-                    variants={pulseVariants}
+                    variants={pulseVariants as unknown as Variants}
                     initial="initial"
                     animate="animate"
                   >
@@ -1057,7 +1056,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
             {/* Enhanced Search with Backslash Hotkey */}
             <div className="relative">
               <motion.div
-                variants={searchVariants}
+                variants={searchVariants as unknown as Variants}
                 animate={isSearchOpen ? "open" : "closed"}
                 className="flex items-center"
               >
@@ -1316,6 +1315,80 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               </AnimatePresence>
             </div>
 
+            {/* Индикатор подключения SignalR */}
+            {user && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.div 
+                      className="flex items-center gap-1 cursor-pointer"
+                      whileHover={{ scale: 1.1 }}
+                      onClick={async () => {
+                        console.log('Состояние подключения:', { 
+                          isConnected, 
+                          connectionStatus, 
+                          notificationsLoading,
+                          hasToken: !!localStorage.getItem('token'),
+                          apiUrl: process.env.NEXT_PUBLIC_BASE_URL
+                        })
+                        
+                        // Если отключены, пытаемся переподключиться
+                        if (!isConnected) {
+                          console.log('Попытка принудительного переподключения...')
+                          setConnectionStatus('connecting')
+                          
+                          // Даем время для отображения статуса "connecting"
+                          setTimeout(() => {
+                            // Попытка переподключения будет выполнена хуком useNotifications
+                            // при следующем обновлении компонента
+                            if (!isConnected) {
+                              setConnectionStatus('disconnected')
+                            }
+                          }, 3000)
+                        }
+                        
+                        fetchNotifications()
+                      }}
+                    >
+                      <div className={cn(
+                        "w-2 h-2 rounded-full transition-all duration-300",
+                        connectionStatus === 'connected' ? "bg-green-400 shadow-lg shadow-green-400/50" : 
+                        connectionStatus === 'connecting' ? "bg-yellow-400 shadow-lg shadow-yellow-400/50" : 
+                        "bg-red-400 shadow-lg shadow-red-400/50"
+                      )}>
+                        {connectionStatus === 'connecting' && (
+                          <motion.div
+                            className="w-2 h-2 bg-yellow-400 rounded-full"
+                            animate={{ scale: [1, 1.5, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        )}
+                      </div>
+                    </motion.div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="bg-blue-700/90 text-white border-blue-600">
+                    <div className="text-center">
+                      <div>
+                        {connectionStatus === 'connected' ? "SignalR подключен" : 
+                         connectionStatus === 'connecting' ? "SignalR подключается..." : 
+                         "SignalR отключен"}
+                      </div>
+                      <div className="text-xs opacity-75 mt-1">
+                        {connectionStatus === 'disconnected' 
+                          ? "Кликните для переподключения" 
+                          : "Кликните для обновления"}
+                      </div>
+                      {connectionStatus === 'disconnected' && (
+                        <div className="text-xs opacity-60 mt-1">
+                          Автопереподключение при активности
+                        </div>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {/* Enhanced Notifications */}
             <DropdownMenu>
               <TooltipProvider>
@@ -1325,7 +1398,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                       <motion.div 
                         whileHover={{ scale: 1.1 }} 
                         whileTap={{ scale: 0.9 }}
-                        variants={pulseVariants}
+                        variants={pulseVariants as unknown as Variants}
                         initial="initial"
                         animate="animate"
                       >
@@ -1359,46 +1432,148 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 <div className="flex items-center justify-between mb-3">
                   <DropdownMenuLabel className="font-bold text-sm text-gray-800">
                     Уведомления
+                    <span className="ml-2 text-xs text-gray-500">
+                      ({connectionStatus === 'connected' ? '●' : connectionStatus === 'connecting' ? '◐' : '○'})
+                    </span>
                   </DropdownMenuLabel>
-                  {unreadCount > 0 && (
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 text-xs text-blue-600 hover:bg-blue-50 rounded-lg"
-                      onClick={markAllAsRead}
+                      className="h-8 text-xs text-gray-600 hover:bg-gray-50 rounded-lg"
+                      onClick={() => fetchNotifications()}
+                      disabled={notificationsLoading}
                     >
-                      Отметить все как прочитанные
+                      🔄 Обновить
                     </Button>
-                  )}
+                    {process.env.NODE_ENV === 'development' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-green-600 hover:bg-green-50 rounded-lg"
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem('token')
+                            const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/send`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                title: 'Тест уведомления',
+                                message: 'Это тестовое уведомление для проверки работы системы',
+                                type: 'GeneralInfo',
+                                priority: 'Normal',
+                                userId: '11111111-1111-1111-1111-111111111111' // Отправляем себе
+                              })
+                            })
+                            if (response.ok) {
+                              console.log('Тестовое уведомление отправлено')
+                            }
+                          } catch (error) {
+                            console.error('Ошибка отправки тестового уведомления:', error)
+                          }
+                        }}
+                      >
+                        🧪 Тест
+                      </Button>
+                    )}
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-blue-600 hover:bg-blue-50 rounded-lg"
+                        onClick={handleMarkAllAsRead}
+                        disabled={notificationsLoading}
+                      >
+                        Отметить все как прочитанные
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <DropdownMenuSeparator className="bg-gray-200" />
-                <div className="max-h-[300px] overflow-auto py-2">
-                  {notifications.length > 0 ? (
-                    notifications.map((notification, index) => (
+                <div className="max-h-[400px] overflow-auto py-2">
+                  {notificationsLoading ? (
+                    <div className="py-8 text-center">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-6 h-6 border-2 border-blue-300 border-t-blue-500 rounded-full mx-auto mb-3"
+                      />
+                      <p className="text-sm text-gray-600">Загрузка уведомлений...</p>
+                    </div>
+                  ) : (notifications && Array.isArray(notifications) && notifications.length > 0) ? (
+                    notifications.slice(0, 10).map((notification, index) => (
                       <motion.div
                         key={notification.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
+                        transition={{ delay: index * 0.05 }}
                         className={cn(
-                          "mb-2 last:mb-0 rounded-lg",
-                          !notification.read && "bg-blue-50",
+                          "mb-2 last:mb-0 rounded-lg border",
+                          !notification.isRead 
+                            ? "bg-blue-50 border-blue-200" 
+                            : "bg-white border-gray-200"
                         )}
                       >
                         <DropdownMenuItem
-                          className="py-4 px-4 rounded-lg hover:bg-gray-100 cursor-default transition-all duration-200"
-                          onSelect={() => markAsRead(notification.id)}
+                          className="py-4 px-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-all duration-200"
+                          onSelect={() => handleMarkAsRead(notification.id)}
                         >
                           <div className="flex gap-3">
-                            <div className="flex-shrink-0 mt-1">{getNotificationIcon(notification.type)}</div>
+                            <div className="flex-shrink-0 mt-1">
+                              {getNotificationIcon(notification.type)}
+                            </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-semibold text-sm text-gray-800">{notification.title}</span>
-                                <span className="text-xs text-gray-500 ml-2">
-                                  {notification.time}
+                                <span className={cn(
+                                  "text-sm",
+                                  notification.isRead 
+                                    ? "font-medium text-gray-700" 
+                                    : "font-semibold text-gray-900"
+                                )}>
+                                  {notification.title}
                                 </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">
+                                    {formatRelativeTime(notification.createdAt)}
+                                  </span>
+                                  {!notification.isRead && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                  )}
+                                </div>
                               </div>
-                              <p className="text-xs text-gray-600">{notification.message}</p>
+                              <p className="text-xs text-gray-600 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              
+                              {/* Дополнительная информация о книге, если есть */}
+                              {(notification as any).bookTitle && (
+                                <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                  📖 {(notification as any).bookTitle}
+                                  {(notification as any).bookAuthors && (
+                                    <span className="text-gray-500"> • {(notification as any).bookAuthors}</span>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {/* Индикатор приоритета */}
+                              {notification.priority && notification.priority !== 'Normal' && (
+                                <div className="mt-1">
+                                  <span className={cn(
+                                    "text-xs px-2 py-0.5 rounded-full font-medium",
+                                    notification.priority === 'Critical' 
+                                      ? "bg-red-100 text-red-700"
+                                      : notification.priority === 'High'
+                                      ? "bg-orange-100 text-orange-700"
+                                      : "bg-gray-100 text-gray-700"
+                                  )}>
+                                    {notification.priority === 'Critical' ? 'Критически важно' :
+                                     notification.priority === 'High' ? 'Важно' : 'Обычное'}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </DropdownMenuItem>
@@ -1408,11 +1583,29 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     <div className="py-8 text-center">
                       <Bell className="h-8 w-8 text-gray-400 mx-auto mb-3" />
                       <p className="text-sm text-gray-600">Нет новых уведомлений</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {connectionStatus === 'connected' ? "Подключение активно" : 
+                         connectionStatus === 'connecting' ? "Подключается..." : 
+                         "Нет подключения"}
+                      </p>
+                      {connectionStatus === 'disconnected' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 text-xs"
+                          onClick={() => window.location.reload()}
+                        >
+                          Перезагрузить страницу
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
                 <DropdownMenuSeparator className="bg-gray-200" />
-                <DropdownMenuItem className="flex justify-center py-3 text-sm font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200">
+                <DropdownMenuItem 
+                  className="flex justify-center py-3 text-sm font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                  onSelect={() => router.push('/admin/notifications')}
+                >
                   Просмотреть все
                 </DropdownMenuItem>
               </DropdownMenuContent>

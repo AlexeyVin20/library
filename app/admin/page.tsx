@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Calendar as DayPickerCalendar } from "@/components/ui/calendar-range";
+import { Calendar } from "@/components/ui/calendar-range";
 import Link from "next/link";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { BookOpen, Users, AlertCircle, TrendingUp, CalendarIcon, ChevronRight, BarChart3, Layers, ArrowRight, Shield, ChevronDown, ChevronUp, Activity, Bookmark, PieChart, Sparkles, Clock, X, CheckCircle, XCircle } from "lucide-react";
@@ -679,7 +679,7 @@ export default function DashboardPage() {
                       </button>)}
                   </div>
                   <div className="flex-1 flex justify-center">
-                    <DayPickerCalendar mode="range" selected={selectedRange} onSelect={setSelectedRange} className="w-full h-[340px] max-w-xl min-w-[340px] text-gray-800" style={{
+                    <Calendar mode="range" selected={selectedRange} onSelect={setSelectedRange} className="w-full h-[340px] max-w-xl min-w-[340px] text-gray-800" style={{
                   fontSize: '1.08rem',
                   color: '#1F2937'
                 }} classNames={{

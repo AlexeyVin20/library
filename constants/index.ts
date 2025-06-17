@@ -33,6 +33,11 @@ export const adminSideBarLinks = [
     route: "/admin/shelfs",
     text: "Полки",
   },
+  {
+    img: "/icons/admin/bookmark.svg",
+    route: "/admin/notifications",
+    text: "Уведомления",
+  },
 ];
 
 export const FIELD_NAMES = {

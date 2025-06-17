@@ -68,6 +68,65 @@
     @apply bg-transparent text-white/90 hover:text-white hover:bg-white/20 !important;
   }
 
+  /* Button Text Color Fixes */
+  button[data-state="open"], 
+  button[data-state="closed"]:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Specific button variant fixes */
+  .btn-outline:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .btn-ghost:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .btn-secondary:not(:hover):not(:focus) {
+    color: hsl(var(--secondary-foreground)) !important;
+  }
+
+  /* Ensure proper contrast for outline and ghost buttons */
+  [data-theme="light"] button[variant="outline"]:not(:hover):not(:focus),
+  [data-theme="light"] button[variant="ghost"]:not(:hover):not(:focus) {
+    color: hsl(222.2 47.4% 11.2%) !important; /* dark text for light theme */
+  }
+
+  [data-theme="dark"] button[variant="outline"]:not(:hover):not(:focus),
+  [data-theme="dark"] button[variant="ghost"]:not(:hover):not(:focus) {
+    color: hsl(210 40% 98%) !important; /* light text for dark theme */
+  }
+
+  /* Additional specificity for Radix UI components */
+  .radix-button:not(:hover):not(:focus):not([data-state="open"]) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Admin navigation button text fixes */
+  .admin-nav button:not(:hover):not(:focus),
+  .admin-header button:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Force proper text color for all button variants */
+  button[data-variant="outline"]:not(:hover):not(:focus),
+  button[data-variant="ghost"]:not(:hover):not(:focus),
+  button[data-variant="secondary"]:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Global button text color fixes with high specificity */
+  .inline-flex.items-center.justify-center[class*="border"]:not(:hover):not(:focus),
+  .inline-flex.items-center.justify-center[class*="bg-background"]:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Specific outline button fixes */
+  button:is([class*="border"], [class*="outline"]):not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
   /* Book Card */
   .book-title {
     @apply mt-2 line-clamp-1 text-base font-semibold text-gray-800 xs:text-xl;
@@ -317,6 +376,14 @@
 
   .hide-scrollbar::-webkit-scrollbar-thumb:hover {
     background: transparent;
+  }
+
+  /* Утилиты для ограничения строк текста */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 }
 
