@@ -414,6 +414,8 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     await markAllAsRead()
   }
 
+
+
   // Search functionality
   const performSearch = async (query: string) => {
     if (!query.trim()) {
@@ -1315,79 +1317,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               </AnimatePresence>
             </div>
 
-            {/* Индикатор подключения SignalR */}
-            {user && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <motion.div 
-                      className="flex items-center gap-1 cursor-pointer"
-                      whileHover={{ scale: 1.1 }}
-                      onClick={async () => {
-                        console.log('Состояние подключения:', { 
-                          isConnected, 
-                          connectionStatus, 
-                          notificationsLoading,
-                          hasToken: !!localStorage.getItem('token'),
-                          apiUrl: process.env.NEXT_PUBLIC_BASE_URL
-                        })
-                        
-                        // Если отключены, пытаемся переподключиться
-                        if (!isConnected) {
-                          console.log('Попытка принудительного переподключения...')
-                          setConnectionStatus('connecting')
-                          
-                          // Даем время для отображения статуса "connecting"
-                          setTimeout(() => {
-                            // Попытка переподключения будет выполнена хуком useNotifications
-                            // при следующем обновлении компонента
-                            if (!isConnected) {
-                              setConnectionStatus('disconnected')
-                            }
-                          }, 3000)
-                        }
-                        
-                        fetchNotifications()
-                      }}
-                    >
-                      <div className={cn(
-                        "w-2 h-2 rounded-full transition-all duration-300",
-                        connectionStatus === 'connected' ? "bg-green-400 shadow-lg shadow-green-400/50" : 
-                        connectionStatus === 'connecting' ? "bg-yellow-400 shadow-lg shadow-yellow-400/50" : 
-                        "bg-red-400 shadow-lg shadow-red-400/50"
-                      )}>
-                        {connectionStatus === 'connecting' && (
-                          <motion.div
-                            className="w-2 h-2 bg-yellow-400 rounded-full"
-                            animate={{ scale: [1, 1.5, 1] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                          />
-                        )}
-                      </div>
-                    </motion.div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-blue-700/90 text-white border-blue-600">
-                    <div className="text-center">
-                      <div>
-                        {connectionStatus === 'connected' ? "SignalR подключен" : 
-                         connectionStatus === 'connecting' ? "SignalR подключается..." : 
-                         "SignalR отключен"}
-                      </div>
-                      <div className="text-xs opacity-75 mt-1">
-                        {connectionStatus === 'disconnected' 
-                          ? "Кликните для переподключения" 
-                          : "Кликните для обновления"}
-                      </div>
-                      {connectionStatus === 'disconnected' && (
-                        <div className="text-xs opacity-60 mt-1">
-                          Автопереподключение при активности
-                        </div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+
 
             {/* Enhanced Notifications */}
             <DropdownMenu>
@@ -1426,59 +1356,14 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               </TooltipProvider>
               <DropdownMenuContent
                 align="end"
-                className="w-80 p-3 rounded-xl backdrop-blur-xl bg-white/95 border border-gray-200 shadow-xl"
+                className="w-96 p-0 rounded-xl backdrop-blur-xl bg-white/95 border border-gray-200 shadow-xl"
                 sideOffset={8}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <DropdownMenuLabel className="font-bold text-sm text-gray-800">
+                <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                  <DropdownMenuLabel className="font-bold text-sm text-gray-800 p-0">
                     Уведомления
-                    <span className="ml-2 text-xs text-gray-500">
-                      ({connectionStatus === 'connected' ? '●' : connectionStatus === 'connecting' ? '◐' : '○'})
-                    </span>
                   </DropdownMenuLabel>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs text-gray-600 hover:bg-gray-50 rounded-lg"
-                      onClick={() => fetchNotifications()}
-                      disabled={notificationsLoading}
-                    >
-                      🔄 Обновить
-                    </Button>
-                    {process.env.NODE_ENV === 'development' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs text-green-600 hover:bg-green-50 rounded-lg"
-                        onClick={async () => {
-                          try {
-                            const token = localStorage.getItem('token')
-                            const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/send`, {
-                              method: 'POST',
-                              headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify({
-                                title: 'Тест уведомления',
-                                message: 'Это тестовое уведомление для проверки работы системы',
-                                type: 'GeneralInfo',
-                                priority: 'Normal',
-                                userId: '11111111-1111-1111-1111-111111111111' // Отправляем себе
-                              })
-                            })
-                            if (response.ok) {
-                              console.log('Тестовое уведомление отправлено')
-                            }
-                          } catch (error) {
-                            console.error('Ошибка отправки тестового уведомления:', error)
-                          }
-                        }}
-                      >
-                        🧪 Тест
-                      </Button>
-                    )}
                     {unreadCount > 0 && (
                       <Button
                         variant="ghost"
@@ -1492,8 +1377,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     )}
                   </div>
                 </div>
-                <DropdownMenuSeparator className="bg-gray-200" />
-                <div className="max-h-[400px] overflow-auto py-2">
+                <div className="max-h-[400px] overflow-auto">
                   {notificationsLoading ? (
                     <div className="py-8 text-center">
                       <motion.div
@@ -1511,32 +1395,35 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
                         className={cn(
-                          "mb-2 last:mb-0 rounded-lg border",
+                          "border-b border-gray-100 last:border-b-0 relative",
                           !notification.isRead 
-                            ? "bg-blue-50 border-blue-200" 
-                            : "bg-white border-gray-200"
+                            ? "bg-blue-50/50" 
+                            : "bg-white"
                         )}
                       >
-                        <DropdownMenuItem
-                          className="py-4 px-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-all duration-200"
-                          onSelect={() => handleMarkAsRead(notification.id)}
-                        >
+                        <div className="py-4 px-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 relative">
                           <div className="flex gap-3">
-                            <div className="flex-shrink-0 mt-1">
+                            <div 
+                              className="flex-shrink-0 mt-1"
+                              onClick={() => handleMarkAsRead(notification.id)}
+                            >
                               {getNotificationIcon(notification.type)}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-1">
+                            <div 
+                              className="flex-1 min-w-0"
+                              onClick={() => handleMarkAsRead(notification.id)}
+                            >
+                              <div className="flex items-start justify-between mb-1">
                                 <span className={cn(
-                                  "text-sm",
+                                  "text-sm pr-2",
                                   notification.isRead 
                                     ? "font-medium text-gray-700" 
                                     : "font-semibold text-gray-900"
                                 )}>
                                   {notification.title}
                                 </span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-500">
+                                <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                                  <span className="text-xs text-gray-500 whitespace-nowrap">
                                     {formatRelativeTime(notification.createdAt)}
                                   </span>
                                   {!notification.isRead && (
@@ -1544,13 +1431,13 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                   )}
                                 </div>
                               </div>
-                              <p className="text-xs text-gray-600 line-clamp-2">
+                              <p className="text-xs text-gray-600 line-clamp-2 mb-2">
                                 {notification.message}
                               </p>
                               
                               {/* Дополнительная информация о книге, если есть */}
                               {(notification as any).bookTitle && (
-                                <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                <div className="mb-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
                                   📖 {(notification as any).bookTitle}
                                   {(notification as any).bookAuthors && (
                                     <span className="text-gray-500"> • {(notification as any).bookAuthors}</span>
@@ -1560,7 +1447,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                               
                               {/* Индикатор приоритета */}
                               {notification.priority && notification.priority !== 'Normal' && (
-                                <div className="mt-1">
+                                <div className="mb-2">
                                   <span className={cn(
                                     "text-xs px-2 py-0.5 rounded-full font-medium",
                                     notification.priority === 'Critical' 
@@ -1576,38 +1463,27 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                               )}
                             </div>
                           </div>
-                        </DropdownMenuItem>
+                          
+
+                        </div>
                       </motion.div>
                     ))
                   ) : (
                     <div className="py-8 text-center">
                       <Bell className="h-8 w-8 text-gray-400 mx-auto mb-3" />
                       <p className="text-sm text-gray-600">Нет новых уведомлений</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {connectionStatus === 'connected' ? "Подключение активно" : 
-                         connectionStatus === 'connecting' ? "Подключается..." : 
-                         "Нет подключения"}
-                      </p>
-                      {connectionStatus === 'disconnected' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 text-xs"
-                          onClick={() => window.location.reload()}
-                        >
-                          Перезагрузить страницу
-                        </Button>
-                      )}
                     </div>
                   )}
                 </div>
-                <DropdownMenuSeparator className="bg-gray-200" />
-                <DropdownMenuItem 
-                  className="flex justify-center py-3 text-sm font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                  onSelect={() => router.push('/admin/notifications')}
-                >
-                  Просмотреть все
-                </DropdownMenuItem>
+                <div className="border-t border-gray-100 p-4">
+                  <Button
+                    variant="outline"
+                    className="w-full text-sm font-semibold text-blue-600 hover:bg-blue-50 border-blue-200 rounded-lg transition-all duration-200"
+                    onClick={() => router.push('/admin/notifications')}
+                  >
+                    Просмотреть все уведомления
+                  </Button>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
 

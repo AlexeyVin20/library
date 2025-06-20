@@ -7,12 +7,21 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Menu, Moon, Sun, Book, BookOpen, Home, Heart, Clock, LogIn, Settings, UserIcon, ChevronDown, LogOut, ExternalLink, X, FileText, Zap } from "lucide-react";
+import { Search, Menu, Moon, Sun, Book, BookOpen, Home, Heart, Clock, LogIn, Settings, UserIcon, ChevronDown, LogOut, ExternalLink, X, FileText, Zap, Bell } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { useAuth, User } from "@/lib/auth";
+import { useNotifications } from "@/hooks/use-notifications";
+import { 
+  getNotificationIcon, 
+  formatRelativeTime, 
+  getPriorityColor,
+  getPriorityTextColor,
+  getNotificationTypeLabel
+} from "@/lib/notification-utils";
 
 // Интерфейсы для результатов поиска
 interface SearchResult {
@@ -78,6 +87,17 @@ const ReaderNavigation = () => {
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [user, setUser] = useState<User | null>(null);
+  
+  // Используем хук для работы с уведомлениями
+  const {
+    notifications,
+    unreadCount,
+    isLoading: notificationsLoading,
+    isConnected,
+    markAsRead,
+    markAllAsRead,
+    fetchNotifications
+  } = useNotifications();
 
   // Keyboard shortcut handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -161,6 +181,15 @@ const ReaderNavigation = () => {
     // Используем данные из контекста авторизации
     setUser(authUser);
   }, [authUser]);
+
+  // Функции для работы с уведомлениями
+  const handleMarkAsRead = async (id: string) => {
+    await markAsRead(id)
+  }
+
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead()
+  }
 
   // Переключение темы с анимацией
   const toggleTheme = () => {
@@ -558,6 +587,162 @@ const ReaderNavigation = () => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
+            {/* Enhanced Notifications */}
+            {user && (
+              <DropdownMenu>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <motion.div 
+                          whileHover={{ scale: 1.1 }} 
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Button variant="ghost" size="icon" className="relative h-9 w-9 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">
+                            <Bell size={18} />
+                            {unreadCount > 0 && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -top-1 -right-1 flex items-center justify-center"
+                              >
+                                <Badge variant="destructive" className="h-4 min-w-4 px-1 text-xs font-bold bg-red-500 border-2 border-white">
+                                  {unreadCount}
+                                </Badge>
+                              </motion.div>
+                            )}
+                          </Button>
+                        </motion.div>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      Уведомления
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-96 p-0 rounded-xl backdrop-blur-xl bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-600 shadow-xl"
+                  sideOffset={8}
+                >
+                  <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-600">
+                    <DropdownMenuLabel className="font-bold text-sm text-gray-800 dark:text-gray-200 p-0">
+                      Уведомления
+                    </DropdownMenuLabel>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+                          onClick={handleMarkAllAsRead}
+                          disabled={notificationsLoading}
+                        >
+                          Отметить все как прочитанные
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-[400px] overflow-auto">
+                    {notificationsLoading ? (
+                      <div className="py-8 text-center">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-6 h-6 border-2 border-blue-300 border-t-blue-500 rounded-full mx-auto mb-3"
+                        />
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Загрузка уведомлений...</p>
+                      </div>
+                    ) : (notifications && Array.isArray(notifications) && notifications.length > 0) ? (
+                      notifications.slice(0, 10).map((notification, index) => (
+                        <motion.div
+                          key={notification.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className={cn(
+                            "border-b border-gray-100 dark:border-gray-600 last:border-b-0 relative",
+                            !notification.isRead 
+                              ? "bg-blue-50/50 dark:bg-blue-900/20" 
+                              : "bg-white dark:bg-gray-800"
+                          )}
+                        >
+                          <div className="py-4 px-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition-all duration-200 relative">
+                            <div className="flex gap-3">
+                              <div 
+                                className="flex-shrink-0 mt-1"
+                                onClick={() => handleMarkAsRead(notification.id)}
+                              >
+                                {getNotificationIcon(notification.type)}
+                              </div>
+                              <div 
+                                className="flex-1 min-w-0"
+                                onClick={() => handleMarkAsRead(notification.id)}
+                              >
+                                <div className="flex items-start justify-between mb-1">
+                                  <span className={cn(
+                                    "text-sm pr-2",
+                                    notification.isRead 
+                                      ? "font-medium text-gray-700 dark:text-gray-300" 
+                                      : "font-semibold text-gray-900 dark:text-gray-100"
+                                  )}>
+                                    {notification.title}
+                                  </span>
+                                  <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                      {formatRelativeTime(notification.createdAt)}
+                                    </span>
+                                    {!notification.isRead && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
+                                  {notification.message}
+                                </p>
+                                
+                                {/* Дополнительная информация о книге, если есть */}
+                                {(notification as any).bookTitle && (
+                                  <div className="mb-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
+                                    📖 {(notification as any).bookTitle}
+                                    {(notification as any).bookAuthors && (
+                                      <span className="text-gray-500 dark:text-gray-400"> • {(notification as any).bookAuthors}</span>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {/* Индикатор приоритета */}
+                                {notification.priority && notification.priority !== 'Normal' && (
+                                  <div className="mb-2">
+                                    <span className={cn(
+                                      "text-xs px-2 py-0.5 rounded-full font-medium",
+                                      notification.priority === 'Critical' 
+                                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                        : notification.priority === 'High'
+                                        ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                                        : "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-300"
+                                    )}>
+                                      {notification.priority === 'Critical' ? 'Критически важно' :
+                                       notification.priority === 'High' ? 'Важно' : 'Обычное'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center">
+                        <Bell className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Нет новых уведомлений</p>
+                      </div>
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             {/* Enhanced Search with Backslash Hotkey */}
             <div className="relative">

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import * as signalR from '@microsoft/signalr'
 import type { Notification, NotificationStats } from '@/lib/types'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://localhost:7139'
+const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 
 interface UseNotificationsReturn {
   notifications: Notification[]
@@ -15,6 +15,7 @@ interface UseNotificationsReturn {
   fetchNotifications: (isRead?: boolean, page?: number, pageSize?: number) => Promise<void>
   markAsRead: (notificationId: string) => Promise<boolean>
   markAllAsRead: () => Promise<boolean>
+  deleteNotification: (notificationId: string) => Promise<boolean>
   refreshStats: () => Promise<void>
 }
 
@@ -179,6 +180,37 @@ export const useNotifications = (): UseNotificationsReturn => {
       return false
     }
   }, [getHeaders])
+
+  // Удаление уведомления
+  const deleteNotification = useCallback(async (notificationId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/Notification/${notificationId}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      // Проверяем, было ли удаляемое уведомление непрочитанным
+      const deletedNotification = notifications.find(n => n.id === notificationId)
+      const wasUnread = deletedNotification && !deletedNotification.isRead
+
+      // Обновляем локальное состояние
+      setNotifications(prev => prev.filter(n => n.id !== notificationId))
+      
+      // Обновляем счетчик непрочитанных, если удаляемое уведомление было непрочитанным
+      if (wasUnread) {
+        setUnreadCount(count => Math.max(0, count - 1))
+      }
+      
+      return true
+    } catch (error) {
+      console.error('Ошибка удаления уведомления:', error)
+      return false
+    }
+  }, [getHeaders, notifications])
 
   // Настройка SignalR соединения
   useEffect(() => {
@@ -404,6 +436,7 @@ export const useNotifications = (): UseNotificationsReturn => {
     fetchNotifications,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     refreshStats,
   }
 } 

@@ -75,10 +75,15 @@ export default function AdminNotificationsPage() {
   })
 
   useEffect(() => {
-    loadNotifications()
-    loadStats()
     loadUsers()
+    loadStats()
   }, [])
+  
+  useEffect(() => {
+    if (users.length > 0) {
+      loadNotifications()
+    }
+  }, [users])
 
   const loadNotifications = async () => {
     try {
@@ -92,7 +97,27 @@ export default function AdminNotificationsPage() {
       
       if (response.ok) {
         const data = await response.json()
-        setNotifications(data)
+        
+        // Дополняем уведомления информацией о пользователях
+        const notificationsWithUsers = await Promise.all(
+          data.map(async (notification: Notification) => {
+            if (notification.userId && users.length > 0) {
+              const user = users.find(u => u.id === notification.userId)
+              if (user) {
+                return {
+                  ...notification,
+                  user: {
+                    fullName: user.fullName,
+                    email: user.email
+                  }
+                }
+              }
+            }
+            return notification
+          })
+        )
+        
+        setNotifications(notificationsWithUsers)
       }
     } catch (error) {
       console.error('Ошибка загрузки уведомлений:', error)
@@ -565,7 +590,7 @@ export default function AdminNotificationsPage() {
                 </div>
               </div>
               
-              <div className="space-y-2">
+                            <div className="space-y-2">
                 <Label htmlFor="message">Сообщение</Label>
                 <Textarea
                   id="message"
@@ -686,7 +711,7 @@ export default function AdminNotificationsPage() {
                 </div>
               </div>
               
-              <div className="space-y-2">
+                            <div className="space-y-2">
                 <Label htmlFor="bulk-message">Сообщение</Label>
                 <Textarea
                   id="bulk-message"

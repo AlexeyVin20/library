@@ -70,7 +70,7 @@ export default function NotificationManager({ notifications, onRefresh }: Notifi
       filtered = filtered.filter(n => 
         n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         n.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (n.user?.fullName).toLowerCase().includes(searchTerm.toLowerCase())
+        (n.user?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -172,7 +172,7 @@ export default function NotificationManager({ notifications, onRefresh }: Notifi
     try {
       const token = localStorage.getItem('token')
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/Notification/mark-all-read`,
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/mark-all-read`,
         {
           method: 'PUT',
           headers: {
@@ -193,6 +193,60 @@ export default function NotificationManager({ notifications, onRefresh }: Notifi
       toast({
         title: "Ошибка",
         description: "Не удалось отметить все уведомления",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const deleteNotifications = async (notificationIds: string[]) => {
+    try {
+      const token = localStorage.getItem('token')
+      
+      if (notificationIds.length === 1) {
+        // Удалить одно уведомление
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/${notificationIds[0]}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+        
+        if (response.ok) {
+          toast({
+            title: "Успешно",
+            description: "Уведомление удалено"
+          })
+        }
+      } else {
+        // Удалить несколько уведомлений
+        await Promise.all(
+          notificationIds.map(id => 
+            fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/${id}`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            })
+          )
+        )
+        
+        toast({
+          title: "Успешно",
+          description: `${notificationIds.length} уведомлений удалено`
+        })
+      }
+      
+      setSelectedNotifications([])
+      onRefresh()
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить уведомления",
         variant: "destructive"
       })
     }
@@ -364,6 +418,15 @@ export default function NotificationManager({ notifications, onRefresh }: Notifi
               </Button>
               <Button
                 size="sm"
+                variant="destructive"
+                onClick={() => deleteNotifications(selectedNotifications)}
+                disabled={selectedNotifications.length === 0}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Удалить выбранные
+              </Button>
+              <Button
+                size="sm"
                 variant="outline"
                 onClick={() => setSelectedNotifications([])}
               >
@@ -479,6 +542,14 @@ export default function NotificationManager({ notifications, onRefresh }: Notifi
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteNotifications([notification.id])}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                       {notification.user && (
                         <Button
                           size="sm"
