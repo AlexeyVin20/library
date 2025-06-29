@@ -24,6 +24,23 @@ interface ShelfCanvasProps {
   onEmptySlotClick: (shelfId: number, position: number) => void
   overlappingShelfIds?: number[]
   getShelfSize: (capacity: number) => { width: number; height: number }
+  draggedItem?: {
+    item: Book | Journal;
+    isJournal: boolean;
+    sourceShelfId: number;
+    sourcePosition: number;
+  } | null
+  dragOverSlot?: {
+    shelfId: number;
+    position: number;
+  } | null
+  isDraggingItem?: boolean
+  onItemDragStart?: (item: Book | Journal, isJournal: boolean, shelfId: number, position: number, e: React.DragEvent) => void
+  onSlotDragOver?: (shelfId: number, position: number, e: React.DragEvent) => void
+  onSlotDragLeave?: () => void
+  onItemDrop?: (targetShelfId: number, targetPosition: number, e: React.DragEvent) => void
+  onItemDragEnd?: () => void
+  aiArrangedBooks?: string[]
 }
 
 const ShelfCanvas = ({
@@ -42,6 +59,15 @@ const ShelfCanvas = ({
   onEmptySlotClick,
   overlappingShelfIds = [],
   getShelfSize,
+  draggedItem,
+  dragOverSlot,
+  isDraggingItem,
+  onItemDragStart,
+  onSlotDragOver,
+  onSlotDragLeave,
+  onItemDrop,
+  onItemDragEnd,
+  aiArrangedBooks = [],
 }: ShelfCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -187,17 +213,45 @@ const ShelfCanvas = ({
           const item = book || journal
 
           const getBackground = () => {
+            // Check if this slot is being hovered during drag
+            const isDropTarget = dragOverSlot?.shelfId === shelf.id && dragOverSlot?.position === i
+            const isDraggedSource = draggedItem?.sourceShelfId === shelf.id && draggedItem?.sourcePosition === i
+            
+            if (isDraggedSource) {
+              return "bg-gray-300 opacity-50 border-2 border-dashed border-gray-400"
+            }
+            
+            if (isDropTarget) {
+              return "bg-yellow-200 border-2 border-yellow-400 animate-pulse"
+            }
+
             if (item) {
               if (book) {
+                // Check if this book was arranged by AI
+                const isAiArranged = aiArrangedBooks.includes(book.id)
+                
                 // Highlight the book if it matches the highlighted ID
                 const isHighlighted = book.id === highlightedBookId
                 if (isHighlighted) {
                   return "bg-yellow-400 border-2 border-yellow-600 shadow-lg animate-pulse"
                 }
+                
+                // Special styling for AI-arranged books
+                if (isAiArranged) {
+                  return book.availableCopies && book.availableCopies > 0
+                    ? "bg-gradient-to-br from-green-400 to-blue-500 border-2 border-purple-400 shadow-lg hover:scale-105 hover:shadow-md animate-pulse"
+                    : "bg-gradient-to-br from-red-400 to-blue-500 border-2 border-purple-400 shadow-lg hover:scale-105 hover:shadow-md animate-pulse"
+                }
+                
                 return book.availableCopies && book.availableCopies > 0
                   ? "bg-green-500 hover:scale-105 hover:shadow-md"
                   : "bg-red-500 hover:scale-105 hover:shadow-md"
               } else {
+                // Check if this journal was arranged by AI (journals can also be arranged)
+                const isAiArranged = aiArrangedBooks.includes(journal!.id)
+                if (isAiArranged) {
+                  return "bg-gradient-to-br from-blue-400 to-purple-500 border-2 border-purple-400 shadow-lg hover:scale-105 hover:shadow-md animate-pulse"
+                }
                 return "bg-blue-500 hover:scale-105 hover:shadow-md" // Journals
               }
             }
@@ -205,7 +259,7 @@ const ShelfCanvas = ({
           }
 
           return (
-            <motion.div
+            <div
               key={i}
               data-book-id={book?.id || ""}
               title={
@@ -213,17 +267,54 @@ const ShelfCanvas = ({
                   ? `${item.title} (${journal ? "Журнал" : "Книга"})${book?.authors ? ` - ${book.authors}` : ""}`
                   : "Пустое место"
               }
-              className={`w-6 h-8 rounded transition-all cursor-pointer ${getBackground()}`}
-              whileHover={{ scale: 1.1, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (item) {
-                  onItemClick(item, !!journal, shelf.id, i)
-                } else {
-                  onEmptySlotClick(shelf.id, i)
+              className={`w-6 h-8 rounded transition-all duration-200 transform hover:scale-105 hover:-translate-y-0.5 active:scale-95 ${getBackground()}`}
+              style={{
+                cursor: item && !isEditMode ? (isDraggingItem ? 'grabbing' : 'grab') : 'pointer'
+              }}
+              draggable={item && !isEditMode}
+              onDragStart={(e) => {
+                if (item && !isEditMode && onItemDragStart) {
+                  onItemDragStart(item, !!journal, shelf.id, i, e)
+                  // Add visual feedback
+                  e.currentTarget.style.opacity = '0.5'
                 }
               }}
-            ></motion.div>
+              onDragEnd={(e) => {
+                // Reset visual feedback
+                e.currentTarget.style.opacity = '1'
+                if (onItemDragEnd) {
+                  onItemDragEnd()
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                if (onSlotDragOver) {
+                  onSlotDragOver(shelf.id, i, e)
+                }
+              }}
+              onDragLeave={() => {
+                if (onSlotDragLeave) {
+                  onSlotDragLeave()
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                if (onItemDrop) {
+                  onItemDrop(shelf.id, i, e)
+                }
+              }}
+              onClick={(e) => {
+                // Only handle click if not in middle of dragging
+                if (!isDraggingItem) {
+                  if (item) {
+                    onItemClick(item, !!journal, shelf.id, i)
+                  } else {
+                    onEmptySlotClick(shelf.id, i)
+                  }
+                }
+                e.stopPropagation()
+              }}
+            ></div>
           )
         })}
       </div>
@@ -325,10 +416,18 @@ const ShelfCanvas = ({
         onMouseUp={() => {
           handleCanvasMouseUp()
           onDragEnd()
+          // Reset item drag state if dragging was in progress
+          if (isDraggingItem && onSlotDragLeave) {
+            onSlotDragLeave()
+          }
         }}
         onMouseLeave={() => {
           handleCanvasMouseUp()
           onDragEnd()
+          // Reset item drag state if dragging was in progress
+          if (isDraggingItem && onSlotDragLeave) {
+            onSlotDragLeave()
+          }
         }}
       >
         {loading ? (
@@ -421,6 +520,8 @@ const ShelfCanvas = ({
         <div className="absolute bottom-4 left-4 text-xs text-gray-500 bg-white p-2 rounded-lg border border-gray-200 shadow-md">
           <p>Используйте Alt + перетаскивание для навигации по холсту</p>
           <p>Используйте кнопки справа для масштабирования и перемещения</p>
+          <p>Удерживайте и перетаскивайте книги/журналы для перемещения между местами</p>
+          <p>При перемещении на занятое место элементы поменяются местами</p>
         </div>
       </div>
     </div>

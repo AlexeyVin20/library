@@ -118,6 +118,11 @@ const CardsView = ({
                 </Link>
                 <p className="text-sm text-gray-500">{book.authors}</p>
                 <p className="text-xs text-gray-500">{book.genre || ""}</p>
+                <div className="mt-2 flex items-center gap-1">
+                  <span className="text-xs font-medium text-white bg-blue-500 px-2 py-1 rounded-full">
+                    Доступно: {book.availableCopies || 0} шт.
+                  </span>
+                </div>
               </div>
               <div className="flex justify-end gap-2 mt-2">
                 <Link href={`/admin/books/${book.id}/update`}>
@@ -221,6 +226,11 @@ const ThreeDBookView = ({
               </Link>
               <p className="text-sm text-gray-500 line-clamp-1">{book.authors}</p>
               {book.genre && <p className="text-xs text-gray-500">{book.genre}</p>}
+              <div className="mt-1">
+                <span className="text-xs font-medium text-white bg-blue-500 px-2 py-1 rounded-full">
+                  Доступно: {book.availableCopies || 0} шт.
+                </span>
+              </div>
             </motion.div>
             <div className="mt-2 flex justify-center gap-2">
               <Link href={`/admin/books/${book.id}/update`}>
@@ -263,6 +273,7 @@ const ListView = ({
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Название</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Автор</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Жанр</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Доступно</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Действия</th>
           </tr>
         </thead>
@@ -302,6 +313,11 @@ const ListView = ({
               </td>
               <td className="px-4 py-3 text-sm text-gray-500">{book.authors || "—"}</td>
               <td className="px-4 py-3 text-sm text-gray-500">{book.genre || "—"}</td>
+              <td className="px-4 py-3">
+                <span className="text-xs font-medium text-white bg-blue-500 px-2 py-1 rounded-full">
+                  {book.availableCopies || 0} шт.
+                </span>
+              </td>
               <td className="px-4 py-3 text-sm">
                 <div className="flex gap-2">
                   <Link href={`/admin/books/${book.id}/update`}>

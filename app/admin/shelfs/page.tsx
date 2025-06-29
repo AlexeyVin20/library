@@ -3,7 +3,7 @@
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Lock, Unlock, X, Search, Upload, Library, ChevronLeft, AlertCircle } from "lucide-react";
+import { Plus, Lock, Unlock, X, Search, Upload, Library, ChevronLeft, AlertCircle, Bot, Undo } from "lucide-react";
 import type { Book, Shelf, Journal } from "@/lib/types";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -17,6 +17,7 @@ import ShelfItemContextMenu from "@/components/admin/ShelfItemContextMenu";
 import ShelfCanvas from "@/components/admin/ShelfCanvas";
 import BookSelectorModal from "@/components/admin/BookSelectorModal";
 import BookInfoModal from "@/components/admin/BookInfoModal";
+import AutoArrangeBooks from "@/components/admin/AutoArrangeBooks";
 interface Position {
   x: number;
   y: number;
@@ -133,6 +134,18 @@ export default function ShelfsPage() {
   const [selectedItemIsJournal, setSelectedItemIsJournal] = useState(false);
   const [selectedItemShelfId, setSelectedItemShelfId] = useState<number>(0);
   const [selectedItemPosition, setSelectedItemPosition] = useState<number>(0);
+  // Add these new state variables for book/journal dragging
+  const [draggedItem, setDraggedItem] = useState<{
+    item: Book | Journal;
+    isJournal: boolean;
+    sourceShelfId: number;
+    sourcePosition: number;
+  } | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<{
+    shelfId: number;
+    position: number;
+  } | null>(null);
+  const [isDraggingItem, setIsDraggingItem] = useState(false);
   const [newShelf, setNewShelf] = useState({
     category: "",
     capacity: "",
@@ -146,6 +159,11 @@ export default function ShelfsPage() {
     posY: ""
   });
   const [overlappingShelfIds, setOverlappingShelfIds] = useState<number[]>([]);
+  // States for AI auto-arrangement
+  const [showAutoArrange, setShowAutoArrange] = useState(false);
+  const [aiArrangedBooks, setAiArrangedBooks] = useState<string[]>([]);
+  const [lastArrangements, setLastArrangements] = useState<any[]>([]);
+  
   useEffect(() => {
     fetchShelves();
     fetchBooks();
@@ -710,6 +728,178 @@ export default function ShelfsPage() {
     setShowBookInfoModal(true);
   };
 
+  // Functions for book/journal dragging
+  const handleItemDragStart = (item: Book | Journal, isJournal: boolean, shelfId: number, position: number, e: React.DragEvent) => {
+    // Prevent dragging if in edit mode (for shelf positioning)
+    if (isEditMode) {
+      e.preventDefault();
+      return;
+    }
+    
+    setDraggedItem({
+      item,
+      isJournal,
+      sourceShelfId: shelfId,
+      sourcePosition: position
+    });
+    setIsDraggingItem(true);
+    
+    // Set drag data
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      itemId: item.id,
+      isJournal,
+      sourceShelfId: shelfId,
+      sourcePosition: position
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSlotDragOver = (shelfId: number, position: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedItem) {
+      setDragOverSlot({ shelfId, position });
+    }
+  };
+
+  const handleSlotDragLeave = () => {
+    setDragOverSlot(null);
+  };
+
+  const handleItemDrop = async (targetShelfId: number, targetPosition: number, e: React.DragEvent) => {
+    e.preventDefault();
+    
+    if (!draggedItem) return;
+
+    const { item: sourceItem, isJournal: sourceIsJournal, sourceShelfId, sourcePosition } = draggedItem;
+
+    // If dropping on the same position, do nothing
+    if (sourceShelfId === targetShelfId && sourcePosition === targetPosition) {
+      resetDragState();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+
+      // Check if target position has an item
+      const targetShelf = shelves.find(s => s.id === targetShelfId);
+      if (!targetShelf) throw new Error("Target shelf not found");
+
+      const targetItem = [...books, ...journals].find(item => 
+        item.shelfId === targetShelfId && item.position === targetPosition
+      );
+
+      if (targetItem) {
+        // Swap items - need to be careful about the order
+        const targetIsJournal = journals.some(j => j.id === targetItem.id);
+        
+        const sourceEndpoint = sourceIsJournal ? "journals" : "books";
+        const targetEndpoint = targetIsJournal ? "journals" : "books";
+        const sourceResource = sourceIsJournal ? "Journals" : "Books";
+        const targetResource = targetIsJournal ? "Journals" : "Books";
+
+        console.log('Swapping items:', {
+          source: { id: sourceItem.id, type: sourceIsJournal ? 'journal' : 'book', shelf: sourceShelfId, pos: sourcePosition },
+          target: { id: targetItem.id, type: targetIsJournal ? 'journal' : 'book', shelf: targetShelfId, pos: targetPosition }
+        });
+
+        toast({
+          title: "Обмен местами",
+          description: "Выполняется обмен элементов местами..."
+        });
+
+        // First, remove the source item from shelf
+        const removeResponse = await fetch(`${baseUrl}/api/${sourceResource}/${sourceItem.id}/shelf/remove`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" }
+        });
+
+        if (!removeResponse.ok) {
+          throw new Error(`Ошибка при удалении элемента с полки: ${removeResponse.status}`);
+        }
+
+        // Then move target item to source position
+        const moveTargetResponse = await fetch(`${baseUrl}/api/${targetEndpoint}/${targetItem.id}/position`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shelfId: sourceShelfId,
+            position: sourcePosition
+          })
+        });
+
+        if (!moveTargetResponse.ok) {
+          throw new Error(`Ошибка при перемещении целевого элемента: ${moveTargetResponse.status}`);
+        }
+
+        // Finally, move source item to target position
+        const moveSourceResponse = await fetch(`${baseUrl}/api/${sourceEndpoint}/${sourceItem.id}/position`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shelfId: targetShelfId,
+            position: targetPosition
+          })
+        });
+
+        if (!moveSourceResponse.ok) {
+          throw new Error(`Ошибка при перемещении исходного элемента: ${moveSourceResponse.status}`);
+        }
+
+        toast({
+          title: "Успех",
+          description: "Элементы успешно поменялись местами"
+        });
+      } else {
+        // Move to empty position
+        const sourceEndpoint = sourceIsJournal ? "journals" : "books";
+        
+        await fetch(`${baseUrl}/api/${sourceEndpoint}/${sourceItem.id}/position`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shelfId: targetShelfId,
+            position: targetPosition
+          })
+        });
+
+        toast({
+          title: "Успех",
+          description: "Элемент успешно перемещен"
+        });
+      }
+
+      // Refresh data
+      await fetchBooks();
+      await fetchJournals();
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка при перемещении элемента");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при перемещении элемента",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+      resetDragState();
+    }
+  };
+
+  const resetDragState = () => {
+    setDraggedItem(null);
+    setDragOverSlot(null);
+    setIsDraggingItem(false);
+  };
+
+  // Add drag end handler
+  const handleItemDragEnd = () => {
+    resetDragState();
+  };
+
   // Функция авто-расстановки полок по сетке
   const autoArrangeShelves = () => {
     const GAP_X = 10;
@@ -736,6 +926,120 @@ export default function ShelfsPage() {
     });
     setShelves(newShelves);
     setOverlappingShelfIds([]);
+  };
+
+  // Functions for AI auto-arrangement
+  const handleAiArrangement = async (arrangements: any[]) => {
+    setLoading(true);
+    setLastArrangements([...arrangements]);
+    const arrangedBookIds: string[] = [];
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+
+      // Apply all arrangements
+      const updatePromises = arrangements.map(async (arrangement) => {
+        const response = await fetch(`${baseUrl}/api/books/${arrangement.bookId}/position`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            shelfId: arrangement.shelfId,
+            position: arrangement.position
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Ошибка при размещении книги ${arrangement.bookId}: ${response.status}`);
+        }
+
+        arrangedBookIds.push(arrangement.bookId);
+        return response.json();
+      });
+
+      await Promise.all(updatePromises);
+      
+      // Update local state
+      setAiArrangedBooks(arrangedBookIds);
+      
+      // Refresh data
+      await fetchBooks();
+      
+      toast({
+        title: "Автоматическая расстановка завершена",
+        description: `${arrangements.length} книг размещены на полках с помощью ИИ`
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка при автоматической расстановке");
+      toast({
+        title: "Ошибка автоматической расстановки",
+        description: err instanceof Error ? err.message : "Ошибка при автоматической расстановке",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const undoAiArrangement = async () => {
+    if (lastArrangements.length === 0 || aiArrangedBooks.length === 0) {
+      toast({
+        title: "Нет расстановки для отмены",
+        description: "Нет недавней автоматической расстановки для отмены",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+
+      // Remove all AI-arranged books from shelves
+      const undoPromises = aiArrangedBooks.map(async (bookId) => {
+        const response = await fetch(`${baseUrl}/api/Books/${bookId}/shelf/remove`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Ошибка при удалении книги ${bookId} с полки: ${response.status}`);
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(undoPromises);
+
+      // Clear AI arrangement state
+      setAiArrangedBooks([]);
+      setLastArrangements([]);
+
+      // Refresh data
+      await fetchBooks();
+
+      toast({
+        title: "Автоматическая расстановка отменена",
+        description: "Все книги, размещенные ИИ, удалены с полок"
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка при отмене автоматической расстановки");
+      toast({
+        title: "Ошибка отмены",
+        description: err instanceof Error ? err.message : "Ошибка при отмене автоматической расстановки",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return <div className="min-h-screen bg-gray-200">
@@ -772,7 +1076,17 @@ export default function ShelfsPage() {
               </motion.h1>
             </div>
             <div className="flex gap-2">
-              <Button onClick={autoArrangeShelves} variant="outline" className="text-black border-gray-300">Авто-расстановка</Button>
+              <Button onClick={() => setShowAutoArrange(true)} variant="outline" className="text-black border-gray-300">
+                <Bot className="h-4 w-4 mr-2" />
+                ИИ Расстановка
+              </Button>
+              {aiArrangedBooks.length > 0 && (
+                <Button onClick={undoAiArrangement} variant="outline" className="text-red-600 border-red-300">
+                  <Undo className="h-4 w-4 mr-2" />
+                  Отменить ИИ
+                </Button>
+              )}
+              <Button onClick={autoArrangeShelves} variant="outline" className="text-black border-gray-300">Авто-расстановка полок</Button>
               <motion.button onClick={toggleEditMode} className={`${isEditMode ? "bg-yellow-400 text-black" : "bg-blue-500 text-black"} border border-gray-200 rounded-lg p-2 flex items-center justify-center`} whileHover={{
                 y: -2,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
@@ -981,7 +1295,34 @@ export default function ShelfsPage() {
                   </h2>
                 </div>
 
-                <ShelfCanvas shelves={shelves} books={books} journals={journals} loading={loading} isEditMode={isEditMode} highlightedBookId={highlightedBookId} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd} onShelfEdit={startEditShelf} onShelfDelete={deleteShelf} onItemClick={handleItemClick} onEmptySlotClick={handleEmptySlotClick} overlappingShelfIds={overlappingShelfIds} getShelfSize={getShelfSize} />
+                <ShelfCanvas 
+                  shelves={shelves} 
+                  books={books} 
+                  journals={journals} 
+                  loading={loading} 
+                  isEditMode={isEditMode} 
+                  highlightedBookId={highlightedBookId} 
+                  onDragStart={handleDragStart} 
+                  onDragMove={handleDragMove} 
+                  onDragEnd={handleDragEnd} 
+                  onShelfEdit={startEditShelf} 
+                  onShelfDelete={deleteShelf} 
+                  onItemClick={handleItemClick} 
+                  onEmptySlotClick={handleEmptySlotClick} 
+                  overlappingShelfIds={overlappingShelfIds} 
+                  getShelfSize={getShelfSize}
+                  // New props for item dragging
+                  draggedItem={draggedItem}
+                  dragOverSlot={dragOverSlot}
+                  isDraggingItem={isDraggingItem}
+                  onItemDragStart={handleItemDragStart}
+                  onSlotDragOver={handleSlotDragOver}
+                  onSlotDragLeave={handleSlotDragLeave}
+                  onItemDrop={handleItemDrop}
+                  onItemDragEnd={handleItemDragEnd}
+                  // AI arrangement props
+                  aiArrangedBooks={aiArrangedBooks}
+                />
               </motion.div>
 
               <motion.div initial={{
@@ -994,7 +1335,7 @@ export default function ShelfsPage() {
               delay: 0.4
             }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
                 <h3 className="font-semibold text-gray-800 mb-4">Обозначения:</h3>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                   <div className="flex items-center">
                     <div className="w-6 h-8 bg-green-500 mr-3 rounded"></div>
                     <span className="text-gray-500">Книга доступна</span>
@@ -1014,6 +1355,10 @@ export default function ShelfsPage() {
                   <div className="flex items-center">
                     <div className="w-6 h-8 bg-yellow-400 mr-3 rounded animate-pulse"></div>
                     <span className="text-gray-500">Найденная книга</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-6 h-8 bg-gradient-to-br from-green-400 to-blue-500 border border-purple-400 mr-3 rounded animate-pulse"></div>
+                    <span className="text-gray-500">Размещено ИИ</span>
                   </div>
                 </div>
               </motion.div>
@@ -1053,5 +1398,15 @@ export default function ShelfsPage() {
     }} />
       {/* Context Menu */}
       {showContextMenu && contextMenuData && <ShelfItemContextMenu item={contextMenuData.item} isJournal={contextMenuData.isJournal} position={contextMenuData.position} onClose={handleCloseMenu} onRemove={handleRemoveItem} />}
+      
+      {/* AI Auto Arrangement Modal */}
+      <AutoArrangeBooks
+        open={showAutoArrange}
+        onOpenChange={setShowAutoArrange}
+        books={books}
+        shelves={shelves}
+        onArrangement={handleAiArrangement}
+        onUndo={undoAiArrangement}
+      />
     </div>;
 }
