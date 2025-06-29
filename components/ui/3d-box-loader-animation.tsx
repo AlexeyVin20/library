@@ -18,23 +18,16 @@ const Loader = () => {
         zoom: 0.44;
       }
     }
-    .loader:before, .loader:after {
-      --r: 20.5deg;
-      content: "";
-      width: 320px;
-      height: 140px;
+    .loader .cover {
       position: absolute;
-      right: 32%;
-      bottom: -11px;
-      /* This background color is crucial for the masking effect and must match the page background */
-      background: #e5e7eb; 
-      transform: translateZ(200px) rotate(var(--r));
-      animation: mask var(--duration) linear forwards infinite;
-    }
-    .loader:after {
-      --r: -20.5deg;
-      right: auto;
-      left: 32%;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 240px;
+      height: 160px;
+      background:rgb(200, 200, 200);
+      z-index: 10;
+      border-radius: 4px 4px 0 0;
     }
     .loader .ground {
       position: absolute;
@@ -147,7 +140,6 @@ const Loader = () => {
     
     @keyframes ground { 0%, 65% { transform: rotateX(90deg) rotateY(0deg) translate(-48px, -120px) translateZ(100px) scale(0); } 75%, 90% { transform: rotateX(90deg) rotateY(0deg) translate(-48px, -120px) translateZ(100px) scale(1); } 100% { transform: rotateX(90deg) rotateY(0deg) translate(-48px, -120px) translateZ(100px) scale(0); } }
     @keyframes ground-shine { 0%, 70% { opacity: 0; } 75%, 87% { opacity: 0.2; } 100% { opacity: 0; } }
-    @keyframes mask { 0%, 65% { opacity: 0; } 66%, 100% { opacity: 1; } }
   `;
 
   // Map over an array to avoid repeating the JSX for each box.
@@ -165,6 +157,7 @@ const Loader = () => {
         <div className="ground">
           <div></div>
         </div>
+        <div className="cover"></div>
       </div>
     </>
   );

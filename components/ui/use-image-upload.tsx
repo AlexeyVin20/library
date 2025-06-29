@@ -9,15 +9,15 @@ export function useImageUpload({ onUpload }: UseImageUploadProps = {}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleThumbnailClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
-  const handleFileChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
+  const processFile = useCallback(
+    (file: File) => {
+      if (file && file.type.startsWith('image/')) {
         setFileName(file.name);
         const url = URL.createObjectURL(file);
         setPreviewUrl(url);
@@ -26,6 +26,48 @@ export function useImageUpload({ onUpload }: UseImageUploadProps = {}) {
       }
     },
     [onUpload],
+  );
+
+  const handleFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        processFile(file);
+      }
+    },
+    [processFile],
+  );
+
+  const handleDragEnter = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragOver(false);
+
+      const files = event.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+        processFile(file);
+      }
+    },
+    [processFile],
   );
 
   const handleRemove = useCallback(() => {
@@ -52,8 +94,13 @@ export function useImageUpload({ onUpload }: UseImageUploadProps = {}) {
     previewUrl,
     fileName,
     fileInputRef,
+    isDragOver,
     handleThumbnailClick,
     handleFileChange,
     handleRemove,
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleDrop,
   };
 }

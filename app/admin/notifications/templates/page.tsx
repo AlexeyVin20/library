@@ -252,25 +252,25 @@ export default function NotificationTemplatesPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 bg-gray-200 min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Шаблоны уведомлений</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-gray-800">Шаблоны уведомлений</h1>
+          <p className="text-gray-500">
             Создание и управление шаблонами для автоматических уведомлений
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => setShowCreateModal(true)} className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg">
           <Plus className="mr-2 h-4 w-4" />
           Создать шаблон
         </Button>
       </div>
 
       {/* Список шаблонов */}
-      <Card>
+      <Card className="bg-white rounded-xl shadow-sm">
         <CardHeader>
-          <CardTitle>Список шаблонов</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-gray-800">Список шаблонов</CardTitle>
+          <CardDescription className="text-gray-500">
             Всего шаблонов: {templates.length}
           </CardDescription>
         </CardHeader>
@@ -292,7 +292,7 @@ export default function NotificationTemplatesPage() {
                   <TableCell>
                     <div>
                       <div className="font-medium">{template.name}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-gray-500">
                         {template.title}
                       </div>
                     </div>
@@ -358,7 +358,7 @@ export default function NotificationTemplatesPage() {
           </Table>
 
           {templates.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-gray-500">
               Нет шаблонов для отображения
             </div>
           )}
@@ -367,10 +367,10 @@ export default function NotificationTemplatesPage() {
 
       {/* Модальное окно создания шаблона */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white rounded-xl">
           <DialogHeader>
-            <DialogTitle>Создать шаблон уведомления</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-800">Создать шаблон уведомления</DialogTitle>
+            <DialogDescription className="text-gray-500">
               Создайте новый шаблон для автоматических уведомлений
             </DialogDescription>
           </DialogHeader>
@@ -447,7 +447,7 @@ export default function NotificationTemplatesPage() {
                 placeholder="Введите текст сообщения. Используйте {{переменная}} для динамических значений"
                 rows={5}
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 Используйте синтаксис {"{{переменная}}"} для вставки динамических значений
               </p>
             </div>
@@ -466,13 +466,14 @@ export default function NotificationTemplatesPage() {
             )}
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+              <Button variant="outline" onClick={() => setShowCreateModal(false)} className="bg-white text-gray-800 border-2 border-gray-300 hover:bg-gray-100">
                 <X className="mr-2 h-4 w-4" />
                 Отменить
               </Button>
               <Button 
                 onClick={saveTemplate}
                 disabled={!templateForm.name || !templateForm.title || !templateForm.message}
+                className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg"
               >
                 <Save className="mr-2 h-4 w-4" />
                 Создать шаблон
@@ -484,10 +485,10 @@ export default function NotificationTemplatesPage() {
 
       {/* Модальное окно редактирования шаблона */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white rounded-xl">
           <DialogHeader>
-            <DialogTitle>Редактировать шаблон</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-800">Редактировать шаблон</DialogTitle>
+            <DialogDescription className="text-gray-500">
               Изменение существующего шаблона уведомления
             </DialogDescription>
           </DialogHeader>
@@ -580,13 +581,14 @@ export default function NotificationTemplatesPage() {
             )}
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowEditModal(false)}>
+              <Button variant="outline" onClick={() => setShowEditModal(false)} className="bg-white text-gray-800 border-2 border-gray-300 hover:bg-gray-100">
                 <X className="mr-2 h-4 w-4" />
                 Отменить
               </Button>
               <Button 
                 onClick={updateTemplate}
                 disabled={!templateForm.name || !templateForm.title || !templateForm.message}
+                className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg"
               >
                 <Save className="mr-2 h-4 w-4" />
                 Сохранить изменения

@@ -183,6 +183,8 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
   const [formSuccess, setFormSuccess] = useState<string | null>(null)
   // Переключатель простого/расширенного режима
   const [isAdvancedMode, setIsAdvancedMode] = useState(true)
+  // Переключатель ИИ модели
+  const [aiModel, setAiModel] = useState<'openrouter' | 'gemini'>('openrouter')
 
   // Хук для загрузки изображений
   const imageUpload = useImageUpload({
@@ -394,10 +396,18 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
   const GeminiFileUpload = () => {
     return (
       <motion.div
-        className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all bg-gray-100 border-gray-300 hover:bg-gray-200"
-        whileHover={{ scale: 1.02 }}
+        className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
+          imageUpload.isDragOver 
+            ? 'bg-blue-100 border-blue-400 scale-105' 
+            : 'bg-gray-100 border-gray-300 hover:bg-gray-200'
+        }`}
+        whileHover={{ scale: imageUpload.isDragOver ? 1.05 : 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={imageUpload.handleThumbnailClick}
+        onDragEnter={imageUpload.handleDragEnter}
+        onDragLeave={imageUpload.handleDragLeave}
+        onDragOver={imageUpload.handleDragOver}
+        onDrop={imageUpload.handleDrop}
       >
         <input 
           type="file" 
@@ -406,11 +416,24 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
           ref={imageUpload.fileInputRef}
           onChange={imageUpload.handleFileChange}
         />
-        <Camera className="w-10 h-10 mb-2 text-gray-800" />
-        <p className="mb-2 text-sm text-center text-gray-800">
-          Перетащите файл сюда или нажмите для загрузки
+        <Camera className={`w-10 h-10 mb-2 transition-colors ${
+          imageUpload.isDragOver ? 'text-blue-600' : 'text-gray-800'
+        }`} />
+        <p className={`mb-2 text-sm text-center transition-colors ${
+          imageUpload.isDragOver ? 'text-blue-600 font-medium' : 'text-gray-800'
+        }`}>
+          {imageUpload.isDragOver 
+            ? 'Отпустите файл для загрузки' 
+            : 'Перетащите файл сюда или нажмите для загрузки'
+          }
         </p>
-        {imageUpload.fileName && <p className="text-xs text-gray-800">{imageUpload.fileName}</p>}
+        {imageUpload.fileName && (
+          <p className={`text-xs transition-colors ${
+            imageUpload.isDragOver ? 'text-blue-600' : 'text-gray-800'
+          }`}>
+            {imageUpload.fileName}
+          </p>
+        )}
       </motion.div>
     )
   }
@@ -422,6 +445,10 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
     setFormError(null)
 
     try {
+      if (aiModel === 'gemini') {
+        return await handleGoogleGeminiUpload()
+      }
+
       const endpoint = "https://openrouter.ai/api/v1/chat/completions"
       const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY
 
@@ -495,7 +522,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       // Заполнение полей формы данными из API
       fillFormWithApiData(parsedData, coverUrl)
 
-      const modelName = useBackupModel ? "резервной модели" : "основной модели"
+      const modelName = useBackupModel ? "резервной модели OpenRouter" : "основной модели OpenRouter"
       setFormSuccess(`Данные книги успешно получены из изображения (${modelName})`)
       toast({
         title: "Данные получены",
@@ -528,6 +555,93 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
     } finally {
       setGeminiLoading(false)
       setGeminiImage(null)
+    }
+  }
+
+  const handleGoogleGeminiUpload = async () => {
+    if (!geminiImage) return
+
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY
+
+      if (!apiKey) {
+        throw new Error("Google API ключ не настроен")
+      }
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+
+      const requestBody = {
+        contents: [
+          {
+            parts: [
+              {
+                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число) - shelfId всегда оставляй null. Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото."
+              },
+              {
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: geminiImage
+                }
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          maxOutputTokens: 4096,
+          temperature: 0.1
+        }
+      }
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Google Gemini API error: ${res.status} - ${errorText}`)
+      }
+
+      const data = await res.json()
+      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text
+
+      if (!responseText) {
+        throw new Error("Пустой ответ от Google Gemini API")
+      }
+
+      let jsonString = responseText.trim()
+      if (jsonString.startsWith("```json")) jsonString = jsonString.slice(7).trim()
+      if (jsonString.endsWith("```")) jsonString = jsonString.slice(0, -3).trim()
+
+      const parsedData = JSON.parse(jsonString)
+
+      // Поиск обложки книги
+      const coverUrl = await findBookCover(parsedData)
+
+      // Заполнение полей формы данными из API
+      fillFormWithApiData(parsedData, coverUrl)
+
+      setFormSuccess("Данные книги успешно получены из изображения (Google Gemini 2.5 Flash)")
+      toast({
+        title: "Данные получены",
+        description: "Информация о книге успешно извлечена из изображения с помощью Google Gemini 2.5 Flash",
+      })
+
+      // Проверяем валидность полей после заполнения
+      await trigger()
+    } catch (error) {
+      console.error("Ошибка при обработке изображения через Google Gemini:", error)
+      const errorMessage = error instanceof Error ? error.message : "Неизвестная ошибка"
+      
+      setFormError(`Ошибка при обработке изображения через Google Gemini: ${errorMessage}`)
+      toast({
+        title: "Ошибка",
+        description: "Ошибка при вызове Google Gemini API.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -934,9 +1048,23 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                 title="Сканирование титульного листа"
                 icon={<Camera className="h-5 w-5 text-gray-800" />}
               >
-                <p className="text-sm text-gray-800 mb-3">
-                  Загрузите изображение титульного листа для автоматического заполнения информации
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-gray-800">
+                    Загрузите изображение титульного листа для автоматического заполнения информации
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-700 select-none">
+                      {aiModel === 'openrouter' ? 'OpenRouter' : 'Google Gemini'}
+                    </span>
+                    <Switch
+                      checked={aiModel === 'gemini'}
+                      onCheckedChange={(checked) => setAiModel(checked ? 'gemini' : 'openrouter')}
+                    />
+                  </div>
+                </div>
+                <div className="text-xs text-gray-600 mb-3 p-2 bg-gray-50 rounded-lg border">
+                  <strong>Выбранная модель:</strong> {aiModel === 'openrouter' ? 'OpenRouter (Gemini 2.0 Flash)' : 'Google Gemini 2.5 Flash'}
+                </div>
                 <GeminiFileUpload />
                 {geminiLoading && (
                   <div className="flex items-center justify-center mt-4">

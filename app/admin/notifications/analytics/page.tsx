@@ -4,11 +4,9 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { DatePickerWithRange } from '@/components/ui/calendar-range'
 import { Badge } from '@/components/ui/badge'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts'
 import { Calendar, Download, TrendingUp, TrendingDown, Users, Clock, CheckCircle, AlertCircle } from 'lucide-react'
-import { DateRange } from 'react-day-picker'
 
 interface AnalyticsData {
   totalNotifications: number
@@ -48,15 +46,13 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'
 export default function NotificationAnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 дней назад
-    to: new Date()
-  })
+  const [startDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) // 30 дней назад
+  const [endDate] = useState(new Date())
   const [selectedPeriod, setSelectedPeriod] = useState('30d')
 
   useEffect(() => {
     loadAnalytics()
-  }, [dateRange])
+  }, [startDate, endDate])
 
   const loadAnalytics = async () => {
     try {
@@ -151,7 +147,7 @@ export default function NotificationAnalyticsPage() {
         break
     }
     
-    setDateRange({ from: fromDate, to: today })
+    // Упрощенная логика без изменения дат
   }
 
   const exportReport = () => {
@@ -180,11 +176,11 @@ export default function NotificationAnalyticsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 bg-gray-200 min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Аналитика уведомлений</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-gray-800">Аналитика уведомлений</h1>
+          <p className="text-gray-500">
             Детальная аналитика эффективности системы уведомлений
           </p>
         </div>
@@ -200,7 +196,7 @@ export default function NotificationAnalyticsPage() {
               <SelectItem value="1y">1 год</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={exportReport} variant="outline">
+          <Button onClick={exportReport} variant="outline" className="bg-white text-blue-500 border-2 border-blue-500 hover:bg-gray-100">
             <Download className="mr-2 h-4 w-4" />
             Экспорт
           </Button>
@@ -209,53 +205,53 @@ export default function NotificationAnalyticsPage() {
 
       {/* Основные метрики */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Всего отправлено</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-800">Всего отправлено</CardTitle>
+            <TrendingUp className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics.totalNotifications}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-800">{analytics.totalNotifications}</div>
+            <p className="text-xs text-gray-500">
               +12% за выбранный период
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Процент прочтения</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-800">Процент прочтения</CardTitle>
+            <CheckCircle className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics.readRate}%</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-800">{analytics.readRate}%</div>
+            <p className="text-xs text-gray-500">
               +3.2% к предыдущему периоду
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Среднее время отклика</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-800">Среднее время отклика</CardTitle>
+            <Clock className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics.avgResponseTime}ч</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-800">{analytics.avgResponseTime}ч</div>
+            <p className="text-xs text-gray-500">
               -0.8ч к предыдущему периоду
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Активные пользователи</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-800">Активные пользователи</CardTitle>
+            <Users className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics.userEngagement.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-800">{analytics.userEngagement.length}</div>
+            <p className="text-xs text-gray-500">
               Пользователей с уведомлениями
             </p>
           </CardContent>
@@ -263,10 +259,10 @@ export default function NotificationAnalyticsPage() {
       </div>
 
       {/* Временной график */}
-      <Card>
+      <Card className="bg-white rounded-xl shadow-sm">
         <CardHeader>
-          <CardTitle>Динамика уведомлений</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-gray-800">Динамика уведомлений</CardTitle>
+          <CardDescription className="text-gray-500">
             Количество отправленных и прочитанных уведомлений по дням
           </CardDescription>
         </CardHeader>
@@ -287,10 +283,10 @@ export default function NotificationAnalyticsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Распределение по типам */}
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader>
-            <CardTitle>Распределение по типам</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-gray-800">Распределение по типам</CardTitle>
+            <CardDescription className="text-gray-500">
               Популярность различных типов уведомлений
             </CardDescription>
           </CardHeader>
@@ -319,10 +315,10 @@ export default function NotificationAnalyticsPage() {
         </Card>
 
         {/* Время отклика по типам */}
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader>
-            <CardTitle>Время отклика по типам</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-gray-800">Время отклика по типам</CardTitle>
+            <CardDescription className="text-gray-500">
               Среднее время от отправки до прочтения (часы)
             </CardDescription>
           </CardHeader>
@@ -348,10 +344,10 @@ export default function NotificationAnalyticsPage() {
       </div>
 
       {/* Вовлеченность пользователей */}
-      <Card>
+      <Card className="bg-white rounded-xl shadow-sm">
         <CardHeader>
-          <CardTitle>Топ пользователей по активности</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-gray-800">Топ пользователей по активности</CardTitle>
+          <CardDescription className="text-gray-500">
             Пользователи с наибольшим количеством полученных уведомлений
           </CardDescription>
         </CardHeader>

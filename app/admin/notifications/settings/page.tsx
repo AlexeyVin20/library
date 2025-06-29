@@ -190,35 +190,40 @@ export default function NotificationSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Настройки уведомлений</h1>
-          <p className="text-muted-foreground">
-            Управление системой уведомлений и параметрами доставки
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={testConnection} variant="outline">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Тест подключения
-          </Button>
-          <Button onClick={saveSettings} disabled={saving}>
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? 'Сохранение...' : 'Сохранить'}
-          </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Хедер */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Настройки уведомлений</h1>
+              <p className="text-gray-500">
+                Управление системой уведомлений и параметрами доставки
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={testConnection} variant="outline" className="bg-white text-blue-500 border-2 border-blue-500 hover:bg-gray-100">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Тест подключения
+              </Button>
+              <Button onClick={saveSettings} disabled={saving} className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg">
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? 'Сохранение...' : 'Сохранить'}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Общие настройки */}
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <Bell className="h-5 w-5 text-blue-500" />
               Общие настройки
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-500">
               Основные параметры системы уведомлений
             </CardDescription>
           </CardHeader>
@@ -270,13 +275,13 @@ export default function NotificationSettingsPage() {
         </Card>
 
         {/* Настройки времени */}
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <Clock className="h-5 w-5 text-blue-500" />
               Настройки времени
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-500">
               Управление временем отправки уведомлений
             </CardDescription>
           </CardHeader>
@@ -321,13 +326,13 @@ export default function NotificationSettingsPage() {
         </Card>
 
         {/* Настройки повторов */}
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <RefreshCw className="h-5 w-5 text-blue-500" />
               Настройки повторов
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-500">
               Параметры повторной отправки уведомлений
             </CardDescription>
           </CardHeader>
@@ -363,13 +368,13 @@ export default function NotificationSettingsPage() {
         </Card>
 
         {/* Настройки доставки */}
-        <Card>
+        <Card className="bg-white rounded-xl shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <Mail className="h-5 w-5 text-blue-500" />
               Настройки доставки
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-500">
               Параметры пакетной обработки и доставки
             </CardDescription>
           </CardHeader>
@@ -386,7 +391,7 @@ export default function NotificationSettingsPage() {
                   setSettings({...settings, batchSize: parseInt(e.target.value)})
                 }
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 Количество уведомлений в одном пакете
               </p>
             </div>

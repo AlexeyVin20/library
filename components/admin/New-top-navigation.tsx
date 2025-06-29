@@ -901,9 +901,9 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     whileHover="hover"
                     whileTap="tap"
                   >
-                    <NavigationMenuTrigger className="navigation-menu-trigger text-white/90 hover:text-white hover:bg-white/20 hover:shadow-lg hover:shadow-white/5 rounded-lg transition-all duration-300 bg-transparent">
-                      <LayoutGrid className="mr-2 h-4 w-4" />
-                      Управление
+                    <NavigationMenuTrigger className="navigation-menu-trigger text-white hover:text-white hover:bg-white/20 hover:shadow-lg hover:shadow-white/5 rounded-lg transition-all duration-300 bg-transparent">
+                      <LayoutGrid className="mr-2 h-4 w-4 text-white" />
+                      <span className="text-white">Управление</span>
                     </NavigationMenuTrigger>
                   </motion.div>
                   <NavigationMenuContent>
@@ -1481,7 +1481,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     className="w-full text-sm font-semibold text-blue-600 hover:bg-blue-50 border-blue-200 rounded-lg transition-all duration-200"
                     onClick={() => router.push('/admin/notifications')}
                   >
-                    Просмотреть все уведомления
+                    Управление уведомлениями
                   </Button>
                 </div>
               </DropdownMenuContent>
