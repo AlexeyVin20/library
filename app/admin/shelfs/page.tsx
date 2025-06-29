@@ -1,16 +1,88 @@
 "use client";
 
-import { useState, useEffect, MouseEvent, useRef } from 'react';
-import { Plus, Lock, Unlock, X, Search } from 'lucide-react';
-import { Book, Shelf, Journal } from '@/lib/types';
-import Link from 'next/link';
-import Modal from '@/components/Modal';
-import ShelfItemContextMenu from '@/components/admin/ShelfItemContextMenu';
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
-
+import type React from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Lock, Unlock, X, Search, Upload, Library, ChevronLeft, AlertCircle, Bot, Undo } from "lucide-react";
+import type { Book, Shelf, Journal } from "@/lib/types";
+import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import ShelfItemContextMenu from "@/components/admin/ShelfItemContextMenu";
+// Update the imports to include the new components
+import ShelfCanvas from "@/components/admin/ShelfCanvas";
+import BookSelectorModal from "@/components/admin/BookSelectorModal";
+import BookInfoModal from "@/components/admin/BookInfoModal";
+import AutoArrangeBooks from "@/components/admin/AutoArrangeBooks";
 interface Position {
   x: number;
   y: number;
+}
+
+// Компонент для анимированного появления
+const FadeInView = ({
+  children,
+  delay = 0,
+  duration = 0.5
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  duration?: number;
+}) => {
+  return <motion.div initial={{
+    opacity: 0,
+    y: 20
+  }} animate={{
+    opacity: 1,
+    y: 0
+  }} transition={{
+    duration,
+    delay,
+    ease: [0.22, 1, 0.36, 1]
+  }}>
+      {children}
+    </motion.div>;
+};
+
+// Функция для проверки пересечения двух прямоугольников
+function isRectOverlap(a: {x: number, y: number, width: number, height: number}, b: {x: number, y: number, width: number, height: number}) {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+// Функция для вычисления ширины и высоты полки
+function getShelfSize(capacity: number) {
+  const width = Math.max(100, Math.min(40 * capacity + 30, 500));
+  const height = 150; // Можно сделать чуть больше для capacity > 10, если нужно
+  return { width, height };
+}
+
+// Функция для проверки всех полок на пересечение, возвращает массив id пересекающихся полок
+function getOverlappingShelfIds(shelves: Shelf[]): number[] {
+  const overlappingIds = new Set<number>();
+  for (let i = 0; i < shelves.length; i++) {
+    const a = shelves[i];
+    const sizeA = getShelfSize(a.capacity);
+    const rectA = { x: a.posX, y: a.posY, width: sizeA.width, height: sizeA.height };
+    for (let j = i + 1; j < shelves.length; j++) {
+      const b = shelves[j];
+      const sizeB = getShelfSize(b.capacity);
+      const rectB = { x: b.posX, y: b.posY, width: sizeB.width, height: sizeB.height };
+      if (isRectOverlap(rectA, rectB)) {
+        overlappingIds.add(a.id);
+        overlappingIds.add(b.id);
+      }
+    }
+  }
+  return Array.from(overlappingIds);
 }
 
 export default function ShelfsPage() {
@@ -21,7 +93,10 @@ export default function ShelfsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingShelf, setEditingShelf] = useState<Shelf | null>(null);
   const [draggedShelf, setDraggedShelf] = useState<Shelf | null>(null);
-  const [mousePosition, setMousePosition] = useState<Position>({ x: 0, y: 0 });
+  const [mousePosition, setMousePosition] = useState<Position>({
+    x: 0,
+    y: 0
+  });
   const [hoveredBook, setHoveredBook] = useState<Book | null>(null);
   const [highlightedBookId, setHighlightedBookId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -29,200 +104,246 @@ export default function ShelfsPage() {
   const [loading, setLoading] = useState(false);
   const [hoveredShelf, setHoveredShelf] = useState<Shelf | null>(null);
   const editorRef = useRef(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showBookSelector, setShowBookSelector] = useState(false);
-  const [selectedEmptySlot, setSelectedEmptySlot] = useState<{ shelfId: number, position: number } | null>(null);
+  const [selectedEmptySlot, setSelectedEmptySlot] = useState<{
+    shelfId: number;
+    position: number;
+  } | null>(null);
   const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
   const [filteredJournals, setFilteredJournals] = useState<Journal[]>([]);
   const [isJournalTab, setIsJournalTab] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenuData, setContextMenuData] = useState<{ item: Book | Journal | null; isJournal: boolean; position: { x: number; y: number }; shelfId: number; itemPosition: number } | null>(null);
-
-  const [newShelf, setNewShelf] = useState({
-    category: '',
-    capacity: '',
-    shelfNumber: '',
-  });
-
-  const [editShelfData, setEditShelfData] = useState({
-    category: '',
-    capacity: '',
-    shelfNumber: '',
-    posX: '',
-    posY: '',
-  });
-
-  const getThemeClasses = () => {
-    return {
-      card: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col",
-      shelfCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300",
-      statsCard: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between",
-      mainContainer: "bg-gray-100/70 dark:bg-neutral-900/70 backdrop-blur-xl min-h-screen p-6",
-      button: "bg-gradient-to-r from-primary-admin/90 to-primary-admin/70 dark:from-primary-admin/80 dark:to-primary-admin/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-5 py-3 flex items-center justify-center gap-2",
-      iconButton: "flex items-center justify-center p-2 rounded-lg bg-gradient-to-r from-gray-200/90 to-gray-300/70 dark:from-gray-700/80 dark:to-gray-800/60 backdrop-blur-xl text-gray-700 dark:text-gray-200 shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300",
-      input: "max-w-xs bg-white/40 dark:bg-neutral-700/40 backdrop-blur-sm border border-white/30 dark:border-neutral-700/30 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 rounded-lg px-4 py-2",
-      menu: "backdrop-blur-xl bg-white/80 dark:bg-neutral-800/80 p-3 rounded-lg border border-white/20 dark:border-neutral-700/20 shadow-lg",
-      menuItem: "block p-2 rounded-md hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors",
-      editorArea: "bg-gradient-to-br from-white/30 to-white/20 dark:from-neutral-800/30 dark:to-neutral-900/20 backdrop-blur-xl border border-white/30 dark:border-neutral-700/30 rounded-2xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden min-h-[500px] relative",
-      bookOnShelf: "w-6 h-8 rounded transition-all cursor-pointer",
-      searchDropdown: "absolute z-50 mt-1 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-md shadow-lg max-h-60 overflow-auto",
-      searchItem: "px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 cursor-pointer",
-      highlightedBook: "animate-pulse border-2 border-yellow-400 shadow-lg shadow-yellow-300/50",
-      sectionTitle: "text-2xl font-bold mb-4 text-neutral-500 dark:text-white border-b pb-2 border-white/30 dark:border-neutral-700/30",
+  const [contextMenuData, setContextMenuData] = useState<{
+    item: Book | Journal | null;
+    isJournal: boolean;
+    position: {
+      x: number;
+      y: number;
     };
-  };
+    shelfId: number;
+    itemPosition: number;
+  } | null>(null);
+  const [showJsonImport, setShowJsonImport] = useState(false);
+  const [jsonData, setJsonData] = useState("");
+  const [activeTab, setActiveTab] = useState("shelves");
+  // Add these state variables to the main component function, after the existing state declarations
+  const [showBookInfoModal, setShowBookInfoModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Book | Journal | null>(null);
+  const [selectedItemIsJournal, setSelectedItemIsJournal] = useState(false);
+  const [selectedItemShelfId, setSelectedItemShelfId] = useState<number>(0);
+  const [selectedItemPosition, setSelectedItemPosition] = useState<number>(0);
+  // Add these new state variables for book/journal dragging
+  const [draggedItem, setDraggedItem] = useState<{
+    item: Book | Journal;
+    isJournal: boolean;
+    sourceShelfId: number;
+    sourcePosition: number;
+  } | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<{
+    shelfId: number;
+    position: number;
+  } | null>(null);
+  const [isDraggingItem, setIsDraggingItem] = useState(false);
+  const [newShelf, setNewShelf] = useState({
+    category: "",
+    capacity: "",
+    shelfNumber: ""
+  });
+  const [editShelfData, setEditShelfData] = useState({
+    category: "",
+    capacity: "",
+    shelfNumber: "",
+    posX: "",
+    posY: ""
+  });
+  const [overlappingShelfIds, setOverlappingShelfIds] = useState<number[]>([]);
+  // States for AI auto-arrangement
+  const [showAutoArrange, setShowAutoArrange] = useState(false);
+  const [aiArrangedBooks, setAiArrangedBooks] = useState<string[]>([]);
+  const [lastArrangements, setLastArrangements] = useState<any[]>([]);
   
   useEffect(() => {
     fetchShelves();
     fetchBooks();
     fetchJournals();
   }, []);
-
   const fetchShelves = async () => {
     try {
       setLoading(true);
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-
-      const response = await fetch(`${baseUrl}/api/shelf`);
+      const response = await fetch(`${baseUrl}/api/Shelf`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
       setShelves(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка при загрузке полок');
+      setError(err instanceof Error ? err.message : "Ошибка при загрузке полок");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при загрузке полок",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
-
   const fetchBooks = async () => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-
-      const response = await fetch(`${baseUrl}/api/books`);
+      const response = await fetch(`${baseUrl}/api/Books`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
       setBooks(data);
       setFilteredBooks(data);
     } catch (err) {
-      console.error('Ошибка при загрузке книг:', err);
+      console.error("Ошибка при загрузке книг:", err);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить книги",
+        variant: "destructive"
+      });
     }
   };
-
   const fetchJournals = async () => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-
-      const response = await fetch(`${baseUrl}/api/journals`);
+      const response = await fetch(`${baseUrl}/api/Journals`);
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
       const data = await response.json();
       setJournals(data);
       setFilteredJournals(data);
     } catch (err) {
-      console.error('Ошибка при загрузке журналов:', err);
+      console.error("Ошибка при загрузке журналов:", err);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить журналы",
+        variant: "destructive"
+      });
     }
   };
-
   const handleNewShelfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewShelf(prev => ({ ...prev, [name]: value }));
+    const {
+      name,
+      value
+    } = e.target;
+    setNewShelf(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
-
   const handleEditShelfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditShelfData(prev => ({ ...prev, [name]: value }));
+    const {
+      name,
+      value
+    } = e.target;
+    setEditShelfData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
-
   const addShelf = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       setLoading(true);
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-
       const response = await fetch(`${baseUrl}/api/shelf/auto-position`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           category: newShelf.category,
-          capacity: parseInt(newShelf.capacity),
-          shelfNumber: parseInt(newShelf.shelfNumber)
-        }),
+          capacity: Number.parseInt(newShelf.capacity),
+          shelfNumber: Number.parseInt(newShelf.shelfNumber)
+        })
       });
-
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
-      
       await fetchShelves();
       setShowAddForm(false);
-      setNewShelf({ category: '', capacity: '', shelfNumber: '' });
+      setNewShelf({
+        category: "",
+        capacity: "",
+        shelfNumber: ""
+      });
+      toast({
+        title: "Успех",
+        description: "Полка успешно добавлена"
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка при добавлении полки');
+      setError(err instanceof Error ? err.message : "Ошибка при добавлении полки");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при добавлении полки",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
-
   const handleBookHover = (book: Book | null) => {
     setHoveredBook(book);
   };
-
   const handleBookFound = (bookId: string) => {
     setHighlightedBookId(bookId);
-    
     setTimeout(() => {
       setHighlightedBookId(null);
     }, 5000);
-    
     const bookWithShelf = books.find(b => b.id === bookId);
     if (bookWithShelf?.shelfId) {
       const shelf = shelves.find(s => s.id === bookWithShelf.shelfId);
       if (shelf) {
         const shelfElement = document.getElementById(`shelf-${shelf.id}`);
-        shelfElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        shelfElement?.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
       }
     }
   };
-
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    
     if (term.length > 1) {
       setShowSearchDropdown(true);
-      
-      const filteredResults = books.filter(b => 
-        b.title.toLowerCase().includes(term.toLowerCase()) || 
-        (b.authors && b.authors.toLowerCase().includes(term.toLowerCase()))
-      );
-      
+      const filteredResults = books.filter(b => b.title.toLowerCase().includes(term.toLowerCase()) || b.authors && b.authors.toLowerCase().includes(term.toLowerCase()));
       setFilteredBooks(filteredResults.slice(0, 5)); // Ограничиваем список до 5 элементов
     } else {
       setShowSearchDropdown(false);
     }
   };
-
   const animateHighlightedBook = (bookId: string) => {
     handleBookFound(bookId);
     setShowSearchDropdown(false);
-    
-    // Добавляем пульсирующую анимацию вокруг найденной книги
+
+    // Скроллим к книге
     const bookElement = document.querySelector(`[data-book-id="${bookId}"]`);
     if (bookElement) {
-      // Исправление: разбиваем строку классов и добавляем их с помощью spread-оператора
-      bookElement.classList.add(...themeClasses.highlightedBook.split(' '));
-      
-      // Также исправляем удаление классов
-      setTimeout(() => {
-        bookElement.classList.remove(...themeClasses.highlightedBook.split(' '));
-      }, 5000);
+      // Найдем родительскую полку
+      const book = books.find(b => b.id === bookId);
+      if (book?.shelfId) {
+        const shelfElement = document.getElementById(`shelf-${book.shelfId}`);
+        if (shelfElement) {
+          shelfElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+
+          // Подсвечиваем книгу
+          setHighlightedBookId(bookId);
+
+          // Убираем подсветку через 5 секунд
+          setTimeout(() => {
+            setHighlightedBookId(null);
+          }, 5000);
+        }
+      }
     }
   };
-  
-
   const startEditShelf = (shelf: Shelf) => {
     setEditingShelf(shelf);
     setEditShelfData({
@@ -233,350 +354,263 @@ export default function ShelfsPage() {
       posY: String(shelf.posY)
     });
   };
-
   const deleteShelf = async (id: number) => {
     try {
       setLoading(true);
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-      
       const response = await fetch(`${baseUrl}/api/shelf/${id}`, {
-        method: 'DELETE'
+        method: "DELETE"
       });
-      
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
-      
       setShelves(shelves.filter(shelf => shelf.id !== id));
+      toast({
+        title: "Успех",
+        description: "Полка успешно удалена"
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка при удалении полки');
+      setError(err instanceof Error ? err.message : "Ошибка при удалении полки");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при удалении полки",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
-
   const updateShelf = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingShelf) return;
-    
     try {
       setLoading(true);
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-      
       const response = await fetch(`${baseUrl}/api/shelf/${editingShelf.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           id: editingShelf.id,
           category: editShelfData.category,
-          capacity: parseInt(editShelfData.capacity),
-          shelfNumber: parseInt(editShelfData.shelfNumber),
-          posX: parseFloat(editShelfData.posX),
-          posY: parseFloat(editShelfData.posY),
-        }),
+          capacity: Number.parseInt(editShelfData.capacity),
+          shelfNumber: Number.parseInt(editShelfData.shelfNumber),
+          posX: Number.parseFloat(editShelfData.posX),
+          posY: Number.parseFloat(editShelfData.posY)
+        })
       });
-      
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
-      
       await fetchShelves();
       setEditingShelf(null);
+      toast({
+        title: "Успех",
+        description: "Полка успешно обновлена"
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка при обновлении полки');
+      setError(err instanceof Error ? err.message : "Ошибка при обновлении полки");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при обновлении полки",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
-
   const handleDragStart = (e: React.MouseEvent, shelf: Shelf) => {
     if (!isEditMode) return;
-    
-    const container = document.getElementById('shelf-editor');
+    const container = document.getElementById("shelf-editor");
     if (!container) return;
-    
     const rect = container.getBoundingClientRect();
-    
     setMousePosition({
       x: e.clientX - rect.left - shelf.posX,
-      y: e.clientY - rect.top - shelf.posY,
+      y: e.clientY - rect.top - shelf.posY
     });
-    
     setDraggedShelf(shelf);
     e.preventDefault();
   };
-
   const handleDragMove = (e: React.MouseEvent) => {
     if (!draggedShelf) return;
-    
-    const container = document.getElementById('shelf-editor');
+    const container = document.getElementById("shelf-editor");
     if (!container) return;
-    
     const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left - mousePosition.x;
     const y = e.clientY - rect.top - mousePosition.y;
-    
+
     // Ограничиваем перемещение в пределах контейнера
     const newX = Math.max(0, Math.min(rect.width - 250, x));
     const newY = Math.max(0, Math.min(rect.height - 150, y));
-    
-    setShelves(shelves.map(shelf => 
-      shelf.id === draggedShelf.id
-        ? { ...shelf, posX: newX, posY: newY }
-        : shelf
-    ));
+    setShelves(shelves.map(shelf => shelf.id === draggedShelf.id ? {
+      ...shelf,
+      posX: newX,
+      posY: newY
+    } : shelf));
   };
-
   const handleDragEnd = async () => {
-    if (!draggedShelf) return;
-    
-    const draggedShelfNew = shelves.find(s => s.id === draggedShelf.id);
-    if (draggedShelfNew) {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-        if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-        
-        await fetch(`${baseUrl}/api/shelf/${draggedShelfNew.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(draggedShelfNew)
-        });
-      } catch (error) {
-        console.error('Ошибка при обновлении позиции полки:', error);
-      }
-    }
-    
+    // The API call to update the shelf position is moved to toggleEditMode
+    // when the edit mode is turned off.
     setDraggedShelf(null);
   };
-
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode);
+  const toggleEditMode = async () => {
+    const newIsEditMode = !isEditMode;
+    if (isEditMode) {
+      // Проверка на наложение полок
+      const overlapIds = getOverlappingShelfIds(shelves);
+      if (overlapIds.length > 0) {
+        setOverlappingShelfIds(overlapIds);
+        toast({
+          title: "Ошибка расположения полок",
+          description: "Обнаружено наложение полок друг на друга. Пожалуйста, раздвиньте полки так, чтобы они не пересекались.",
+          variant: "destructive",
+          duration: 7000
+        });
+        setError("Обнаружено наложение полок. Исправьте расположение.");
+        return;
+      } else {
+        setOverlappingShelfIds([]);
+      }
+      // Turning OFF edit mode (current isEditMode is true)
+      setIsEditMode(false); // Visually lock shelves immediately
+      setLoading(true);
+      toast({
+        title: "Режим редактирования выключен",
+        description: "Сохранение измененных позиций полок..."
+      });
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) {
+        toast({
+          title: "Ошибка конфигурации",
+          description: "NEXT_PUBLIC_BASE_URL не определен. Сохранение невозможно.",
+          variant: "destructive"
+        });
+        setError("NEXT_PUBLIC_BASE_URL is not defined");
+        setLoading(false);
+        return;
+      }
+      if (shelves.length > 0) {
+        const updatePromises = shelves.map(shelf => fetch(`${baseUrl}/api/shelf/${shelf.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            id: shelf.id,
+            category: shelf.category,
+            capacity: shelf.capacity,
+            shelfNumber: shelf.shelfNumber,
+            posX: shelf.posX,
+            posY: shelf.posY
+          })
+        }).then(async response => {
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            return Promise.reject({
+              shelfId: shelf.id,
+              status: response.status,
+              message: errorData.message || `Ошибка API: ${response.status}`
+            });
+          }
+          return response.json();
+        }));
+        const results = await Promise.allSettled(updatePromises);
+        const failedUpdates = results.filter(result => result.status === "rejected");
+        if (failedUpdates.length > 0) {
+          const errorMessages = (failedUpdates as PromiseRejectedResult[]).map(f => `Полка #${f.reason.shelfId}: ${f.reason.message}`).join("; ");
+          toast({
+            title: "Ошибка сохранения позиций",
+            description: `Не удалось обновить ${failedUpdates.length} из ${shelves.length} полок. ${errorMessages}`,
+            variant: "destructive",
+            duration: 7000
+          });
+          setError(`Не удалось сохранить позиции для ${failedUpdates.length} полок.`);
+        } else {
+          toast({
+            title: "Позиции сохранены",
+            description: "Все изменения позиций полок успешно сохранены на сервере."
+          });
+          setError(null); // Clear error on successful save
+        }
+      } else {
+        // No shelves to save, consider it a success in terms of saving operation
+        toast({
+          title: "Позиции сохранены",
+          description: "Нет полок для сохранения позиций."
+        });
+        setError(null);
+      }
+      setLoading(false);
+    } else {
+      // Turning ON edit mode
+      setIsEditMode(true);
+      toast({
+        title: "Режим редактирования включен",
+        description: "Теперь вы можете перемещать полки."
+      });
+    }
   };
-
   const handleEmptySlotClick = (shelfId: number, position: number) => {
-    setSelectedEmptySlot({ shelfId, position });
+    setSelectedEmptySlot({
+      shelfId,
+      position
+    });
     setShowBookSelector(true);
   };
-
   const handleBookSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
-    
     if (isJournalTab) {
-      const filtered = journals.filter(journal => 
-        journal.title.toLowerCase().includes(term) || 
-        (journal.publisher && journal.publisher.toLowerCase().includes(term))
-      );
+      const filtered = journals.filter(journal => journal.title.toLowerCase().includes(term) || journal.publisher && journal.publisher.toLowerCase().includes(term));
       setFilteredJournals(filtered);
     } else {
-      const filtered = books.filter(book => 
-        book.title.toLowerCase().includes(term) || 
-        (book.authors && book.authors.toLowerCase().includes(term))
-      );
+      const filtered = books.filter(book => book.title.toLowerCase().includes(term) || book.authors && book.authors.toLowerCase().includes(term));
       setFilteredBooks(filtered);
     }
   };
-
   const addItemToShelf = async (itemId: string, isJournal: boolean) => {
     if (!selectedEmptySlot) return;
-    
     try {
       setLoading(true);
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-      
-      const endpoint = isJournal ? 'journals' : 'books';
-      
+      const endpoint = isJournal ? "journals" : "books";
+
       // Исправление: используем правильный эндпоинт для позиционирования
       const response = await fetch(`${baseUrl}/api/${endpoint}/${itemId}/position`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           shelfId: selectedEmptySlot.shelfId,
           position: selectedEmptySlot.position
-        }),
+        })
       });
-      
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
-      
+
       // Обновляем данные
       if (isJournal) {
         await fetchJournals();
       } else {
         await fetchBooks();
       }
-      
       setShowBookSelector(false);
       setSelectedEmptySlot(null);
-      setSearchTerm('');
-      
+      setSearchTerm("");
+      toast({
+        title: "Успех",
+        description: isJournal ? "Журнал успешно добавлен на полку" : "Книга успешно добавлена на полку"
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка при добавлении на полку');
+      setError(err instanceof Error ? err.message : "Ошибка при добавлении на полку");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при добавлении на полку",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
-  };
-  
-
-  const BookSelector = () => {
-    return (
-      <Modal
-        isOpen={showBookSelector}
-        onClose={() => {
-          setShowBookSelector(false);
-          setSelectedEmptySlot(null);
-          setSearchTerm('');
-          setIsJournalTab(false);
-        }}
-        title="Выберите элемент для добавления на полку"
-      >
-        <div className="p-4">
-  <div className="flex mb-4">
-    <button
-      className={`px-4 py-2 rounded-l-lg ${!isJournalTab ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-900'}`}
-      onClick={() => setIsJournalTab(false)}
-    >
-      Книги
-    </button>
-    <button
-      className={`px-4 py-2 rounded-r-lg ${isJournalTab ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-900'}`}
-      onClick={() => setIsJournalTab(true)}
-    >
-      Журналы
-    </button>
-  </div>
-  
-  <div className="mb-4">
-    <div className="relative">
-      <input
-        type="text"
-        value={searchTerm}
-        onChange={handleBookSearch}
-        placeholder={isJournalTab ? "Поиск журналов..." : "Поиск книг..."}
-        className="w-full px-4 py-2 border rounded-lg pr-10 text-gray-900"
-      />
-      <Search className="absolute right-3 top-2.5 text-gray-500" size={18} />
-    </div>
-  </div>
-          
-          <div className="max-h-[400px] overflow-y-auto">
-            {isJournalTab ? (
-              filteredJournals.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">Журналы не найдены</div>
-              ) : (
-                filteredJournals.map(journal => (
-                  <div
-                    key={journal.id}
-                    className="p-3 border-b hover:bg-gray-100 cursor-pointer flex items-start"
-                    onClick={() => addItemToShelf(journal.id.toString(), true)}
-                  >
-                    <div className="w-10 h-14 bg-blue-200 rounded mr-3 flex-shrink-0">
-                      {journal.coverImageUrl ? (
-                        <img src={journal.coverImageUrl} alt={journal.title} className="w-full h-full object-cover rounded" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-blue-700 text-sm">
-                          Журнал
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{journal.title}</h3>
-                      <p className="text-sm text-gray-600">{journal.publisher || 'Издатель не указан'}</p>
-                      <p className="text-xs text-gray-500">ISSN: {journal.issn || 'Нет'}</p>
-                    </div>
-                  </div>
-                ))
-              )
-            ) : (
-              filteredBooks.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">Книги не найдены</div>
-              ) : (
-                filteredBooks.map(book => (
-                  <div
-                    key={book.id}
-                    className="p-3 border-b hover:bg-gray-100 cursor-pointer flex items-start"
-                    onClick={() => addItemToShelf(book.id, false)}
-                  >
-                    <div className="w-10 h-14 bg-green-200 rounded mr-3 flex-shrink-0">
-                      {book.cover ? (
-                        <img src={book.cover} alt={book.title} className="w-full h-full object-cover rounded" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-green-700 text-sm">
-                          Книга
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{book.title}</h3>
-                      <p className="text-sm text-gray-600">{book.authors || 'Автор не указан'}</p>
-                      <p className="text-xs text-gray-500">ISBN: {book.isbn || 'Нет'}</p>
-                    </div>
-                  </div>
-                ))
-              )
-            )}
-          </div>
-        </div>
-      </Modal>
-    );
-  };
-
-  const themeClasses = getThemeClasses();
-
-  const ShelfContent = ({ shelf }: { shelf: Shelf }) => {
-    return (
-        <div className="flex flex-wrap gap-1">
-            {Array.from({ length: shelf.capacity }).map((_, i) => {
-                const book = books.find(b => b.shelfId === shelf.id && b.position === i);
-                const journal = journals.find(j => j.shelfId === shelf.id && j.position === i);
-                const item = book || journal;
-
-                const getBackground = () => {
-                    if (item) {
-                        if (book) {
-                            return book.availableCopies && book.availableCopies > 0 
-                                ? 'bg-green-500 hover:scale-105' 
-                                : 'bg-red-500 hover:scale-105';
-                        } else {
-                            return 'bg-blue-500 hover:scale-105'; // Журналы
-                        }
-                    } 
-                    return 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600';
-                };
-
-                const handleContextMenu = (e: React.MouseEvent) => {
-                    e.preventDefault();
-                    if (item) {
-                        // Открываем контекстное меню с передачей данных
-                        setContextMenuData({ 
-                            item, 
-                            isJournal: !!journal, 
-                            position: { x: e.pageX, y: e.pageY },
-                            shelfId: shelf.id,
-                            itemPosition: i
-                        });
-                        setShowContextMenu(true);
-                    }
-                };
-
-                return (
-                    <div
-                        key={i}
-                        data-book-id={book?.id || ''}
-                        className={`${themeClasses.bookOnShelf} ${getBackground()}`}
-                        onClick={() => {
-                            if (item) {
-                                // Если место занято, открываем контекстное меню
-                                handleContextMenu({ preventDefault: () => {}, pageX: window.innerWidth / 2, pageY: window.innerHeight / 2 } as React.MouseEvent);
-                            } else {
-                                // Если место пустое, открываем селектор для добавления
-                                handleEmptySlotClick(shelf.id, i);
-                            }
-                        }}
-                        onContextMenu={handleContextMenu}
-                    ></div>
-                );
-            })}
-        </div>
-    );
   };
 
   // Обработчик для закрытия меню
@@ -588,45 +622,71 @@ export default function ShelfsPage() {
   // Обработчик для удаления элемента
   const handleRemoveItem = () => {
     if (contextMenuData) {
-      const { shelfId, itemPosition, isJournal } = contextMenuData;
+      const {
+        shelfId,
+        itemPosition,
+        isJournal
+      } = contextMenuData;
       removeItemFromShelf(shelfId, itemPosition, isJournal);
     }
   };
-
   const removeItemFromShelf = async (shelfId: number, position: number, isJournal: boolean) => {
-    if (!contextMenuData) return;
-    
+    if (!contextMenuData && !selectedItem) {
+      // Если нет данных ни из контекстного меню, ни из выбранного элемента, выходим.
+      // Это важно, так как selectedItem используется, если contextMenuData отсутствует (например, при удалении из BookInfoModal)
+      console.error("removeItemFromShelf: Нет данных для удаления элемента.");
+      return;
+    }
+
+    // Определяем itemId и isJournal приоритетно из contextMenuData, если оно есть,
+    // иначе используем selectedItem (для удаления из BookInfoModal).
+    const currentItem = contextMenuData?.item || selectedItem;
+    const currentIsJournal = contextMenuData ? contextMenuData.isJournal : selectedItemIsJournal;
+    if (!currentItem) {
+      console.error("removeItemFromShelf: Не удалось определить элемент для удаления.");
+      return;
+    }
+    const itemId = currentItem.id;
     try {
       setLoading(true);
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-      
-      const itemId = contextMenuData.item?.id;
-      const endpoint = isJournal ? 'journals' : 'books';
-      
-      const response = await fetch(`${baseUrl}/api/${endpoint}/${itemId}/position`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shelfId,
-          position
-        }),
+      const apiResource = currentIsJournal ? "Journals" : "Books"; // Используем заглавные буквы для ресурса
+
+      // Используем новый эндпоинт и метод PUT
+      const response = await fetch(`${baseUrl}/api/${apiResource}/${itemId}/shelf/remove`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        }
+        // Тело запроса больше не нужно
       });
-      
       if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
-      
+
       // Обновляем данные
-      if (isJournal) {
+      if (currentIsJournal) {
         await fetchJournals();
       } else {
         await fetchBooks();
       }
-      
       setShowContextMenu(false);
       setContextMenuData(null);
-      
+      // Также закрываем BookInfoModal, если удаление было инициировано оттуда
+      if (selectedItem && selectedItem.id === itemId) {
+        setShowBookInfoModal(false);
+        setSelectedItem(null);
+      }
+      toast({
+        title: "Успех",
+        description: currentIsJournal ? "Журнал успешно удален с полки" : "Книга успешно удалена с полки"
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка при удалении с полки');
+      setError(err instanceof Error ? err.message : "Ошибка при удалении с полки");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при удалении с полки",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -639,306 +699,714 @@ export default function ShelfsPage() {
         handleCloseMenu();
       }
     };
-
-    document.addEventListener('click', handleClick);
-
+    document.addEventListener("click", handleClick);
     return () => {
-      document.removeEventListener('click', handleClick);
+      document.removeEventListener("click", handleClick);
     };
   }, [showContextMenu]);
 
-  return (
-    <GlassMorphismContainer
-      backgroundPattern={true}
-      isDarkMode={false}
-    >
-      <div className="flex flex-col">
+  // Replace the existing ShelfContent component with a stub since it's now handled in ShelfCanvas
+  const ShelfContent = ({
+    shelf
+  }: {
+    shelf: Shelf;
+  }) => {
+    return null; // This is now handled in ShelfCanvas
+  };
+
+  // Replace the existing BookSelector component with a stub since we're using the new BookSelectorModal
+  const BookSelector = () => {
+    return null; // This is now handled by BookSelectorModal
+  };
+
+  // Add a function to handle item click (book or journal)
+  const handleItemClick = (item: Book | Journal | null, isJournal: boolean, shelfId: number, position: number) => {
+    setSelectedItem(item);
+    setSelectedItemIsJournal(isJournal);
+    setSelectedItemShelfId(shelfId);
+    setSelectedItemPosition(position);
+    setShowBookInfoModal(true);
+  };
+
+  // Functions for book/journal dragging
+  const handleItemDragStart = (item: Book | Journal, isJournal: boolean, shelfId: number, position: number, e: React.DragEvent) => {
+    // Prevent dragging if in edit mode (for shelf positioning)
+    if (isEditMode) {
+      e.preventDefault();
+      return;
+    }
+    
+    setDraggedItem({
+      item,
+      isJournal,
+      sourceShelfId: shelfId,
+      sourcePosition: position
+    });
+    setIsDraggingItem(true);
+    
+    // Set drag data
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      itemId: item.id,
+      isJournal,
+      sourceShelfId: shelfId,
+      sourcePosition: position
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSlotDragOver = (shelfId: number, position: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedItem) {
+      setDragOverSlot({ shelfId, position });
+    }
+  };
+
+  const handleSlotDragLeave = () => {
+    setDragOverSlot(null);
+  };
+
+  const handleItemDrop = async (targetShelfId: number, targetPosition: number, e: React.DragEvent) => {
+    e.preventDefault();
+    
+    if (!draggedItem) return;
+
+    const { item: sourceItem, isJournal: sourceIsJournal, sourceShelfId, sourcePosition } = draggedItem;
+
+    // If dropping on the same position, do nothing
+    if (sourceShelfId === targetShelfId && sourcePosition === targetPosition) {
+      resetDragState();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+
+      // Check if target position has an item
+      const targetShelf = shelves.find(s => s.id === targetShelfId);
+      if (!targetShelf) throw new Error("Target shelf not found");
+
+      const targetItem = [...books, ...journals].find(item => 
+        item.shelfId === targetShelfId && item.position === targetPosition
+      );
+
+      if (targetItem) {
+        // Swap items - need to be careful about the order
+        const targetIsJournal = journals.some(j => j.id === targetItem.id);
+        
+        const sourceEndpoint = sourceIsJournal ? "journals" : "books";
+        const targetEndpoint = targetIsJournal ? "journals" : "books";
+        const sourceResource = sourceIsJournal ? "Journals" : "Books";
+        const targetResource = targetIsJournal ? "Journals" : "Books";
+
+        console.log('Swapping items:', {
+          source: { id: sourceItem.id, type: sourceIsJournal ? 'journal' : 'book', shelf: sourceShelfId, pos: sourcePosition },
+          target: { id: targetItem.id, type: targetIsJournal ? 'journal' : 'book', shelf: targetShelfId, pos: targetPosition }
+        });
+
+        toast({
+          title: "Обмен местами",
+          description: "Выполняется обмен элементов местами..."
+        });
+
+        // First, remove the source item from shelf
+        const removeResponse = await fetch(`${baseUrl}/api/${sourceResource}/${sourceItem.id}/shelf/remove`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" }
+        });
+
+        if (!removeResponse.ok) {
+          throw new Error(`Ошибка при удалении элемента с полки: ${removeResponse.status}`);
+        }
+
+        // Then move target item to source position
+        const moveTargetResponse = await fetch(`${baseUrl}/api/${targetEndpoint}/${targetItem.id}/position`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shelfId: sourceShelfId,
+            position: sourcePosition
+          })
+        });
+
+        if (!moveTargetResponse.ok) {
+          throw new Error(`Ошибка при перемещении целевого элемента: ${moveTargetResponse.status}`);
+        }
+
+        // Finally, move source item to target position
+        const moveSourceResponse = await fetch(`${baseUrl}/api/${sourceEndpoint}/${sourceItem.id}/position`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shelfId: targetShelfId,
+            position: targetPosition
+          })
+        });
+
+        if (!moveSourceResponse.ok) {
+          throw new Error(`Ошибка при перемещении исходного элемента: ${moveSourceResponse.status}`);
+        }
+
+        toast({
+          title: "Успех",
+          description: "Элементы успешно поменялись местами"
+        });
+      } else {
+        // Move to empty position
+        const sourceEndpoint = sourceIsJournal ? "journals" : "books";
+        
+        await fetch(`${baseUrl}/api/${sourceEndpoint}/${sourceItem.id}/position`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shelfId: targetShelfId,
+            position: targetPosition
+          })
+        });
+
+        toast({
+          title: "Успех",
+          description: "Элемент успешно перемещен"
+        });
+      }
+
+      // Refresh data
+      await fetchBooks();
+      await fetchJournals();
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка при перемещении элемента");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при перемещении элемента",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+      resetDragState();
+    }
+  };
+
+  const resetDragState = () => {
+    setDraggedItem(null);
+    setDragOverSlot(null);
+    setIsDraggingItem(false);
+  };
+
+  // Add drag end handler
+  const handleItemDragEnd = () => {
+    resetDragState();
+  };
+
+  // Функция авто-расстановки полок по сетке
+  const autoArrangeShelves = () => {
+    const GAP_X = 10;
+    const GAP_Y = 10;
+    const EDGE_X = 10;
+    const EDGE_Y = 10;
+    const COLUMNS = 4;
+    let x = EDGE_X;
+    let y = EDGE_Y;
+    let maxRowHeight = 0;
+    // Сортировка по номеру полки
+    const sortedShelves = [...shelves].sort((a, b) => a.shelfNumber - b.shelfNumber);
+    const newShelves = sortedShelves.map((shelf, idx) => {
+      const { width, height } = getShelfSize(shelf.capacity);
+      if (idx % COLUMNS === 0 && idx !== 0) {
+        x = EDGE_X;
+        y += maxRowHeight + GAP_Y;
+        maxRowHeight = 0;
+      }
+      const pos = { ...shelf, posX: x, posY: y };
+      x += width + GAP_X;
+      if (height > maxRowHeight) maxRowHeight = height;
+      return pos;
+    });
+    setShelves(newShelves);
+    setOverlappingShelfIds([]);
+  };
+
+  // Functions for AI auto-arrangement
+  const handleAiArrangement = async (arrangements: any[]) => {
+    setLoading(true);
+    setLastArrangements([...arrangements]);
+    const arrangedBookIds: string[] = [];
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+
+      // Apply all arrangements
+      const updatePromises = arrangements.map(async (arrangement) => {
+        const response = await fetch(`${baseUrl}/api/books/${arrangement.bookId}/position`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            shelfId: arrangement.shelfId,
+            position: arrangement.position
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Ошибка при размещении книги ${arrangement.bookId}: ${response.status}`);
+        }
+
+        arrangedBookIds.push(arrangement.bookId);
+        return response.json();
+      });
+
+      await Promise.all(updatePromises);
+      
+      // Update local state
+      setAiArrangedBooks(arrangedBookIds);
+      
+      // Refresh data
+      await fetchBooks();
+      
+      toast({
+        title: "Автоматическая расстановка завершена",
+        description: `${arrangements.length} книг размещены на полках с помощью ИИ`
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка при автоматической расстановке");
+      toast({
+        title: "Ошибка автоматической расстановки",
+        description: err instanceof Error ? err.message : "Ошибка при автоматической расстановке",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const undoAiArrangement = async () => {
+    if (lastArrangements.length === 0 || aiArrangedBooks.length === 0) {
+      toast({
+        title: "Нет расстановки для отмены",
+        description: "Нет недавней автоматической расстановки для отмены",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+
+      // Remove all AI-arranged books from shelves
+      const undoPromises = aiArrangedBooks.map(async (bookId) => {
+        const response = await fetch(`${baseUrl}/api/Books/${bookId}/shelf/remove`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Ошибка при удалении книги ${bookId} с полки: ${response.status}`);
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(undoPromises);
+
+      // Clear AI arrangement state
+      setAiArrangedBooks([]);
+      setLastArrangements([]);
+
+      // Refresh data
+      await fetchBooks();
+
+      toast({
+        title: "Автоматическая расстановка отменена",
+        description: "Все книги, размещенные ИИ, удалены с полок"
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка при отмене автоматической расстановки");
+      toast({
+        title: "Ошибка отмены",
+        description: err instanceof Error ? err.message : "Ошибка при отмене автоматической расстановки",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return <div className="min-h-screen bg-gray-200">
+      <div className="container mx-auto p-6">
         {/* Header */}
-        <header className="mb-8">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-neutral-500 dark:text-white">Управление полками библиотеки</h1>
-            <div className="flex space-x-2">
-              <button
-                onClick={toggleEditMode}
-                className={`${themeClasses.iconButton} ${isEditMode ? 'bg-yellow-200/80 dark:bg-yellow-700/80' : ''}`}
-                title={isEditMode ? "Заблокировать перемещение" : "Разблокировать перемещение"}
-              >
-                {isEditMode ? <Lock size={18} /> : <Unlock size={18} />}
-              </button>
+        <FadeInView>
+          <div className="mb-8 flex items-center gap-4 justify-between">
+            <div className="flex items-center gap-4">
+              <motion.div initial={{
+                x: -20,
+                opacity: 0
+              }} animate={{
+                x: 0,
+                opacity: 1
+              }} transition={{
+                duration: 0.5
+              }}>
+                <Link href="/admin" className="flex items-center gap-2 text-blue-700 hover:text-blue-500 transition-colors">
+                  <ChevronLeft className="h-5 w-5" />
+                  <span className="font-medium">Назад</span>
+                </Link>
+              </motion.div>
+              <motion.h1 initial={{
+                opacity: 0,
+                y: -20
+              }} animate={{
+                opacity: 1,
+                y: 0
+              }} transition={{
+                duration: 0.5,
+                delay: 0.1
+              }} className="text-3xl font-bold text-gray-800">
+                Управление полками библиотеки
+              </motion.h1>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => setShowAutoArrange(true)} variant="outline" className="text-black border-gray-300">
+                <Bot className="h-4 w-4 mr-2" />
+                ИИ Расстановка
+              </Button>
+              {aiArrangedBooks.length > 0 && (
+                <Button onClick={undoAiArrangement} variant="outline" className="text-red-600 border-red-300">
+                  <Undo className="h-4 w-4 mr-2" />
+                  Отменить ИИ
+                </Button>
+              )}
+              <Button onClick={autoArrangeShelves} variant="outline" className="text-black border-gray-300">Авто-расстановка полок</Button>
+              <motion.button onClick={toggleEditMode} className={`${isEditMode ? "bg-yellow-400 text-black" : "bg-blue-500 text-black"} border border-gray-200 rounded-lg p-2 flex items-center justify-center`} whileHover={{
+                y: -2,
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+              }} whileTap={{
+                scale: 0.95
+              }} title={isEditMode ? "Заблокировать перемещение" : "Разблокировать перемещение"}>
+                {isEditMode ? <Unlock size={18} /> : <Lock size={18} />}
+              </motion.button>
             </div>
           </div>
-        </header>
+        </FadeInView>
 
         {/* Main Content */}
-        <main className="flex-1 space-y-8">
-          {error && (
-            <div className={`${themeClasses.card} p-4 flex justify-between items-center text-red-700`}>
-              {error}
-              <button onClick={() => setError(null)} className="text-red-700 font-bold">×</button>
-            </div>
-          )}
+        <FadeInView delay={0.2}>
+          <Tabs defaultValue="shelves" onValueChange={setActiveTab} className="space-y-8">
+            <TabsContent value="shelves" className="space-y-6">
+              {error && <motion.div initial={{
+              opacity: 0,
+              y: -10
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} className="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center">
+                  <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                  <span>{error}</span>
+                  <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setError(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </motion.div>}
 
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 max-w-xl">
-              {!showAddForm ? (
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className={`${themeClasses.button} flex items-center`}
-                >
-                  <Plus size={20} className="mr-2" />
-                  Добавить полку
-                </button>
-              ) : (
-                <form onSubmit={addShelf} className={themeClasses.card}>
-                  <div className="flex justify-between items-center p-4 border-b border-primary-300/30 dark:border-primary-700/30">
-                    <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Добавить новую полку</h2>
-                    <button type="button" onClick={() => setShowAddForm(false)} className="text-neutral-500 hover:text-neutral-700">
-                      <X size={20} />
-                    </button>
-                  </div>
-                  <div className="p-4 grid grid-cols-1 gap-4">
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-100">Рубрика</label>
-                      <input
-                        type="text"
-                        name="category"
-                        placeholder="Рубрика (например, Фантастика)"
-                        value={newShelf.category}
-                        onChange={handleNewShelfChange}
-                        className={`${themeClasses.input} text-gray-900 dark:text-gray-100`}
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Количество мест</label>
-                      <input
-                        type="number"
-                        name="capacity"
-                        placeholder="Количество мест для книг/журналов"
-                        value={newShelf.capacity}
-                        onChange={handleNewShelfChange}
-                        className={themeClasses.input}
-                        min="1"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Номер полки</label>
-                      <input
-                        type="number"
-                        name="shelfNumber"
-                        placeholder="Номер полки"
-                        value={newShelf.shelfNumber}
-                        onChange={handleNewShelfChange}
-                        className={themeClasses.input}
-                        min="1"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="p-4 border-t border-primary-300/30 dark:border-primary-700/30">
-                    <button type="submit" className={themeClasses.button}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex-1">
+                  {!showAddForm ? <motion.button onClick={() => setShowAddForm(true)} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-3 flex items-center gap-2 shadow-md" whileHover={{
+                  y: -3,
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+                }} whileTap={{
+                  scale: 0.98
+                }}>
+                      <Plus className="h-5 w-5" />
                       Добавить полку
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
+                    </motion.button> : <motion.div initial={{
+                  opacity: 0,
+                  y: 20
+                }} animate={{
+                  opacity: 1,
+                  y: 0
+                }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 z-50 relative">
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-gray-800">Добавить новую полку</h2>
+                        <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}
+                          className="text-gray-700 border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                          Отмена
+                        </Button>
+                      </div>
+                      <form onSubmit={addShelf} className="space-y-4">
+                        <div>
+                          <Label htmlFor="category" className="text-gray-500">
+                            Рубрика
+                          </Label>
+                          <Input id="category" name="category" placeholder="Рубрика (например, Фантастика)" value={newShelf.category} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" required />
+                        </div>
 
-            <div className="flex-1 relative">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Поиск книг по названию или автору..."
-                  className={`${themeClasses.input} w-full pl-10 text-gray-900 dark:text-gray-100`}
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  onFocus={() => searchTerm.length > 1 && setShowSearchDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
+                        <div>
+                          <Label htmlFor="capacity" className="text-gray-500">
+                            Количество мест
+                          </Label>
+                          <Input id="capacity" type="number" name="capacity" placeholder="Количество мест для книг/журналов" value={newShelf.capacity} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" min="1" required />
+                        </div>
+                        <div>
+                          <Label htmlFor="shelfNumber" className="text-gray-500">
+                            Номер полки
+                          </Label>
+                          <Input id="shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={newShelf.shelfNumber} onChange={handleNewShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" min="1" required />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                          <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}
+                            className="text-gray-700 border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            Отмена
+                          </Button>
+                          <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            {loading ? <>
+                                <motion.div animate={{
+                            rotate: 360
+                          }} transition={{
+                            duration: 1,
+                            repeat: Number.POSITIVE_INFINITY,
+                            ease: "linear"
+                          }} className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                Добавление...
+                              </> : <>Добавить полку</>}
+                          </Button>
+                        </div>
+                      </form>
+                    </motion.div>}
+                </div>
+
+                <div className="flex-1">
+                  <div className="relative">
+                    <Input type="text" placeholder="Поиск книг по названию или автору..." className="bg-gray-100 border border-gray-200 w-full pl-10 text-black" value={searchTerm} onChange={handleSearch} onFocus={() => searchTerm.length > 1 && setShowSearchDropdown(true)} onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)} />
+                    <Search className="absolute left-3 top-2.5 text-black" size={18} />
+                  </div>
+
+                  <AnimatePresence>
+                    {showSearchDropdown && filteredBooks.length > 0 && <motion.div initial={{
+                    opacity: 0,
+                    y: -10,
+                    scale: 0.95
+                  }} animate={{
+                    opacity: 1,
+                    y: 0,
+                    scale: 1
+                  }} exit={{
+                    opacity: 0,
+                    y: -10,
+                    scale: 0.95
+                  }} transition={{
+                    duration: 0.2
+                  }} className="absolute z-30 mt-1 w-full bg-white rounded-lg shadow-lg max-h-60 overflow-auto border border-gray-200">
+                        {filteredBooks.map((book, index) => <motion.div key={book.id} initial={{
+                      opacity: 0,
+                      x: -5
+                    }} animate={{
+                      opacity: 1,
+                      x: 0
+                    }} transition={{
+                      delay: index * 0.05,
+                      duration: 0.2
+                    }} className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => animateHighlightedBook(book.id)}>
+                            <div className="font-medium text-gray-800">{book.title}</div>
+                            <div className="text-sm text-gray-500">{book.authors || "Автор не указан"}</div>
+                          </motion.div>)}
+                      </motion.div>}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {editingShelf && <motion.div initial={{
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 z-50 relative">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-gray-800">Редактировать полку #{editingShelf.id}</h2>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingShelf(null)}
+                      className="text-gray-700 border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                      Отмена
+                    </Button>
+                  </div>
+                  <form onSubmit={updateShelf} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="edit-category" className="text-gray-500">
+                          Рубрика
+                        </Label>
+                        <Input id="edit-category" name="category" placeholder="Рубрика" value={editShelfData.category} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" required />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-capacity" className="text-gray-500">
+                          Количество мест
+                        </Label>
+                        <Input id="edit-capacity" type="number" name="capacity" placeholder="Кол-во мест" value={editShelfData.capacity} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" min="1" required />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-shelfNumber" className="text-gray-500">
+                          Номер полки
+                        </Label>
+                        <Input id="edit-shelfNumber" type="number" name="shelfNumber" placeholder="Номер полки" value={editShelfData.shelfNumber} onChange={handleEditShelfChange} className="bg-gray-100 border border-gray-200 placeholder:text-gray-500 text-black" min="1" required />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <Button type="button" variant="outline" onClick={() => setEditingShelf(null)}
+                        className="text-gray-700 border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        Отмена
+                      </Button>
+                      <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        {loading ? <>
+                            <motion.div animate={{
+                        rotate: 360
+                      }} transition={{
+                        duration: 1,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "linear"
+                      }} className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                            Сохранение...
+                          </> : <>Сохранить изменения</>}
+                      </Button>
+                    </div>
+                  </form>
+                </motion.div>}
+
+              <motion.div initial={{
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              delay: 0.3
+            }} className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <Library className="h-5 w-5 text-blue-500" />
+                    Визуальное расположение полок
+                  </h2>
+                </div>
+
+                <ShelfCanvas 
+                  shelves={shelves} 
+                  books={books} 
+                  journals={journals} 
+                  loading={loading} 
+                  isEditMode={isEditMode} 
+                  highlightedBookId={highlightedBookId} 
+                  onDragStart={handleDragStart} 
+                  onDragMove={handleDragMove} 
+                  onDragEnd={handleDragEnd} 
+                  onShelfEdit={startEditShelf} 
+                  onShelfDelete={deleteShelf} 
+                  onItemClick={handleItemClick} 
+                  onEmptySlotClick={handleEmptySlotClick} 
+                  overlappingShelfIds={overlappingShelfIds} 
+                  getShelfSize={getShelfSize}
+                  // New props for item dragging
+                  draggedItem={draggedItem}
+                  dragOverSlot={dragOverSlot}
+                  isDraggingItem={isDraggingItem}
+                  onItemDragStart={handleItemDragStart}
+                  onSlotDragOver={handleSlotDragOver}
+                  onSlotDragLeave={handleSlotDragLeave}
+                  onItemDrop={handleItemDrop}
+                  onItemDragEnd={handleItemDragEnd}
+                  // AI arrangement props
+                  aiArrangedBooks={aiArrangedBooks}
                 />
-                <Search className="absolute left-3 top-2.5 text-gray-500" size={18} />
-              </div>
-              
-              {showSearchDropdown && filteredBooks.length > 0 && (
-                <div className={themeClasses.searchDropdown}>
-                  {filteredBooks.map(book => (
-                    <div 
-                      key={book.id}
-                      className={themeClasses.searchItem}
-                      onMouseDown={() => animateHighlightedBook(book.id)}
-                    >
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{book.title}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{book.authors || 'Автор не указан'}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+              </motion.div>
 
-          {editingShelf && (
-            <form onSubmit={updateShelf} className={themeClasses.card}>
-              <div className="p-4 border-b border-primary-300/30 dark:border-primary-700/30">
-                <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Редактировать полку #{editingShelf.id}</h2>
-              </div>
-              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Рубрика</label>
-                  <input
-                    type="text"
-                    name="category"
-                    placeholder="Рубрика"
-                    value={editShelfData.category}
-                    onChange={handleEditShelfChange}
-                    className={themeClasses.input}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Количество мест</label>
-                  <input
-                    type="number"
-                    name="capacity"
-                    placeholder="Кол-во мест"
-                    value={editShelfData.capacity}
-                    onChange={handleEditShelfChange}
-                    className={themeClasses.input}
-                    min="1"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Номер полки</label>
-                  <input
-                    type="number"
-                    name="shelfNumber"
-                    placeholder="Номер полки"
-                    value={editShelfData.shelfNumber}
-                    onChange={handleEditShelfChange}
-                    className={themeClasses.input}
-                    min="1"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="p-4 border-t border-primary-300/30 dark:border-primary-700/30 flex space-x-4">
-                <button type="submit" className={themeClasses.button}>
-                  Сохранить изменения
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditingShelf(null); }}
-                  className="bg-neutral-500/90 hover:bg-neutral-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 px-4 py-2"
-                >
-                  Отмена
-                </button>
-              </div>
-            </form>
-          )}
-
-          <div
-            id="shelf-editor"
-            ref={editorRef}
-            className={`${themeClasses.editorArea} relative p-4 h-[600px]`}
-            onMouseMove={draggedShelf ? handleDragMove : undefined}
-            onMouseUp={draggedShelf ? handleDragEnd : undefined}
-            onMouseLeave={draggedShelf ? handleDragEnd : undefined}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-              </div>
-            ) : shelves.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-neutral-500 dark:text-neutral-400">
-                Нет полок для отображения. Добавьте первую полку.
-              </div>
-            ) : (
-              shelves.map((shelf) => (
-                <div
-                  key={shelf.id}
-                  id={`shelf-${shelf.id}`}
-                  className={`${themeClasses.shelfCard} absolute p-3 ${isEditMode ? 'cursor-move' : ''}`}
-                  style={{
-                    left: shelf.posX,
-                    top: shelf.posY,
-                    transition: draggedShelf?.id === shelf.id ? 'none' : 'all 0.2s ease',
-                    zIndex: draggedShelf?.id === shelf.id ? 100 : 10,
-                  }}
-                  onMouseDown={isEditMode ? (e) => handleDragStart(e, shelf) : undefined}
-                  onMouseEnter={() => setHoveredShelf(shelf)}
-                  onMouseLeave={() => setTimeout(() => { if (!hoveredBook) setHoveredShelf(null); }, 100)}
-                >
-                  <div className="shelf-container">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-blue-900 dark:text-blue-300">{shelf.category}</span>
-                      <span className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs text-blue-800 dark:text-blue-200">
-                        #{shelf.shelfNumber}
-                      </span>
-                    </div>
-                    
-                    <ShelfContent shelf={shelf} />
-                    
-                    <div className="mt-2 flex space-x-2">
-                      <button
-                        onClick={() => startEditShelf(shelf)}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs"
-                      >
-                        Изменить
-                      </button>
-                      <button
-                        onClick={() => { if (confirm('Вы уверены, что хотите удалить эту полку?')) deleteShelf(shelf.id); }}
-                        className="bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs"
-                      >
-                        Удалить
-                      </button>
-                    </div>
+              <motion.div initial={{
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              delay: 0.4
+            }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                <h3 className="font-semibold text-gray-800 mb-4">Обозначения:</h3>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                  <div className="flex items-center">
+                    <div className="w-6 h-8 bg-green-500 mr-3 rounded"></div>
+                    <span className="text-gray-500">Книга доступна</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-6 h-8 bg-red-500 mr-3 rounded"></div>
+                    <span className="text-gray-500">Книга недоступна</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-6 h-8 bg-blue-500 mr-3 rounded"></div>
+                    <span className="text-gray-500">Журнал</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-6 h-8 bg-gray-200 mr-3 rounded"></div>
+                    <span className="text-gray-500">Пустое место</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-6 h-8 bg-yellow-400 mr-3 rounded animate-pulse"></div>
+                    <span className="text-gray-500">Найденная книга</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-6 h-8 bg-gradient-to-br from-green-400 to-blue-500 border border-purple-400 mr-3 rounded animate-pulse"></div>
+                    <span className="text-gray-500">Размещено ИИ</span>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              </motion.div>
+            </TabsContent>
 
-          <div className={themeClasses.card}>
-            <div className="p-4">
-              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Обозначения:</h3>
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-green-500 mr-2 rounded"></div>
-                  <span className="text-neutral-700 dark:text-neutral-300">Книга доступна</span>
+            {showJsonImport && <motion.div initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                <div className="flex justify-between items-center mb-4">
                 </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-red-500 mr-2 rounded"></div>
-                  <span className="text-neutral-700 dark:text-neutral-300">Книга недоступна</span>
+                <div className="space-y-4">
+                  <Textarea rows={8} value={jsonData} onChange={e => setJsonData(e.target.value)} placeholder='{"Id": 11, "Category": "Фантастика", ...}' className="bg-gray-100 border border-gray-200 font-mono text-sm" />
+                  <div className="flex justify-end gap-3">
+                    <Button variant="outline" onClick={() => setShowJsonImport(false)}>
+                      Отмена
+                    </Button>
+                    
+                  </div>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-blue-500 mr-2 rounded"></div>
-                  <span className="text-neutral-700 dark:text-neutral-300">Журнал</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 mr-2 rounded"></div>
-                  <span className="text-neutral-700 dark:text-neutral-300">Пустое место (кликните, чтобы добавить)</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-yellow-300 mr-2 rounded"></div>
-                  <span className="text-neutral-700 dark:text-neutral-300">Найденная книга</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-        <BookSelector />
-
-        {showContextMenu && contextMenuData && (
-          <ShelfItemContextMenu
-            item={contextMenuData.item}
-            isJournal={contextMenuData.isJournal}
-            position={contextMenuData.position}
-            onClose={handleCloseMenu}
-            onRemove={handleRemoveItem}
-          />
-        )}
+              </motion.div>}
+          </Tabs>
+        </FadeInView>
       </div>
-    </GlassMorphismContainer>
-  );
+      {/* Book Selector Modal */}
+      <BookSelectorModal open={showBookSelector} onOpenChange={setShowBookSelector} books={books.filter(b => !b.shelfId)} // Only show books that aren't already on shelves
+    journals={journals.filter(j => !j.shelfId)} // Only show journals that aren't already on shelves
+    onSelect={(itemId, isJournal) => addItemToShelf(itemId, isJournal)} shelfCategory={selectedEmptySlot ? shelves.find(s => s.id === selectedEmptySlot.shelfId)?.category : undefined} />
+      {/* Book Info Modal */}
+      <BookInfoModal open={showBookInfoModal} onOpenChange={setShowBookInfoModal} item={selectedItem} isJournal={selectedItemIsJournal} shelfId={selectedItemShelfId} position={selectedItemPosition} onRemove={() => {
+      if (selectedItem) {
+        removeItemFromShelf(selectedItemShelfId, selectedItemPosition, selectedItemIsJournal);
+      }
+    }} />
+      {/* Context Menu */}
+      {showContextMenu && contextMenuData && <ShelfItemContextMenu item={contextMenuData.item} isJournal={contextMenuData.isJournal} position={contextMenuData.position} onClose={handleCloseMenu} onRemove={handleRemoveItem} />}
+      
+      {/* AI Auto Arrangement Modal */}
+      <AutoArrangeBooks
+        open={showAutoArrange}
+        onOpenChange={setShowAutoArrange}
+        books={books}
+        shelves={shelves}
+        onArrangement={handleAiArrangement}
+        onUndo={undoAiArrangement}
+      />
+    </div>;
 }

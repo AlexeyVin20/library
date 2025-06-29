@@ -40,11 +40,9 @@ const journalSchema = z.object({
   registrationNumber: z.string().max(50, "Максимальная длина - 50 символов").optional().nullable(),
   format: z.enum(["Print", "Electronic", "Mixed"]),
   periodicity: z.enum(["Weekly", "BiWeekly", "Monthly", "Quarterly", "BiAnnually", "Annually"]),
-  pagesPerIssue: z.number().int().nonnegative(),
   description: z.string().max(500, "Максимальная длина - 500 символов").optional().nullable(),
-  publisher: z.string().max(100, "Максимальная длина - 100 символов").optional().nullable(),
-  foundationDate: z.date(),
-  circulation: z.number().int().nonnegative(),
+  publisher: z.string().min(1, "Издательство обязательно").max(100, "Максимальная длина - 100 символов"),
+  foundationDate: z.date().optional().nullable(),
   isOpenAccess: z.boolean(),
   category: z.enum(["Scientific", "Popular", "Entertainment", "Professional", "Educational", "Literary", "News"]),
   targetAudience: z.string().max(100, "Максимальная длина - 100 символов").optional().nullable(),
@@ -52,15 +50,16 @@ const journalSchema = z.object({
   isIndexedInRINTS: z.boolean(),
   isIndexedInScopus: z.boolean(),
   isIndexedInWebOfScience: z.boolean(),
-  publicationDate: z.date(),
-  pageCount: z.number().int().nonnegative(),
-  coverImageUrl: z.string().optional().nullable(),
+  coverImageUrl: z.string().url("Неверный URL обложки").optional().nullable(),
+  website: z.string().url("Неверный URL сайта").optional().nullable(),
+  editorInChief: z.string().max(100, "Максимальная длина - 100 символов").optional().nullable(),
+  editorialBoard: z.array(z.string()).optional().nullable(),
 });
 
 export type JournalInput = z.infer<typeof journalSchema>;
 
 interface JournalFormProps {
-  initialData?: JournalInput;
+  initialData?: JournalInput & { editorialBoard?: string[] };
   onSubmit: (data: JournalInput) => Promise<void>;
   isSubmitting: boolean;
   mode: "create" | "update";
@@ -84,6 +83,7 @@ const JournalForm = ({
   const [manualCoverUrl, setManualCoverUrl] = useState("");
   const [geminiImage, setGeminiImage] = useState<string | null>(null);
   const [geminiLoading, setGeminiLoading] = useState(false);
+  const [editorialBoardString, setEditorialBoardString] = useState<string>("");
 
   // Инициализация формы
   const {
@@ -100,11 +100,9 @@ const JournalForm = ({
       registrationNumber: initialData?.registrationNumber || "",
       format: initialData?.format || "Print",
       periodicity: initialData?.periodicity || "Monthly",
-      pagesPerIssue: initialData?.pagesPerIssue || 0,
       description: initialData?.description || "",
       publisher: initialData?.publisher || "",
-      foundationDate: initialData?.foundationDate || new Date(),
-      circulation: initialData?.circulation || 0,
+      foundationDate: initialData?.foundationDate ? new Date(initialData.foundationDate) : null,
       isOpenAccess: initialData?.isOpenAccess || false,
       category: initialData?.category || "Scientific",
       targetAudience: initialData?.targetAudience || "",
@@ -112,18 +110,28 @@ const JournalForm = ({
       isIndexedInRINTS: initialData?.isIndexedInRINTS || false,
       isIndexedInScopus: initialData?.isIndexedInScopus || false,
       isIndexedInWebOfScience: initialData?.isIndexedInWebOfScience || false,
-      publicationDate: initialData?.publicationDate || new Date(),
-      pageCount: initialData?.pageCount || 0,
       coverImageUrl: initialData?.coverImageUrl || "",
+      website: initialData?.website || "",
+      editorInChief: initialData?.editorInChief || "",
+      editorialBoard: initialData?.editorialBoard || [],
     },
   });
 
   const formValues = watch();
   const isOpenAccess = watch("isOpenAccess");
+  const editorialBoardValue = watch("editorialBoard");
 
   useEffect(() => {
     if (initialData?.coverImageUrl) setPreviewUrl(initialData.coverImageUrl);
+    if (initialData?.editorialBoard) {
+      setEditorialBoardString(initialData.editorialBoard.join('\n'));
+    }
   }, [initialData]);
+
+  useEffect(() => {
+    const boardArray = editorialBoardString.split('\n').map(s => s.trim()).filter(s => s !== '');
+    setValue("editorialBoard", boardArray);
+  }, [editorialBoardString, setValue]);
 
   useEffect(() => {
     if (geminiImage) handleGeminiUpload();
@@ -246,7 +254,7 @@ const JournalForm = ({
           {
             parts: [
               {
-                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у журналов. Модель журнала содержит следующие поля: id(int), title(строка 200), issn(строка 20), registrationNumber(строка 50), format(Print/Electronic/Mixed), periodicity(Weekly/BiWeekly/Monthly/Quarterly/BiAnnually/Annually), pagesPerIssue(число), description(строка 500), publisher(строка 100), foundationDate(дата), circulation(число), isOpenAccess(boolean), category(Scientific/Popular/Entertainment/Professional/Educational/Literary/News), targetAudience(строка 100), isPeerReviewed(boolean), isIndexedInRINTS(boolean), isIndexedInScopus(boolean), isIndexedInWebOfScience(boolean), publicationDate(дата), pageCount(число), coverImageUrl - всегда оставляй null. Если информации нет, оставляй null",
+                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у журналов. Модель журнала содержит следующие поля: id(int), title(строка 200), issn(строка 20), registrationNumber(строка 50), format(Print/Electronic/Mixed), periodicity(Weekly/BiWeekly/Monthly/Quarterly/BiAnnually/Annually), description(строка 500), publisher(строка 100), foundationDate(дата, опционально), isOpenAccess(boolean), category(Scientific/Popular/Entertainment/Professional/Educational/Literary/News), targetAudience(строка 100), isPeerReviewed(boolean), isIndexedInRINTS(boolean), isIndexedInScopus(boolean), isIndexedInWebOfScience(boolean), website(строка url, опционально), editorInChief(строка 100, опционально), editorialBoard(массив строк, опционально), coverImageUrl - всегда оставляй null. Если информации нет, оставляй null.",
               },
               { inlineData: { mimeType: "image/jpeg", data: geminiImage } },
             ],
@@ -313,11 +321,9 @@ const JournalForm = ({
         if (parsedData.registrationNumber) setValue("registrationNumber", parsedData.registrationNumber);
         if (parsedData.format) setValue("format", parsedData.format);
         if (parsedData.periodicity) setValue("periodicity", parsedData.periodicity);
-        if (parsedData.pagesPerIssue) setValue("pagesPerIssue", parsedData.pagesPerIssue);
         if (parsedData.description) setValue("description", parsedData.description);
         if (parsedData.publisher) setValue("publisher", parsedData.publisher);
         if (parsedData.foundationDate) setValue("foundationDate", new Date(parsedData.foundationDate));
-        if (parsedData.circulation) setValue("circulation", parsedData.circulation);
         if (parsedData.isOpenAccess !== undefined) setValue("isOpenAccess", parsedData.isOpenAccess);
         if (parsedData.category) setValue("category", parsedData.category);
         if (parsedData.targetAudience) setValue("targetAudience", parsedData.targetAudience);
@@ -325,8 +331,12 @@ const JournalForm = ({
         if (parsedData.isIndexedInRINTS !== undefined) setValue("isIndexedInRINTS", parsedData.isIndexedInRINTS);
         if (parsedData.isIndexedInScopus !== undefined) setValue("isIndexedInScopus", parsedData.isIndexedInScopus);
         if (parsedData.isIndexedInWebOfScience !== undefined) setValue("isIndexedInWebOfScience", parsedData.isIndexedInWebOfScience);
-        if (parsedData.publicationDate) setValue("publicationDate", new Date(parsedData.publicationDate));
-        if (parsedData.pageCount) setValue("pageCount", parsedData.pageCount);
+        if (parsedData.website) setValue("website", parsedData.website);
+        if (parsedData.editorInChief) setValue("editorInChief", parsedData.editorInChief);
+        if (parsedData.editorialBoard && Array.isArray(parsedData.editorialBoard)) {
+          setValue("editorialBoard", parsedData.editorialBoard);
+          setEditorialBoardString(parsedData.editorialBoard.join('\n'));
+        }
       } else {
         toast({ title: "Ошибка", description: "Ответ от Gemini API не содержит данных.", variant: "destructive" });
       }
@@ -389,6 +399,78 @@ const JournalForm = ({
         variant: "destructive",
       });
     }
+  };
+
+  // Функция для импорта данных журнала из JSON
+  const fillFormFromJson = (data: any) => {
+    if (data.Title) setValue("title", data.Title);
+    if (data.ISSN) setValue("issn", data.ISSN);
+    if (data.RegistrationNumber) setValue("registrationNumber", data.RegistrationNumber);
+    if (data.Format) {
+      // Преобразуем числовой формат в строковый
+      let formatValue: "Print" | "Electronic" | "Mixed" = "Print";
+      if (data.Format === "3" || data.Format === 3) formatValue = "Mixed";
+      else if (data.Format === "2" || data.Format === 2) formatValue = "Electronic";
+      setValue("format", formatValue);
+    }
+    if (data.Periodicity) {
+      // Преобразуем числовой формат в строковый
+      let periodicityValue: "Weekly" | "BiWeekly" | "Monthly" | "Quarterly" | "BiAnnually" | "Annually" = "Monthly";
+      
+      // Если это число или строка с числом, определяем значение
+      if (data.Periodicity === "1" || data.Periodicity === 1) periodicityValue = "Weekly";
+      else if (data.Periodicity === "2" || data.Periodicity === 2) periodicityValue = "BiWeekly";
+      else if (data.Periodicity === "3" || data.Periodicity === 3) periodicityValue = "Monthly";
+      else if (data.Periodicity === "4" || data.Periodicity === 4) periodicityValue = "Quarterly";
+      else if (data.Periodicity === "5" || data.Periodicity === 5) periodicityValue = "BiAnnually";
+      else if (data.Periodicity === "6" || data.Periodicity === 6) periodicityValue = "Annually";
+      
+      setValue("periodicity", periodicityValue);
+    }
+    if (data.Description) setValue("description", data.Description);
+    if (data.Publisher) setValue("publisher", data.Publisher);
+    if (data.FoundationDate) setValue("foundationDate", new Date(data.FoundationDate));
+    if (data.IsOpenAccess !== undefined) setValue("isOpenAccess", data.IsOpenAccess);
+    if (data.Category) {
+      // Преобразуем строковое числовое значение в категорию
+      let categoryValue: "Scientific" | "Popular" | "Entertainment" | "Professional" | "Educational" | "Literary" | "News" = "Scientific";
+      
+      // Если категория пришла в виде числа или строки с числом
+      if (data.Category === "1" || data.Category === 1) categoryValue = "Scientific";
+      else if (data.Category === "2" || data.Category === 2) categoryValue = "Popular";
+      else if (data.Category === "3" || data.Category === 3) categoryValue = "Entertainment";
+      else if (data.Category === "4" || data.Category === 4) categoryValue = "Professional";
+      else if (data.Category === "5" || data.Category === 5) categoryValue = "Educational";
+      else if (data.Category === "6" || data.Category === 6) categoryValue = "Literary";
+      else if (data.Category === "7" || data.Category === 7) categoryValue = "News";
+      // Если пришло значение не из списка, используем Scientific
+      else if (typeof data.Category === "string" && !isNaN(Number(data.Category))) {
+        // Дополнительная обработка для значений, которые не в диапазоне 1-7
+        categoryValue = "Scientific";
+      }
+      
+      setValue("category", categoryValue);
+    }
+    if (data.TargetAudience) setValue("targetAudience", data.TargetAudience);
+    if (data.IsPeerReviewed !== undefined) setValue("isPeerReviewed", data.IsPeerReviewed);
+    if (data.IsIndexedInRINTS !== undefined) setValue("isIndexedInRINTS", data.IsIndexedInRINTS);
+    if (data.IsIndexedInScopus !== undefined) setValue("isIndexedInScopus", data.IsIndexedInScopus);
+    if (data.IsIndexedInWebOfScience !== undefined) setValue("isIndexedInWebOfScience", data.IsIndexedInWebOfScience);
+    if (data.Cover) {
+      setValue("coverImageUrl", data.Cover);
+      setPreviewUrl(data.Cover);
+    }
+    if (data.Website) setValue("website", data.Website);
+    if (data.EditorInChief) setValue("editorInChief", data.EditorInChief);
+    if (data.EditorialBoard && Array.isArray(data.EditorialBoard)) {
+      setValue("editorialBoard", data.EditorialBoard);
+      setEditorialBoardString(data.EditorialBoard.join('\n'));
+    }
+    
+    toast({ 
+      title: "Данные загружены", 
+      description: "Информация из JSON успешно импортирована" 
+    });
   };
 
   const onFormSubmit = async (values: z.infer<typeof journalSchema>) => await onSubmit(values);
@@ -484,13 +566,8 @@ const JournalForm = ({
                       {errors.foundationDate && <p className="text-red-500 text-sm mt-1">{errors.foundationDate.message}</p>}
                     </div>
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Дата публикации</label>
-                      <Input type="date" {...register("publicationDate", { setValueAs: (v) => (v ? new Date(v) : null) })} className={themeClasses.input} />
-                      {errors.publicationDate && <p className="text-red-500 text-sm mt-1">{errors.publicationDate.message}</p>}
-                    </div>
-                    <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Категория</label>
-                      <Select onValueChange={(value) => setValue("category", value as any)} defaultValue={initialData?.category || "Scientific"}>
+                      <Select onValueChange={(value) => setValue("category", value as any)} value={watch("category")}>
                         <SelectTrigger className={themeClasses.select}><SelectValue placeholder="Выберите категорию" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Scientific">Научный</SelectItem>
@@ -506,7 +583,7 @@ const JournalForm = ({
                     </div>
                     <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Формат</label>
-                      <Select onValueChange={(value) => setValue("format", value as any)} defaultValue={initialData?.format || "Print"}>
+                      <Select onValueChange={(value) => setValue("format", value as any)} value={watch("format")}>
                         <SelectTrigger className={themeClasses.select}><SelectValue placeholder="Выберите формат" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Print">Печатный</SelectItem>
@@ -583,23 +660,8 @@ const JournalForm = ({
                       {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
                     </div>
                     <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Страниц в выпуске</label>
-                      <Input type="number" placeholder="Введите количество страниц" min={0} {...register("pagesPerIssue", { valueAsNumber: true })} className={themeClasses.input} />
-                      {errors.pagesPerIssue && <p className="text-red-500 text-sm mt-1">{errors.pagesPerIssue.message}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Количество страниц</label>
-                      <Input type="number" placeholder="Введите общее количество страниц" min={0} {...register("pageCount", { valueAsNumber: true })} className={themeClasses.input} />
-                      {errors.pageCount && <p className="text-red-500 text-sm mt-1">{errors.pageCount.message}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Тираж</label>
-                      <Input type="number" placeholder="Введите тираж журнала" min={0} {...register("circulation", { valueAsNumber: true })} className={themeClasses.input} />
-                      {errors.circulation && <p className="text-red-500 text-sm mt-1">{errors.circulation.message}</p>}
-                    </div>
-                    <div>
                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Периодичность</label>
-                      <Select onValueChange={(value) => setValue("periodicity", value as any)} defaultValue={initialData?.periodicity || "Monthly"}>
+                      <Select onValueChange={(value) => setValue("periodicity", value as any)} value={watch("periodicity")}>
                         <SelectTrigger className={themeClasses.select}><SelectValue placeholder="Выберите периодичность" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Weekly">Еженедельно</SelectItem>
@@ -625,25 +687,76 @@ const JournalForm = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center space-x-2">
                       <Checkbox id="isPeerReviewed" checked={watch("isPeerReviewed")} onCheckedChange={(checked) => setValue("isPeerReviewed", checked === true)} />
-                      <label className="text-base font-semibold text-neutral-500 dark:text-white">Рецензируемый</label>
+                      <label htmlFor="isPeerReviewed" className="text-base font-semibold text-neutral-500 dark:text-white cursor-pointer">Рецензируемый</label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox id="isIndexedInRINTS" checked={watch("isIndexedInRINTS")} onCheckedChange={(checked) => setValue("isIndexedInRINTS", checked === true)} />
-                      <label className="text-base font-semibold text-neutral-500 dark:text-white">Индексируется в РИНЦ</label>
+                      <label htmlFor="isIndexedInRINTS" className="text-base font-semibold text-neutral-500 dark:text-white cursor-pointer">Индексируется в РИНЦ</label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox id="isIndexedInScopus" checked={watch("isIndexedInScopus")} onCheckedChange={(checked) => setValue("isIndexedInScopus", checked === true)} />
-                      <label className="text-base font-semibold text-neutral-500 dark:text-white">Индексируется в Scopus</label>
+                      <label htmlFor="isIndexedInScopus" className="text-base font-semibold text-neutral-500 dark:text-white cursor-pointer">Индексируется в Scopus</label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox id="isIndexedInWebOfScience" checked={watch("isIndexedInWebOfScience")} onCheckedChange={(checked) => setValue("isIndexedInWebOfScience", checked === true)} />
-                      <label className="text-base font-semibold text-neutral-500 dark:text-white">Индексируется в Web of Science</label>
+                      <label htmlFor="isIndexedInWebOfScience" className="text-base font-semibold text-neutral-500 dark:text-white cursor-pointer">Индексируется в Web of Science</label>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Веб-сайт</label>
+                      <Input type="url" placeholder="https://example.com" {...register("website")} className={themeClasses.input} />
+                      {errors.website && <p className="text-red-500 text-sm mt-1">{errors.website.message}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Главный редактор</label>
+                      <Input placeholder="Имя главного редактора" {...register("editorInChief")} className={themeClasses.input} />
+                      {errors.editorInChief && <p className="text-red-500 text-sm mt-1">{errors.editorInChief.message}</p>}
+                    </div>
+                    <div className="md:col-span-2">
+                       <label className="block text-base font-semibold text-neutral-500 dark:text-white mb-2">Редакционная коллегия (каждое имя с новой строки)</label>
+                       <Textarea
+                        placeholder="Имя Фамилия 1\nИмя Фамилия 2\n..."
+                        value={editorialBoardString}
+                        onChange={(e) => setEditorialBoardString(e.target.value)}
+                        className={themeClasses.textarea}
+                        rows={5}
+                      />
+                      {errors.editorialBoard && <p className="text-red-500 text-sm mt-1">{Array.isArray(errors.editorialBoard) ? errors.editorialBoard.map(e => e?.message).join(', ') : errors.editorialBoard.message}</p>}
                     </div>
                   </div>
                 </TabsContent>
               </Tabs>
 
               <div className="pt-4 border-t border-white/10 dark:border-neutral-700/30 flex flex-col md:flex-row gap-4">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      // Ожидаем, что пользователь скопировал JSON в буфер обмена
+                      navigator.clipboard.readText().then(text => {
+                        try {
+                          const jsonData = JSON.parse(text);
+                          fillFormFromJson(jsonData);
+                        } catch (e) {
+                          toast({
+                            title: "Ошибка",
+                            description: "Не удалось распарсить JSON из буфера обмена",
+                            variant: "destructive",
+                          });
+                        }
+                      });
+                    } catch (e) {
+                      toast({
+                        title: "Ошибка",
+                        description: "Не удалось получить доступ к буферу обмена",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className={`${themeClasses.button} py-3 w-full md:w-1/3`}
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  Импорт из JSON
+                </Button>
                 <Button
                   type="button"
                   onClick={() => router.back()}

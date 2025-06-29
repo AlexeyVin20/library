@@ -21,7 +21,7 @@ export function UserBorrowingChart({ data }: UserBorrowingChartProps) {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B'];
   
   return (
-    <div className="h-[200px] w-full">
+    <div className="h-[200px] w-full bg-transparent">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

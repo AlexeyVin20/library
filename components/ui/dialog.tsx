@@ -119,4 +119,8 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
+  Dialog as PickerDialog,
+  DialogContent as PickerDialogContent,
+  DialogHeader as PickerDialogHeader,
+  DialogTitle as PickerDialogTitle,
 }

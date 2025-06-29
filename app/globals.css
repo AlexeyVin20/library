@@ -4,37 +4,24 @@
 
 @layer base {
   :root {
-    /* Нейтральные цвета */
-    --scheme-neutral-100: #150047;
-    --scheme-neutral-200: #19004e;
-    --scheme-neutral-300: #1314cf;
-    --scheme-neutral-400: #1f41ef;
-    --scheme-neutral-500: #3666ff;
-    --scheme-neutral-600: #5c96ff;
-    --scheme-neutral-600-10: rgba(92,150,255,0.1);
-    --scheme-neutral-600-30: rgba(92,150,255,0.3);
-    --scheme-neutral-600-50: rgba(92,150,255,0.5);
-    --scheme-neutral-700: #79b8ff;
-    --scheme-neutral-800: #9adeff;
-    --scheme-neutral-900: #a7ecff;
-    --scheme-neutral-1000: #adf3ff;
+    /* Основные цвета из new_style.txt */
+    --color-bg-main: #E5E7EB; /* bg-gray-200 */
+    --color-blue-500: #3B82F6;
+    --color-blue-700: #2563EB;
+    --color-blue-300: #93C5FD;
+    --color-gray-800: #1F2937;
+    --color-gray-500: #6B7280;
+    --color-white: #FFFFFF;
+    --color-gray-100: #F3F4F6;
+    --color-green-100: #D1FAE5;
+    --color-green-800: #065F46;
+    --color-red-100: #FEE2E2;
+    --color-red-800: #991B1B;
 
-    /* Динамические цвета */
-    --color-brand: #2563eb; /* brand */
-    --color-accent: #6366f1; /* accent */
-    --color-neutral: #6b7280; /* neutral */
-    
     /* Настройки интерфейса */
-    --border-radius: 0.75rem; /* playful */
+    --border-radius: 0.75rem;
     --transition-speed: 300ms;
-}
-
-.dark {
-    --color-brand: #1e40af;
-    --color-accent: #4f46e5;
-    --color-neutral: #374151;
-}
-
+  }
 
   .hide-scrollbar::-webkit-scrollbar {
     width: 0px;
@@ -54,24 +41,99 @@
   .hide-scrollbar::-webkit-scrollbar-thumb:hover {
     background: transparent;
   }
+
+  /* Переопределение стилей NavigationMenu */
+  header [data-radix-navigation-menu-trigger] {
+    background: transparent !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  header [data-radix-navigation-menu-trigger]:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+  }
 }
 
 @layer components {
   .form-btn {
-    @apply bg-primary text-dark-100 hover:bg-primary inline-flex min-h-14 w-full items-center justify-center rounded-md px-6 py-2 font-bold text-base !important;
+    @apply bg-blue-500 text-white hover:bg-blue-700 inline-flex min-h-14 w-full items-center justify-center rounded-md px-6 py-2 font-bold text-base !important;
   }
 
   .form-input {
-    @apply w-full min-h-14 border-none text-base font-bold placeholder:font-normal text-white placeholder:text-light-100 focus-visible:ring-0 focus-visible:shadow-none bg-dark-300 !important;
+    @apply w-full min-h-14 border-2 border-blue-500 text-base font-bold placeholder:font-normal text-gray-800 placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-blue-500 bg-white !important;
+  }
+
+  /* Navigation Menu Fixes */
+  .navigation-menu-trigger {
+    @apply bg-transparent text-white/90 hover:text-white hover:bg-white/20 !important;
+  }
+
+  /* Button Text Color Fixes */
+  button[data-state="open"], 
+  button[data-state="closed"]:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Specific button variant fixes */
+  .btn-outline:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .btn-ghost:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .btn-secondary:not(:hover):not(:focus) {
+    color: hsl(var(--secondary-foreground)) !important;
+  }
+
+  /* Ensure proper contrast for outline and ghost buttons */
+  [data-theme="light"] button[variant="outline"]:not(:hover):not(:focus),
+  [data-theme="light"] button[variant="ghost"]:not(:hover):not(:focus) {
+    color: hsl(222.2 47.4% 11.2%) !important; /* dark text for light theme */
+  }
+
+  [data-theme="dark"] button[variant="outline"]:not(:hover):not(:focus),
+  [data-theme="dark"] button[variant="ghost"]:not(:hover):not(:focus) {
+    color: hsl(210 40% 98%) !important; /* light text for dark theme */
+  }
+
+  /* Additional specificity for Radix UI components */
+  .radix-button:not(:hover):not(:focus):not([data-state="open"]) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Admin navigation button text fixes */
+  .admin-nav button:not(:hover):not(:focus),
+  .admin-header button:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Force proper text color for all button variants */
+  button[data-variant="outline"]:not(:hover):not(:focus),
+  button[data-variant="ghost"]:not(:hover):not(:focus),
+  button[data-variant="secondary"]:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Global button text color fixes with high specificity */
+  .inline-flex.items-center.justify-center[class*="border"]:not(:hover):not(:focus),
+  .inline-flex.items-center.justify-center[class*="bg-background"]:not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Specific outline button fixes */
+  button:is([class*="border"], [class*="outline"]):not(:hover):not(:focus) {
+    color: hsl(var(--foreground)) !important;
   }
 
   /* Book Card */
   .book-title {
-    @apply mt-2 line-clamp-1 text-base font-semibold text-white xs:text-xl;
+    @apply mt-2 line-clamp-1 text-base font-semibold text-gray-800 xs:text-xl;
   }
 
   .book-genre {
-    @apply mt-1 line-clamp-1 text-sm italic text-light-100 xs:text-base;
+    @apply mt-1 line-clamp-1 text-sm italic text-gray-500 xs:text-base;
   }
 
   .book-loaned {
@@ -79,12 +141,12 @@
   }
 
   .book-btn {
-    @apply bg-dark-600 mt-3 min-h-14 w-full font-bebas-neue text-base text-primary;
+    @apply bg-blue-500 hover:bg-blue-700 mt-3 min-h-14 w-full font-bebas-neue text-base text-white;
   }
 
   /* Borrowed Book */
   .borrowed-book {
-    @apply gradient-vertical p-5 rounded-2xl xs:w-min w-full relative;
+    @apply bg-white border-2 border-blue-500 p-5 rounded-2xl xs:w-min w-full relative;
   }
 
   .borrowed-book_cover {
@@ -123,11 +185,11 @@
   }
 
   .book-overview h1 {
-    @apply text-5xl font-semibold text-white md:text-7xl;
+    @apply text-5xl font-semibold text-gray-800 md:text-7xl;
   }
 
   .book-info {
-    @apply mt-7 flex flex-row flex-wrap gap-4 text-xl text-light-100;
+    @apply mt-7 flex flex-row flex-wrap gap-4 text-xl text-gray-500;
   }
 
   .book-copies {
@@ -135,19 +197,19 @@
   }
 
   .book-copies p {
-    @apply text-xl text-light-100;
+    @apply text-xl text-gray-500;
   }
 
   .book-copies p span {
-    @apply ml-2 font-semibold text-primary;
+    @apply ml-2 font-semibold text-blue-500;
   }
 
   .book-description {
-    @apply mt-2 text-justify text-xl text-light-100;
+    @apply mt-2 text-justify text-xl text-gray-500;
   }
 
   .book-overview_btn {
-    @apply mt-4 min-h-14 w-fit bg-primary text-dark-100 hover:bg-primary/90 max-md:w-full !important;
+    @apply mt-4 min-h-14 w-fit bg-blue-500 text-white hover:bg-blue-700 max-md:w-full !important;
   }
 
   /* File Upload */
@@ -160,46 +222,46 @@
   }
 
   .progress {
-    @apply rounded-full bg-green-800 p-0.5 text-center font-bebas-neue text-[8px] font-bold leading-none text-light-100;
+    @apply rounded-full bg-green-800 p-0.5 text-center font-bebas-neue text-[8px] font-bold leading-none text-white;
   }
 
   /* Search */
   .search {
-    @apply relative mt-10 flex min-h-14 w-full items-center rounded-xl bg-dark-300 px-4;
+    @apply relative mt-10 flex min-h-14 w-full items-center rounded-xl bg-white border-2 border-blue-500 px-4;
   }
 
   .search-input {
-    @apply w-full border-none font-bold placeholder:font-normal text-white placeholder:text-light-100 focus-visible:ring-0 focus-visible:shadow-none !important;
+    @apply w-full border-none font-bold placeholder:font-normal text-gray-800 placeholder:text-gray-500 focus-visible:ring-0 focus-visible:shadow-none !important;
   }
 
   /* Book Receipt */
   .book-receipt_admin-btn {
-    @apply bg-light-300 rounded-md text-primary-admin font-semibold hover:bg-light-300/80 !important;
+    @apply bg-gray-100 rounded-md text-blue-500 font-semibold hover:bg-gray-200 !important;
   }
 
   /* Book Ticket */
   #book-ticket {
-    @apply relative mt-10 hidden w-[544px] overflow-hidden bg-dark-300 py-8;
+    @apply relative mt-10 hidden w-[544px] overflow-hidden bg-white py-8 border-2 border-blue-500;
   }
 
   #book-ticket #book-details div {
-    @apply space-y-1 rounded-md border border-light-100/10 p-3;
+    @apply space-y-1 rounded-md border border-gray-300 p-3;
   }
 
   #book-ticket #book-details div p:first-child {
-    @apply text-xs text-light-700;
+    @apply text-xs text-gray-500;
   }
 
   #book-ticket #book-details div p:last-child {
-    @apply text-sm font-bold text-white;
+    @apply text-sm font-bold text-gray-800;
   }
 
   #book-ticket #book-divider div:first-child {
-    @apply absolute -left-3.5 top-1/2 size-7 -translate-y-1/2 rounded-full bg-black;
+    @apply absolute -left-3.5 top-1/2 size-7 -translate-y-1/2 rounded-full bg-gray-200;
   }
 
   #book-ticket #book-divider div:last-child {
-    @apply absolute -right-3.5 top-1/2 size-7 -translate-y-1/2 rounded-full bg-black;
+    @apply absolute -right-3.5 top-1/2 size-7 -translate-y-1/2 rounded-full bg-gray-200;
   }
 
   .book-ticket-circles {
@@ -212,15 +274,15 @@
   }
 
   #not-found h4 {
-    @apply text-white mt-6 font-semibold text-2xl;
+    @apply text-gray-800 mt-6 font-semibold text-2xl;
   }
 
   #not-found p {
-    @apply text-light-100 w-[360px] mt-1;
+    @apply text-gray-500 w-[360px] mt-1;
   }
 
   .not-found-btn {
-    @apply bg-primary font-bebas-neue min-w-[360px] mt-6 text-dark-100 text-xl hover:bg-primary/90 min-h-12 !important;
+    @apply bg-blue-500 font-bebas-neue min-w-[360px] mt-6 text-white text-xl hover:bg-blue-700 min-h-12 !important;
   }
 
   /* Pagination */
@@ -229,11 +291,11 @@
   }
 
   .pagination-btn_light {
-    @apply bg-light-300 text-dark-300 hover:bg-light-300/70 !important;
+    @apply bg-gray-100 text-gray-800 hover:bg-gray-200 !important;
   }
 
   .pagination-btn_dark {
-    @apply bg-dark-300 hover:bg-dark-100 !important;
+    @apply bg-blue-500 hover:bg-blue-700 text-white !important;
   }
 
   #pagination p {
@@ -242,42 +304,30 @@
 
   /* Sort */
   .select-trigger {
-    @apply w-40 h-10 px-4 bg-dark-300 text-light-100 border-dark-100 !important;
+    @apply w-40 h-10 px-4 bg-white text-gray-800 border-2 border-blue-500 !important;
   }
 
   .select-content {
-    @apply bg-dark-300 text-light-100 border-dark-100 !important;
+    @apply bg-white text-gray-800 border-2 border-blue-500 !important;
   }
 
   .select-item {
-    @apply focus:bg-dark-600 focus:text-light-100 !important;
+    @apply focus:bg-blue-300 focus:text-gray-800 !important;
   }
 }
 
 @layer utilities {
-  .gradient-vertical {
-    background: linear-gradient(180deg, #12141d 0%, #12151f 100%);
-  }
-
-  .gradient-gray {
-    background: linear-gradient(270deg, #37363a 0%, #353637 100%);
-  }
-
-  .gradient-blue {
-    background: linear-gradient(180deg, #232839 0%, #12141d 100%);
-  }
-
   /* Auth */
   .auth-container {
-    @apply relative flex flex-col-reverse text-light-100 sm:flex-row;
+    @apply relative flex flex-col-reverse text-gray-500 sm:flex-row;
   }
 
   .auth-form {
-    @apply my-auto flex h-full min-h-screen flex-1 items-center bg-pattern bg-cover bg-top bg-dark-100 px-5 py-10;
+    @apply my-auto flex h-full min-h-screen flex-1 items-center bg-gray-200 px-5 py-10;
   }
 
   .auth-box {
-    @apply gradient-vertical mx-auto flex max-w-xl flex-col gap-6 rounded-lg p-10;
+    @apply bg-white border-2 border-blue-500 mx-auto flex max-w-xl flex-col gap-6 rounded-lg p-10;
   }
 
   .auth-illustration {
@@ -286,7 +336,7 @@
 
   /* Root */
   .root-container {
-    @apply flex min-h-screen flex-1 flex-col bg-pattern bg-cover bg-top bg-dark-100 px-5 xs:px-10 md:px-16;
+    @apply flex min-h-screen flex-1 flex-col bg-gray-200 px-5 xs:px-10 md:px-16;
   }
 
   /* Book Details */
@@ -295,7 +345,7 @@
   }
 
   .book-details h3 {
-    @apply text-xl font-semibold text-primary;
+    @apply text-xl font-semibold text-blue-500;
   }
 
   /* Library */
@@ -304,91 +354,13 @@
   }
 
   .library-subtitle {
-    @apply text-lg font-semibold uppercase text-light-100;
+    @apply text-lg font-semibold uppercase text-gray-500;
   }
 
   .library-title {
-    @apply mt-2 text-3xl font-semibold text-white xs:text-5xl;
-  }
-}
-
-@layer base {
-  :root {
-    /* Цвета бренда (blue) */
-    --scheme-brand-100: #070031;
-    --scheme-brand-200: #000957;
-    --scheme-brand-300: #003e89;
-    --scheme-brand-400: #005da9;
-    --scheme-brand-500: #0078c7;
-    --scheme-brand-600: #009ef0;
-    --scheme-brand-700: #3fc2ff;
-    --scheme-brand-800: #6ae6ff;
-    --scheme-brand-900: #78f4ff;
-    --scheme-brand-1000: #91ffff;
-
-    /* Акцентные цвета (cyan) */
-    --scheme-accent-100: #070031;
-    --scheme-accent-200: #000957;
-    --scheme-accent-300: #003e89;
-    --scheme-accent-400: #005da9;
-    --scheme-accent-500: #0078c7;
-    --scheme-accent-600: #009ef0;
-    --scheme-accent-700: #3fc2ff;
-    --scheme-accent-800: #6ae6ff;
-    --scheme-accent-900: #78f4ff;
-
-    /* Нейтральные цвета (sand) */
-    --scheme-neutral-100: #0b002e;
-    --scheme-neutral-200: #18004f;
-    --scheme-neutral-300: #452c93;
-    --scheme-neutral-400: #5c48b1;
-    --scheme-neutral-500: #7866d2;
-    --scheme-neutral-600: #9888f8;
-    --scheme-neutral-700: #b6a8ff;
-    --scheme-neutral-800: #d9ccff;
-    --scheme-neutral-900: #e9dcff;
-    --scheme-neutral-1000: #f6eaff;
-
-    /* Интерфейсные настройки */
-    --border-radius: 0.75rem; /* playful */
-    --transition-speed: 300ms; /* all */
-    --surface-opacity: 0.8; /* translucent */
+    @apply mt-2 text-3xl font-semibold text-gray-800 xs:text-5xl;
   }
 
-  /* Светлая и темная темы */
-  .light {
-    --background: #f6eaff;
-    --foreground: #0b002e;
-    --primary: var(--scheme-brand-600);
-    --accent: var(--scheme-accent-600);
-    --neutral: var(--scheme-neutral-600);
-    --border: var(--scheme-neutral-300);
-    --input: var(--scheme-neutral-400);
-    --ring: var(--scheme-brand-400);
-  }
-
-  .dark {
-    --background: #0b002e;
-    --foreground: #f6eaff;
-    --primary: var(--scheme-brand-400);
-    --accent: var(--scheme-accent-500);
-    --neutral: var(--scheme-neutral-500);
-    --border: var(--scheme-neutral-700);
-    --input: var(--scheme-neutral-600);
-    --ring: var(--scheme-brand-300);
-  }
-
-  /* Глобальные стили */
-  * {
-    @apply border-border outline-ring/50 transition-all;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-/* Дополнительные стили */
-@layer utilities {
   .hide-scrollbar::-webkit-scrollbar {
     width: 0px;
     height: 0px;
@@ -406,13 +378,12 @@
     background: transparent;
   }
 
-  /* Градиентный фон */
-  .gradient-bg {
-    background: linear-gradient(
-      180deg,
-      var(--scheme-neutral-200) 0%,
-      var(--scheme-neutral-600) 100%
-    );
+  /* Утилиты для ограничения строк текста */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 }
 
@@ -421,19 +392,19 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gray-200 text-gray-800;
   }
 }
 
 @keyframes pulse-border {
   0% {
-    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(250, 204, 21, 0);
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
   }
 }
 
@@ -457,6 +428,7 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 20px;
+  border: 2px solid #3B82F6;
 }
 
 .card-header {
@@ -464,18 +436,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 2px solid #3B82F6;
 }
 
 .card-title {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #333;
+  color: #1F2937;
 }
 
 .view-all {
-  color: #4f46e5;
+  color: #3B82F6;
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -510,10 +482,11 @@
 }
 
 .book-card {
-  border: 1px solid #e5e7eb;
+  border: 2px solid #3B82F6;
   border-radius: 8px;
   padding: 16px;
   transition: transform 0.2s;
+  background: white;
 }
 
 .book-card:hover {
@@ -525,16 +498,18 @@
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 8px 0;
+  color: #1F2937;
 }
 
 .book-author {
   font-size: 14px;
-  color: #6b7280;
+  color: #6B7280;
   margin: 0 0 12px 0;
 }
 
 .book-availability {
   font-size: 14px;
+  color: #1F2937;
 }
 
 /* Список запросов */
@@ -548,7 +523,8 @@
 .request-item {
   padding: 12px;
   border-radius: 8px;
-  background-color: #f9fafb;
+  background-color: #F3F4F6;
+  border: 2px solid #3B82F6;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -559,15 +535,17 @@
   align-items: center;
   gap: 8px;
   font-weight: 500;
+  color: #1F2937;
 }
 
 .request-book {
   font-weight: 500;
+  color: #1F2937;
 }
 
 .request-date {
   font-size: 14px;
-  color: #6b7280;
+  color: #6B7280;
 }
 
 .request-actions {
@@ -582,17 +560,17 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  border: none;
+  border: 2px solid #3B82F6;
 }
 
 .btn-approve {
-  background-color: #4f46e5;
+  background-color: #3B82F6;
   color: white;
 }
 
 .btn-reject {
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: #F3F4F6;
+  color: #1F2937;
 }
 
 /* Таблица активностей */
@@ -604,19 +582,23 @@
 .activity-table {
   width: 100%;
   border-collapse: collapse;
+  background: white;
+  border: 2px solid #3B82F6;
 }
 
 .activity-table th {
   text-align: left;
   padding: 12px 16px;
   font-weight: 500;
-  color: #6b7280;
-  border-bottom: 1px solid #e5e7eb;
+  color: #1F2937;
+  border-bottom: 2px solid #3B82F6;
+  background: #F3F4F6;
 }
 
 .activity-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #E5E7EB;
+  color: #1F2937;
 }
 
 .status-badge {
@@ -627,25 +609,25 @@
 }
 
 .status-completed {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: #D1FAE5;
+  color: #065F46;
 }
 
 .status-processing {
-  background-color: #e0f2fe;
-  color: #075985;
+  background-color: #93C5FD;
+  color: #1F2937;
 }
 
 .status-cancelled {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: #FEE2E2;
+  color: #991B1B;
 }
 
 /* Общие стили */
 .no-data {
   padding: 24px;
   text-align: center;
-  color: #6b7280;
+  color: #6B7280;
   font-style: italic;
 }
 
@@ -654,11 +636,11 @@
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .charts-container {
     grid-template-columns: 1fr;
   }
-  
+
   .content-grid {
     grid-template-columns: 1fr;
   }
@@ -668,8 +650,151 @@
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .books-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Стили для новой цветовой схемы */
+.new-style-card {
+  @apply bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-blue-500 text-gray-800;
+}
+
+.new-style-button {
+  @apply bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center justify-center gap-2 transition-colors shadow-md;
+}
+
+.new-style-button-secondary {
+  @apply bg-blue-300 hover:bg-blue-500 text-gray-800 hover:text-white font-medium rounded-lg px-4 py-2 flex items-center justify-center gap-2 transition-colors shadow-md;
+}
+
+/* Плавное появление элементов */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Задержка анимации для создания эффекта каскада */
+.delay-1 {
+  animation-delay: 0.1s;
+}
+
+.delay-2 {
+  animation-delay: 0.2s;
+}
+
+.delay-3 {
+  animation-delay: 0.3s;
+}
+
+.delay-4 {
+  animation-delay: 0.4s;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-gray-200 text-gray-800;
+  }
+}
+
+/* Настройки размера шрифта пользователя */
+:root {
+  --user-font-size: 16px;
+}
+
+/* Применение размера шрифта к основному контенту */
+.font-size-small {
+  --user-font-size: 14px;
+}
+
+.font-size-medium {
+  --user-font-size: 16px;
+}
+
+.font-size-large {
+  --user-font-size: 18px;
+}
+
+.font-size-extra-large {
+  --user-font-size: 20px;
+}
+
+/* Применение к основным элементам текста */
+.user-content,
+.user-content p,
+.user-content div,
+.user-content span {
+  font-size: var(--user-font-size);
+}
+
+/* Применение к заголовкам с сохранением пропорций */
+.font-size-small h1 { font-size: 2rem; }
+.font-size-small h2 { font-size: 1.5rem; }
+.font-size-small h3 { font-size: 1.25rem; }
+
+.font-size-medium h1 { font-size: 2.25rem; }
+.font-size-medium h2 { font-size: 1.875rem; }
+.font-size-medium h3 { font-size: 1.5rem; }
+
+.font-size-large h1 { font-size: 2.5rem; }
+.font-size-large h2 { font-size: 2rem; }
+.font-size-large h3 { font-size: 1.75rem; }
+
+.font-size-extra-large h1 { font-size: 3rem; }
+.font-size-extra-large h2 { font-size: 2.25rem; }
+.font-size-extra-large h3 { font-size: 2rem; }
+
+/* Book component styles */
+.shadow-book {
+  box-shadow: 
+    2px 0 8px 0 rgba(0,0,0,0.15),
+    0 2px 4px 0 rgba(0,0,0,0.1);
+}
+
+.bg-book-bind-bg {
+  background: linear-gradient(
+    180deg,
+    rgba(0,0,0,0.05) 0%,
+    rgba(0,0,0,0.1) 50%,
+    rgba(0,0,0,0.05) 100%
+  );
+}
+
+.bg-book-pages {
+  background: linear-gradient(
+    0deg,
+    #f8f8f8 0%,
+    #ffffff 15%,
+    #f8f8f8 30%,
+    #ffffff 45%,
+    #f8f8f8 60%,
+    #ffffff 75%,
+    #f8f8f8 90%,
+    #ffffff 100%
+  );
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+.book-bg {
+  box-shadow: 
+    -2px 0 4px 0 rgba(0,0,0,0.1),
+    0 2px 4px 0 rgba(0,0,0,0.05);
+}
+
+.bg-ali {
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E");
 }

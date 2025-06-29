@@ -4,7 +4,7 @@ import { useEffect, useState, use } from "react";
 import { notFound } from "next/navigation";
 import BookDetails from "@/components/admin/BookDetails";
 
-// Theme classes aligned with DashboardPage's "cosmic" theme
+// Theme classes aligned with DashboardPage's new blue theme
 interface Book {
   id: string;
   title: string;
@@ -64,6 +64,8 @@ export default function BookDetailPage({
         }
 
         const bookData = await res.json();
+        console.log("Book detail API response:", bookData);
+        
         if (!bookData.authors || typeof bookData.authors !== "string") {
           bookData.authors = "";
         }
@@ -80,8 +82,20 @@ export default function BookDetailPage({
   }, [resolvedParams.bookId]);
 
   if (error) return notFound();
-  if (loading) return <div className="text-center text-neutral-500 dark:text-neutral-400">Загрузка...</div>;
-  if (!book) return <div className="text-center text-neutral-500 dark:text-neutral-400">Книга не найдена</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-gray-200 flex items-center justify-center">
+      <div className="text-center text-gray-500">Загрузка...</div>
+    </div>
+  );
+  if (!book) return (
+    <div className="min-h-screen bg-gray-200 flex items-center justify-center">
+      <div className="text-center text-gray-500">Книга не найдена</div>
+    </div>
+  );
 
-  return <BookDetails book={book} />;
+  return (
+    <div className="min-h-screen bg-gray-200">
+      <BookDetails book={book} />
+    </div>
+  );
 }

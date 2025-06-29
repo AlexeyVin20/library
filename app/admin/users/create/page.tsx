@@ -1,73 +1,115 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, User } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
+
+interface UserRole {
+  roleId: number;
+}
+
+interface Book {
+  // Можно оставить пустым, если не требуется при создании
+}
 
 interface UserCreateDto {
   id: string;
   fullName: string;
   email: string;
-  phone: string;
+  phone: string | null;
   dateOfBirth: string;
-  passportNumber: string;
-  passportIssuedBy: string;
-  passportIssuedDate: string;
-  address: string;
+  passportNumber: string | null;
+  passportIssuedBy: string | null;
+  passportIssuedDate: string | null;
+  address: string | null;
   dateRegistered: string;
-  borrowedBooksCount: number;
+  borrowedBooksCount: number | null;
   fineAmount: number;
   isActive: boolean;
-  lastLoginDate: string;
   loanPeriodDays: number;
-  maxBooksAllowed: number;
-  passwordHash: string;
+  maxBooksAllowed: number | null;
+  password: string;
   username: string;
+  userRoles: UserRole[] | null;
+  borrowedBooks: Book[] | null;
 }
+
+const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+  >
+    {children}
+  </motion.div>
+);
 
 export default function CreateUserPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [formData, setFormData] = useState<UserCreateDto>({
     id: crypto.randomUUID(),
     fullName: "",
     email: "",
     phone: "",
-    dateOfBirth: "",
+    dateOfBirth: new Date().toISOString().slice(0, 10),
     passportNumber: "",
     passportIssuedBy: "",
-    passportIssuedDate: "",
+    passportIssuedDate: new Date().toISOString().slice(0, 10),
     address: "",
-    dateRegistered: new Date().toISOString().split("T")[0],
+    dateRegistered: new Date().toISOString().slice(0, 10),
     borrowedBooksCount: 0,
     fineAmount: 0,
     isActive: true,
-    lastLoginDate: new Date().toISOString().split("T")[0],
-    loanPeriodDays: 14,
-    maxBooksAllowed: 5,
-    passwordHash: "",
+    loanPeriodDays: 0,
+    maxBooksAllowed: 0,
+    password: "",
     username: "",
+    userRoles: null,
+    borrowedBooks: null,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-
-    if (type === "checkbox") {
-      const { checked } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: checked }));
-    } else if (type === "number") {
-      setFormData((prev) => ({ ...prev, [name]: value ? Number(value) : 0 }));
+    const { name, value, type, checked } = e.target;
+    if (name === "userRoles") {
+      const roleId = parseInt(value, 10);
+      setFormData((prev) => {
+        const exists = prev.userRoles?.some((r) => r.roleId === roleId);
+        if (exists) {
+          const filtered = prev.userRoles!.filter((r) => r.roleId !== roleId);
+          return {
+            ...prev,
+            userRoles: filtered.length > 0 ? filtered : null,
+          };
+        } else {
+          return {
+            ...prev,
+            userRoles: prev.userRoles ? [...prev.userRoles, { roleId }] : [{ roleId }],
+          };
+        }
+      });
+    } else if (["dateOfBirth", "passportIssuedDate", "dateRegistered"].includes(name)) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value, // YYYY-MM-DD
+      }));
+    } else if (["borrowedBooksCount", "maxBooksAllowed", "loanPeriodDays", "fineAmount"].includes(name)) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value === "" ? 0 : Number(value),
+      }));
+    } else if (["phone", "passportNumber", "passportIssuedBy", "address"].includes(name)) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
     }
   };
 
@@ -75,284 +117,137 @@ export default function CreateUserPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+      // Приводим даты к ISO-строке
+      const dataToSend = {
+        ...formData,
+        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : new Date().toISOString(),
+        passportIssuedDate: formData.passportIssuedDate ? new Date(formData.passportIssuedDate).toISOString() : new Date().toISOString(),
+        dateRegistered: formData.dateRegistered ? new Date(formData.dateRegistered).toISOString() : new Date().toISOString(),
+        phone: formData.phone ?? "",
+        passportNumber: formData.passportNumber ?? "",
+        passportIssuedBy: formData.passportIssuedBy ?? "",
+        address: formData.address ?? "",
+        borrowedBooksCount: formData.borrowedBooksCount ?? 0,
+        maxBooksAllowed: formData.maxBooksAllowed ?? 0,
+        loanPeriodDays: formData.loanPeriodDays ?? 0,
+        fineAmount: formData.fineAmount ?? 0,
+        userRoles: formData.userRoles && formData.userRoles.length > 0 ? formData.userRoles : null,
+        borrowedBooks: null,
+      };
       const response = await fetch(`${baseUrl}/api/User`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSend),
       });
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Ошибка ответа сервера при создании:", errorText);
-        throw new Error(`Ошибка: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Ошибка при создании пользователя");
       }
-
       router.push("/admin/users");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при создании пользователя");
-      console.error("Ошибка создания пользователя:", err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <GlassMorphismContainer>
-      <div className="p-6 max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-neutral-500 dark:text-neutral-200">
-            Создание пользователя
-          </h1>
-          <button
+    <div className="min-h-screen bg-gray-200 p-6 max-w-2xl mx-auto">
+      <FadeInView>
+        <motion.div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">Создание пользователя</h1>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.back()}
-            className="bg-gradient-to-r from-blue-600/90 to-blue-700/70 dark:from-blue-700/80 dark:to-blue-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
+            className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md"
           >
+            <ArrowLeft className="w-4 h-4" />
             Назад
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
+      </FadeInView>
 
-        {error && (
-          <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mb-6 p-4 bg-red-100 border border-red-200 text-red-800 rounded-lg"
+        >
+          {error}
+        </motion.div>
+      )}
 
+      <FadeInView delay={0.2}>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white/30 dark:bg-neutral-800/30 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-neutral-700/30 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.15)]">
+          <motion.div
+            className="bg-white rounded-xl p-6 shadow-lg border border-gray-200"
+            whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1)" }}
+          >
             <div className="space-y-4">
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  ФИО
-                </label>
-                <input
-                  type="text"
-                  id="fullName"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Телефон
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="dateOfBirth" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Дата рождения
-                </label>
-                <input
-                  type="date"
-                  id="dateOfBirth"
-                  name="dateOfBirth"
-                  value={formData.dateOfBirth}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="passportNumber" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Номер паспорта
-                </label>
-                <input
-                  type="text"
-                  id="passportNumber"
-                  name="passportNumber"
-                  value={formData.passportNumber}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="passportIssuedBy" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Кем выдан паспорт
-                </label>
-                <input
-                  type="text"
-                  id="passportIssuedBy"
-                  name="passportIssuedBy"
-                  value={formData.passportIssuedBy}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="passportIssuedDate" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Дата выдачи паспорта
-                </label>
-                <input
-                  type="date"
-                  id="passportIssuedDate"
-                  name="passportIssuedDate"
-                  value={formData.passportIssuedDate}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="address" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Адрес
-                </label>
-                <input
-                  type="text"
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="dateRegistered" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Дата регистрации
-                </label>
-                <input
-                  type="date"
-                  id="dateRegistered"
-                  name="dateRegistered"
-                  value={formData.dateRegistered}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="loanPeriodDays" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Срок выдачи (дней)
-                </label>
-                <input
-                  type="number"
-                  id="loanPeriodDays"
-                  name="loanPeriodDays"
-                  value={formData.loanPeriodDays}
-                  onChange={handleChange}
-                  min="1"
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="maxBooksAllowed" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Максимальное количество книг
-                </label>
-                <input
-                  type="number"
-                  id="maxBooksAllowed"
-                  name="maxBooksAllowed"
-                  value={formData.maxBooksAllowed}
-                  onChange={handleChange}
-                  min="1"
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="borrowedBooksCount" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Текущее количество книг
-                </label>
-                <input
-                  type="number"
-                  id="borrowedBooksCount"
-                  name="borrowedBooksCount"
-                  value={formData.borrowedBooksCount}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="fineAmount" className="block text-sm font-medium text-neutral-500 dark:text-neutral-200 mb-1">
-                  Штраф (руб.)
-                </label>
-                <input
-                  type="number"
-                  id="fineAmount"
-                  name="fineAmount"
-                  value={formData.fineAmount}
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full bg-white/50 dark:bg-neutral-700/50 backdrop-blur-xl border border-white/30 dark:border-neutral-600/30 rounded-lg px-4 py-2 text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isActive"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, isActive: !!checked }))
-                  }
-                />
-                <label
-                  htmlFor="isActive"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Активный пользователь
-                </label>
-              </div>
+              {[
+                { label: "Имя пользователя", name: "username", type: "text", required: true },
+                { label: "Пароль", name: "password", type: "password", required: true },
+                { label: "ФИО", name: "fullName", type: "text", required: true },
+                { label: "Email", name: "email", type: "email", required: true },
+                { label: "Телефон", name: "phone", type: "tel" },
+                { label: "Дата рождения", name: "dateOfBirth", type: "date", required: true },
+                { label: "Номер паспорта", name: "passportNumber", type: "text" },
+                { label: "Кем выдан паспорт", name: "passportIssuedBy", type: "text" },
+                { label: "Дата выдачи паспорта", name: "passportIssuedDate", type: "date" },
+                { label: "Адрес", name: "address", type: "text" },
+                { label: "Дата регистрации", name: "dateRegistered", type: "date"},
+                { label: "Срок выдачи (дней)", name: "loanPeriodDays", type: "number", min: 1},
+                { label: "Максимальное количество книг", name: "maxBooksAllowed", type: "number", min: 1 },
+                { label: "Текущее количество книг", name: "borrowedBooksCount", type: "number", min: 0 },
+                { label: "Штраф (руб.)", name: "fineAmount", type: "number", min: 0, step: 0.01 },
+              ].map((field, index) => (
+                <div key={field.name}>
+                  <label htmlFor={field.name} className="block text-sm font-medium text-gray-800 mb-1">
+                    {field.label}
+                  </label>
+                  <motion.input
+                    id={field.name}
+                    name={field.name}
+                    type={field.type}
+                    value={formData[field.name as keyof UserCreateDto] as string | number}
+                    onChange={handleChange}
+                    required={field.required}
+                    min={field.min}
+                    step={field.step}
+                    className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    whileFocus={{ scale: 1.02 }}
+                  />
+                </div>
+              ))}
             </div>
-          </div>
-
+          </motion.div>
           <div className="flex justify-end gap-4">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => router.back()}
-              className="bg-gradient-to-r from-gray-600/90 to-gray-700/70 dark:from-gray-700/80 dark:to-gray-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 shadow-md"
             >
               Отмена
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="submit"
               disabled={loading}
-              className="bg-gradient-to-r from-green-600/90 to-green-700/70 dark:from-green-700/80 dark:to-green-800/60 backdrop-blur-xl text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md disabled:opacity-50"
             >
-              {loading ? "Создание..." : "Создать пользователя"}
-            </button>
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Создать пользователя
+            </motion.button>
           </div>
         </form>
-      </div>
-    </GlassMorphismContainer>
+      </FadeInView>
+    </div>
   );
 }

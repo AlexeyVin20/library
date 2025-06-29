@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import GlassMorphismContainer from '@/components/admin/GlassMorphismContainer';
 import Link from "next/link";
 
 interface BookRequest {
@@ -88,23 +87,19 @@ export default function BookRequestsPage() {
   };
 
   if (loading) return (
-    <GlassMorphismContainer>
-      <div className="flex justify-center items-center h-screen text-neutral-700 dark:text-neutral-200">
-        Загрузка...
-      </div>
-    </GlassMorphismContainer>
+    <div className="flex justify-center items-center h-screen text-neutral-700 dark:text-neutral-200">
+      Загрузка...
+    </div>
   );
 
   if (error) return (
-    <GlassMorphismContainer>
-      <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
-        {error}
-      </div>
-    </GlassMorphismContainer>
+    <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
+      {error}
+    </div>
   );
 
   return (
-    <GlassMorphismContainer>
+    <div className="p-6 space-y-6">
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-neutral-700 dark:text-neutral-200">
@@ -178,6 +173,6 @@ export default function BookRequestsPage() {
           )}
         </div>
       </div>
-    </GlassMorphismContainer>
+    </div>
   );
 }

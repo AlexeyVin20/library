@@ -46,4 +46,62 @@ export interface Borrowing {
   dueDate: Date;
   returnDate?: Date;
   status: 'active' | 'returned' | 'overdue';
+}
+
+// Типы для системы уведомлений
+export interface Notification {
+  id: string
+  userId: string
+  title: string
+  message: string
+  type: NotificationType
+  priority: NotificationPriority
+  createdAt: string
+  isRead: boolean
+  readAt?: string
+  isDelivered: boolean
+  deliveredAt?: string
+  additionalData?: string
+  bookId?: string
+  borrowedBookId?: string
+  bookTitle?: string
+  bookAuthors?: string
+  bookCover?: string
+}
+
+export type NotificationType = 
+  | "BookDueSoon"
+  | "BookOverdue" 
+  | "FineAdded"
+  | "FineIncreased"
+  | "BookReturned"
+  | "BookReserved"
+  | "ReservationExpired"
+  | "NewBookAvailable"
+  | "AccountBlocked"
+  | "AccountUnblocked"
+  | "SystemMaintenance"
+  | "GeneralInfo"
+
+export type NotificationPriority = "Low" | "Normal" | "High" | "Critical"
+
+export interface NotificationStats {
+  totalNotifications: number
+  unreadNotifications: number
+  readNotifications: number
+  deliveredNotifications: number
+  pendingNotifications: number
+  notificationsByType: Record<string, number>
+  notificationsByPriority: Record<string, number>
+}
+
+export interface NotificationCreateDto {
+  userId: string
+  title: string
+  message: string
+  type: NotificationType
+  priority?: NotificationPriority
+  additionalData?: string
+  bookId?: string
+  borrowedBookId?: string
 } 
