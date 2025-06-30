@@ -11,24 +11,16 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import Image from "next/image";
 import Filters, { Filter as FilterType, FilterType as FilterTypeEnum, FilterOperator, Status, Priority } from "@/components/ui/filters";
 import { CreateReservationDialog } from "@/components/ui/reservation-creation-modal";
+import type { Reservation as ReservationType, ReservationDto } from "@/lib/types";
 
-interface Reservation {
-  id: string;
-  userId: string;
-  bookId: string;
-  reservationDate: string;
-  expirationDate: string;
-  status: string;
+// Расширенный интерфейс для работы с резервированиями на странице
+interface Reservation extends Omit<ReservationDto, 'book'> {
   originalStatus?: string; // Оригинальный статус для операций
-  notes?: string;
-  user?: {
-    fullName: string;
-    email?: string;
-    phone?: string;
-  };
   book?: {
+    id?: string;
     title: string;
     authors?: string;
+    isbn?: string;
     cover?: string;
     availableCopies?: number;
   };
@@ -265,6 +257,12 @@ export default function ReservationsPage() {
     }
   };
 
+  // Функция для правильного форматирования дат для PostgreSQL
+  const formatDateForPostgres = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toISOString();
+  };
+
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       // Получаем токен авторизации
@@ -276,11 +274,14 @@ export default function ReservationsPage() {
       const reservation = reservations.find(r => r.id === id);
       if (!reservation) throw new Error("Резервирование не найдено");
       
+      // Backend теперь сам управляет назначением и освобождением экземпляров
+      
       // Используем оригинальный статус для отправки на сервер, но обновляем его
       const updatedReservation = {
         ...reservation,
         reservationDate: new Date(reservation.reservationDate).toISOString(),
         expirationDate: new Date(reservation.expirationDate).toISOString(),
+        actualReturnDate: reservation.actualReturnDate ? new Date(reservation.actualReturnDate).toISOString() : null,
         status: newStatus
       };
       
@@ -288,6 +289,7 @@ export default function ReservationsPage() {
       delete updatedReservation.originalStatus;
       delete updatedReservation.user;
       delete updatedReservation.book;
+      delete updatedReservation.bookInstance;
       
       const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
         method: "PUT",
@@ -313,6 +315,13 @@ export default function ReservationsPage() {
         }
         return r;
       }));
+      
+      // Отправляем событие для обновления других компонентов
+      window.dispatchEvent(new CustomEvent('instanceStatusUpdate'));
+      
+      // Показываем уведомление об успехе  
+      alert(`Статус резервирования обновлен на "${newStatus}". Backend автоматически управляет экземплярами.`);
+      
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
       alert(err instanceof Error ? err.message : "Ошибка при обновлении статуса");
@@ -865,6 +874,47 @@ export default function ReservationsPage() {
                               {formatDate(reservation.expirationDate)}
                             </span>
                           </div>
+                          {reservation.actualReturnDate && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-500 font-medium">Возвращено:</span>
+                              <span className="text-green-600 font-medium">
+                                {formatDate(reservation.actualReturnDate)}
+                              </span>
+                            </div>
+                          )}
+                          {reservation.bookInstance && (
+                            <div className="border-t pt-2 mt-2">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-purple-500 font-medium">Экземпляр:</span>
+                                <span className="text-gray-800 font-mono text-sm">
+                                  {reservation.bookInstance.instanceCode}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-purple-500">Состояние:</span>
+                                <span className="text-gray-800 text-sm">
+                                  {reservation.bookInstance.condition}
+                                </span>
+                              </div>
+                              {reservation.bookInstance.location && (
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-purple-500">Расположение:</span>
+                                  <span className="text-gray-800 text-sm">
+                                    {reservation.bookInstance.location}
+                                  </span>
+                                </div>
+                              )}
+                              {reservation.bookInstance.shelf && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-500">Полка:</span>
+                                  <span className="text-gray-800 text-sm">
+                                    {reservation.bookInstance.shelf.category} - {reservation.bookInstance.shelf.shelfNumber}
+                                    {reservation.bookInstance.position && ` (поз. ${reservation.bookInstance.position})`}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           {(reservation.status === 'Просрочена' || reservation.status === 'Истекла') && (
                             <div className="flex items-center gap-2">
                               <span className="text-red-500 font-medium">Просрочено:</span>
@@ -875,45 +925,110 @@ export default function ReservationsPage() {
                           )}
                         </div>
 
-                        <div className="flex justify-between items-center mt-4 gap-2">
+                        <div className="flex flex-col gap-3 mt-4">
+                          {/* Основные быстрые действия */}
                           <div className="flex gap-2">
-                            {(reservation.originalStatus || reservation.status) !== "Одобрена" && (
+                            {/* Быстрое действие: Одобрить */}
+                            {(reservation.originalStatus || reservation.status) === "Обрабатывается" && (
                               <motion.button 
                                 onClick={() => handleStatusChange(reservation.id, "Одобрена")} 
-                                className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" 
+                                className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm" 
                                 disabled={reservation.book?.availableCopies === 0}
                                 whileHover={{ y: -2 }} 
                                 whileTap={{ scale: 0.95 }}
                                 title={reservation.book?.availableCopies === 0 ? "Нет доступных экземпляров" : "Одобрить резервирование"}
                               >
                                 <CheckCircle className="w-4 h-4" />
+                                Одобрить
                               </motion.button>
                             )}
-                            {(reservation.originalStatus || reservation.status) !== "Отменена" && <motion.button onClick={() => handleStatusChange(reservation.id, "Отменена")} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md" whileHover={{
-                        y: -2
-                      }} whileTap={{
-                        scale: 0.95
-                      }}>
-                                <XCircle className="w-4 h-4" />
-                              </motion.button>}
-                            <motion.button onClick={() => handleDelete(reservation.id)} className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md" whileHover={{
-                        y: -2
-                      }} whileTap={{
-                        scale: 0.95
-                      }}>
-                              <Trash2 className="w-4 h-4" />
-                            </motion.button>
+                            
+                            {/* Быстрое действие: Выдать книгу */}
+                            {(reservation.originalStatus || reservation.status) === "Одобрена" && (
+                              <motion.button 
+                                onClick={() => handleStatusChange(reservation.id, "Выдана")} 
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm" 
+                                disabled={reservation.book?.availableCopies === 0}
+                                whileHover={{ y: -2 }} 
+                                whileTap={{ scale: 0.95 }}
+                                title="Выдать книгу (назначить экземпляр)"
+                              >
+                                <ArrowRight className="w-4 h-4" />
+                                Выдать книгу
+                              </motion.button>
+                            )}
+                            
+                            {/* Быстрое действие: Оформить возврат */}
+                            {(reservation.originalStatus || reservation.status) === "Выдана" && (
+                              <motion.button 
+                                onClick={() => handleStatusChange(reservation.id, "Возвращена")} 
+                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-md flex items-center justify-center gap-2 font-medium text-sm"
+                                whileHover={{ y: -2 }} 
+                                whileTap={{ scale: 0.95 }}
+                                title="Оформить возврат книги"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Возвращена
+                              </motion.button>
+                            )}
+                            
+                            {/* Если резервирование завершено, показываем статус */}
+                            {(reservation.status === "Возвращена" || reservation.status === "Отменена" || reservation.status === "Истекла" || reservation.status === "Просрочена" || reservation.status === "Отменена_пользователем") && (
+                              <div className="flex-1 bg-gray-100 text-gray-600 px-3 py-2 rounded-md flex items-center justify-center gap-2 font-medium text-sm">
+                                {getStatusIcon(reservation.status)}
+                                {reservation.status === "Возвращена" ? "Завершено" : 
+                                 reservation.status === "Отменена" ? "Отменено" :
+                                 reservation.status === "Истекла" ? "Истекло" :
+                                 reservation.status === "Просрочена" ? "Просрочено" :
+                                 "Отменено пользователем"}
+                              </div>
+                            )}
                           </div>
-                          <Link href={`/admin/reservations/${reservation.id}`}>
-                            <motion.button className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-2 rounded-md flex items-center gap-2" whileHover={{
-                        y: -2
-                      }} whileTap={{
-                        scale: 0.95
-                      }}>
-                              <span className="text-sm font-medium text-white">Подробнее</span>
-                              <ArrowRight className="w-4 h-4" />
-                            </motion.button>
-                          </Link>
+
+                          {/* Дополнительные действия */}
+                          <div className="flex justify-between items-center gap-2">
+                            <div className="flex gap-2">
+                              {/* Отменить (только для активных резервирований) */}
+                              {(reservation.originalStatus || reservation.status) !== "Отменена" && 
+                               (reservation.originalStatus || reservation.status) !== "Возвращена" && 
+                               (reservation.originalStatus || reservation.status) !== "Истекла" && 
+                               (reservation.originalStatus || reservation.status) !== "Просрочена" && 
+                               (reservation.originalStatus || reservation.status) !== "Отменена_пользователем" && (
+                                <motion.button 
+                                  onClick={() => handleStatusChange(reservation.id, "Отменена")} 
+                                  className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md" 
+                                  whileHover={{ y: -2 }} 
+                                  whileTap={{ scale: 0.95 }}
+                                  title="Отменить резервирование"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </motion.button>
+                              )}
+                              
+                              {/* Удалить */}
+                              <motion.button 
+                                onClick={() => handleDelete(reservation.id)} 
+                                className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md" 
+                                whileHover={{ y: -2 }} 
+                                whileTap={{ scale: 0.95 }}
+                                title="Удалить резервирование"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </motion.button>
+                            </div>
+                            
+                            {/* Подробнее */}
+                            <Link href={`/admin/reservations/${reservation.id}`}>
+                              <motion.button 
+                                className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-2 rounded-md flex items-center gap-2" 
+                                whileHover={{ y: -2 }} 
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <span className="text-sm font-medium text-white">Подробнее</span>
+                                <ArrowRight className="w-4 h-4" />
+                              </motion.button>
+                            </Link>
+                          </div>
                         </div>
                       </motion.div>)}
                   </div>}

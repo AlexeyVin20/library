@@ -48,6 +48,95 @@ export interface Borrowing {
   status: 'active' | 'returned' | 'overdue';
 }
 
+// Интерфейс для резервирований согласно новой модели
+export interface Reservation {
+  id: string;
+  userId: string;
+  bookId: string;
+  bookInstanceId?: string; // Связь с конкретным экземпляром книги
+  reservationDate: string;
+  expirationDate: string;
+  actualReturnDate?: string; // Фактическая дата возврата
+  status: ReservationStatus;
+  notes?: string;
+  user?: UserDto;
+  book?: BookDto;
+  bookInstance?: BookInstanceDto;
+}
+
+export interface ReservationDto {
+  id: string;
+  userId: string;
+  bookId: string;
+  bookInstanceId?: string;
+  reservationDate: string;
+  expirationDate: string;
+  actualReturnDate?: string;
+  status: string;
+  notes?: string;
+  user?: UserDto;
+  book?: BookDto;
+  bookInstance?: BookInstanceDto;
+}
+
+export interface ReservationCreateDto {
+  id: string;
+  userId: string;
+  bookId: string;
+  reservationDate: string;
+  expirationDate: string;
+  status: string;
+  notes?: string;
+}
+
+export interface ReservationUpdateDto {
+  id: string;
+  userId: string;
+  bookId: string;
+  bookInstanceId?: string;
+  reservationDate: string;
+  expirationDate: string;
+  actualReturnDate?: string;
+  status: string;
+  notes?: string;
+}
+
+export type ReservationStatus = 
+  | "Обрабатывается"
+  | "Одобрена"
+  | "Отменена"
+  | "Истекла"
+  | "Выдана"
+  | "Возвращена"
+  | "Просрочена"
+  | "Отменена_пользователем";
+
+export interface UserDto {
+  id?: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface BookInstanceDto {
+  id: string;
+  bookId: string;
+  instanceCode: string;
+  status: string;
+  condition: string;
+  purchasePrice?: number;
+  dateAcquired: string;
+  dateLastChecked?: string;
+  notes?: string;
+  shelfId?: number;
+  shelf?: ShelfDto;
+  position?: number;
+  location?: string;
+  isActive: boolean;
+  dateCreated: string;
+  dateModified: string;
+}
+
 // Типы для системы уведомлений
 export interface Notification {
   id: string
@@ -104,4 +193,80 @@ export interface NotificationCreateDto {
   additionalData?: string
   bookId?: string
   borrowedBookId?: string
+}
+
+export interface BookInstance {
+  id: string;
+  bookId: string;
+  book?: BookDto;
+  instanceCode: string;
+  status: string;
+  condition: string;
+  purchasePrice?: number;
+  dateAcquired: string;
+  dateLastChecked?: string;
+  notes?: string;
+  shelfId?: number;
+  shelf?: ShelfDto;
+  position?: number;
+  location?: string;
+  isActive: boolean;
+  dateCreated: string;
+  dateModified: string;
+}
+
+export interface BookDto {
+  id: string;
+  title: string;
+  authors: string;
+  isbn: string;
+  genre?: string;
+  publisher?: string;
+  publicationYear?: number;
+  description?: string;
+  cover?: string;
+}
+
+export interface ShelfDto {
+  id: number;
+  category: string;
+  shelfNumber: number;
+}
+
+export interface BookInstanceSimpleDto {
+  id: string;
+  bookId: string;
+  instanceCode: string;
+  status: string;
+  condition: string;
+  location?: string;
+  isActive: boolean;
+}
+
+export interface BookInstanceCreateDto {
+  bookId: string;
+  instanceCode: string;
+  status: string;
+  condition: string;
+  purchasePrice?: number;
+  dateAcquired: string;
+  notes?: string;
+  shelfId?: number;
+  position?: number;
+  location?: string;
+  isActive: boolean;
+}
+
+export interface BookInstanceUpdateDto {
+  instanceCode: string;
+  status: string;
+  condition: string;
+  purchasePrice?: number;
+  dateAcquired: string;
+  dateLastChecked?: string;
+  notes?: string;
+  shelfId?: number;
+  position?: number;
+  location?: string;
+  isActive: boolean;
 } 

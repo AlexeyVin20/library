@@ -235,7 +235,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       udk: initialData?.udk || "",
       bbk: initialData?.bbk || "",
       summary: initialData?.summary || "",
-      availableCopies: initialData?.availableCopies || 1,
+      availableCopies: initialData?.availableCopies || 0,
       edition: initialData?.edition || "",
       price: initialData?.price || 0,
       format: initialData?.format || "",
