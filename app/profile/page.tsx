@@ -14,8 +14,6 @@ import {
   Mail,
   Phone,
   Calendar,
-  FileText,
-  MapPin,
   Shield,
   Clock,
   BookOpen,
@@ -52,11 +50,6 @@ interface UserType {
   fullName: string
   email: string
   phone: string
-  dateOfBirth: string
-  passportNumber: string
-  passportIssuedBy: string
-  passportIssuedDate: string
-  address: string
   registrationDate: string
   borrowedBooksCount: number
   fineAmount: number
@@ -271,11 +264,6 @@ export default function ProfilePage() {
           fullName: data.fullName || "",
           email: data.email || "",
           phone: data.phone || "",
-          dateOfBirth: data.dateOfBirth || "",
-          passportNumber: data.passportNumber || "",
-          passportIssuedBy: data.passportIssuedBy || "",
-          passportIssuedDate: data.passportIssuedDate || "",
-          address: data.address || "",
           registrationDate: data.dateRegistered || data.registrationDate || "",
           borrowedBooksCount: data.borrowedBooksCount || 0,
           fineAmount: data.fineAmount || 0,
@@ -724,12 +712,6 @@ export default function ProfilePage() {
                       isActive={activeTab === "personal"}
                     />
                     <AnimatedTabsTrigger
-                      value="documents"
-                      icon={<FileText className="h-4 w-4" />}
-                      label="Документы"
-                      isActive={activeTab === "documents"}
-                    />
-                    <AnimatedTabsTrigger
                       value="security"
                       icon={<Lock className="h-4 w-4" />}
                       label="Безопасность"
@@ -766,38 +748,11 @@ export default function ProfilePage() {
                         value={user?.phone || "Не указано"}
                         icon={<Phone className="h-4 w-4" />}
                       />
-                      <InfoField
-                        label="Дата рождения"
-                        value={user?.dateOfBirth ? formatDate(user.dateOfBirth) : "Не указано"}
-                        icon={<Calendar className="h-4 w-4" />}
-                      />
-                      <InfoField
-                        label="Адрес"
-                        value={user?.address || "Не указано"}
-                        icon={<MapPin className="h-4 w-4" />}
-                      />
+
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="documents" className="p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InfoField
-                        label="Номер паспорта"
-                        value={user?.passportNumber || "Не указано"}
-                        icon={<FileText className="h-4 w-4" />}
-                      />
-                      <InfoField
-                        label="Кем выдан"
-                        value={user?.passportIssuedBy || "Не указано"}
-                        icon={<FileText className="h-4 w-4" />}
-                      />
-                      <InfoField
-                        label="Дата выдачи"
-                        value={user?.passportIssuedDate ? formatDate(user.passportIssuedDate) : "Не указано"}
-                        icon={<Calendar className="h-4 w-4" />}
-                      />
-                    </div>
-                  </TabsContent>
+
 
                   <TabsContent value="security" className="p-6">
                     <h3 className="text-lg font-medium text-gray-800 mb-4">Изменение пароля</h3>

@@ -19,11 +19,6 @@ interface UserCreateDto {
   fullName: string;
   email: string;
   phone: string | null;
-  dateOfBirth: string;
-  passportNumber: string | null;
-  passportIssuedBy: string | null;
-  passportIssuedDate: string | null;
-  address: string | null;
   dateRegistered: string;
   borrowedBooksCount: number | null;
   password: string;
@@ -51,11 +46,6 @@ export default function CreateUserPage() {
     fullName: "",
     email: "",
     phone: "",
-    dateOfBirth: new Date().toISOString().slice(0, 10),
-    passportNumber: "",
-    passportIssuedBy: "",
-    passportIssuedDate: new Date().toISOString().slice(0, 10),
-    address: "",
     dateRegistered: new Date().toISOString().slice(0, 10),
     borrowedBooksCount: 0,
     password: "",
@@ -66,7 +56,7 @@ export default function CreateUserPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    if (["dateOfBirth", "passportIssuedDate", "dateRegistered"].includes(name)) {
+    if (["dateRegistered"].includes(name)) {
       setFormData((prev) => ({
         ...prev,
         [name]: value, // YYYY-MM-DD
@@ -76,7 +66,7 @@ export default function CreateUserPage() {
         ...prev,
         [name]: value === "" ? 0 : Number(value),
       }));
-    } else if (["phone", "passportNumber", "passportIssuedBy", "address"].includes(name)) {
+    } else if (["phone"].includes(name)) {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
@@ -95,16 +85,11 @@ export default function CreateUserPage() {
     setError(null);
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-      // Приводим даты к ISO-строке
+      // Подготавливаем данные для отправки
       const dataToSend = {
         ...formData,
-        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : new Date().toISOString(),
-        passportIssuedDate: formData.passportIssuedDate ? new Date(formData.passportIssuedDate).toISOString() : new Date().toISOString(),
         dateRegistered: formData.dateRegistered ? new Date(formData.dateRegistered).toISOString() : new Date().toISOString(),
         phone: formData.phone ?? "",
-        passportNumber: formData.passportNumber ?? "",
-        passportIssuedBy: formData.passportIssuedBy ?? "",
-        address: formData.address ?? "",
         borrowedBooksCount: formData.borrowedBooksCount ?? 0,
         fineAmount: 0, // Штраф всегда 0 при создании
         isActive: true, // Аккаунт всегда активен при создании
@@ -207,11 +192,6 @@ export default function CreateUserPage() {
                 { label: "ФИО", name: "fullName", type: "text", required: true },
                 { label: "Email", name: "email", type: "email", required: true },
                 { label: "Телефон", name: "phone", type: "tel" },
-                { label: "Дата рождения", name: "dateOfBirth", type: "date", required: true },
-                { label: "Номер паспорта", name: "passportNumber", type: "text" },
-                { label: "Кем выдан паспорт", name: "passportIssuedBy", type: "text" },
-                { label: "Дата выдачи паспорта", name: "passportIssuedDate", type: "date" },
-                { label: "Адрес", name: "address", type: "text" },
                 { label: "Дата регистрации", name: "dateRegistered", type: "date"},
               ].map((field, index) => (
                 <div key={field.name}>

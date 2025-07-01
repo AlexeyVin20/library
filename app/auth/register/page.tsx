@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, BookOpen, User, Mail, Phone, Calendar, FileText, MapPin, Lock } from 'lucide-react';
+import { Loader2, BookOpen, User, Mail, Phone, Lock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -21,11 +21,6 @@ const registerSchema = z.object({
   fullName: z.string().min(2, "Полное имя должно содержать не менее 2 символов"),
   email: z.string().email("Введите корректный email"),
   phone: z.string().min(10, "Введите корректный номер телефона"),
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Дата рождения должна быть в формате YYYY-MM-DD"),
-  passportNumber: z.string().min(10, "Номер паспорта должен содержать не менее 10 символов"),
-  passportIssuedBy: z.string().min(2, "Кем выдан паспорт должно содержать не менее 2 символов"),
-  passportIssuedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Дата выдачи паспорта должна быть в формате YYYY-MM-DD"),
-  address: z.string().min(5, "Адрес должен содержать не менее 5 символов"),
   username: z.string().min(3, "Имя пользователя должно содержать не менее 3 символов"),
   password: z.string().min(6, "Пароль должен содержать не менее 6 символов"),
   confirmPassword: z.string().min(6, "Пароль должен содержать не менее 6 символов"),
@@ -67,7 +62,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -75,11 +70,6 @@ export default function RegisterPage() {
       fullName: "",
       email: "",
       phone: "",
-      dateOfBirth: "",
-      passportNumber: "",
-      passportIssuedBy: "",
-      passportIssuedDate: "",
-      address: "",
       username: "",
       password: "",
       confirmPassword: "",
@@ -88,10 +78,8 @@ export default function RegisterPage() {
 
   const nextStep = () => {
     const fieldsToValidate = currentStep === 1 
-      ? ["fullName", "email", "phone", "dateOfBirth"] 
-      : currentStep === 2 
-        ? ["passportNumber", "passportIssuedBy", "passportIssuedDate", "address"] 
-        : ["username", "password", "confirmPassword"];
+      ? ["fullName", "email", "phone"] 
+      : ["username", "password", "confirmPassword"];
     
     form.trigger(fieldsToValidate as any).then(isValid => {
       if (isValid) {
@@ -111,11 +99,9 @@ export default function RegisterPage() {
     // Удаляем confirmPassword из данных отправки
     const { confirmPassword, ...registerData } = data;
 
-    // Преобразуем даты в формат ISO для API
+    // Формируем данные для API
     const formattedData = {
       ...registerData,
-      dateOfBirth: new Date(registerData.dateOfBirth).toISOString(),
-      passportIssuedDate: new Date(registerData.passportIssuedDate).toISOString(),
       // Автоматически устанавливаем ограничения для роли "Гость"
       maxBooksAllowed: USER_ROLES.GUEST.maxBooksAllowed,
       loanPeriodDays: USER_ROLES.GUEST.loanPeriodDays,
@@ -363,128 +349,13 @@ export default function RegisterPage() {
                         )}
                       />
                       
-                      <FormField
-                        control={form.control}
-                        name="dateOfBirth"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Дата рождения</FormLabel>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  type="date" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
+
                     </FormSection>
                   </FadeInView>
                 )}
                 
-                {/* Step 2: Document Information */}
+                {/* Step 2: Account Information */}
                 {currentStep === 2 && (
-                  <FadeInView>
-                    <FormSection title="Документы">
-                      <FormField
-                        control={form.control}
-                        name="passportNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Номер паспорта</FormLabel>
-                            <div className="relative">
-                              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  placeholder="1234 567890" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="passportIssuedBy"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Кем выдан</FormLabel>
-                            <div className="relative">
-                              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  placeholder="УМВД России по..." 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="passportIssuedDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Дата выдачи паспорта</FormLabel>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  type="date" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel className="text-gray-800 font-medium">Адрес</FormLabel>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  placeholder="г. Москва, ул. Ленина, д. 1, кв. 1" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </FormSection>
-                  </FadeInView>
-                )}
-                
-                {/* Step 3: Account Information */}
-                {currentStep === 3 && (
                   <FadeInView>
                     <FormSection title="Данные учетной записи">
                       <FormField

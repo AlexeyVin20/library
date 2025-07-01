@@ -12,11 +12,6 @@ interface UserDetail {
   fullName: string;
   email: string;
   phone: string;
-  dateOfBirth: string;
-  passportNumber: string;
-  passportIssuedBy: string;
-  passportIssuedDate: string;
-  address: string;
   dateRegistered: string;
   borrowedBooksCount: number;
   fineAmount: number;
@@ -491,8 +486,6 @@ export default function UserDetailPage() {
                     <h4 className="text-gray-800 font-semibold mb-2">Основная информация</h4>
                     <ul className="space-y-2 text-gray-500">
                       <li><span className="font-medium">Логин:</span> {user.username}</li>
-                      <li><span className="font-medium">Дата рождения:</span> {formatDate(user.dateOfBirth)}</li>
-                      <li><span className="font-medium">Адрес:</span> {user.address || "Не указан"}</li>
                       <li><span className="font-medium">Дата регистрации:</span> {formatDate(user.dateRegistered)}</li>
                       <li><span className="font-medium">Последний вход:</span> {formatDate(user.lastLoginDate)}</li>
                     </ul>
@@ -506,14 +499,7 @@ export default function UserDetailPage() {
                     </ul>
                   </div>
                 </div>
-                {user.passportNumber && <div>
-                    <h4 className="text-gray-800 font-semibold mb-2">Паспортные данные</h4>
-                    <ul className="space-y-2 text-gray-500">
-                      <li><span className="font-medium">Номер паспорта:</span> {user.passportNumber}</li>
-                      {user.passportIssuedBy && <li><span className="font-medium">Кем выдан:</span> {user.passportIssuedBy}</li>}
-                      {user.passportIssuedDate && <li><span className="font-medium">Дата выдачи:</span> {formatDate(user.passportIssuedDate)}</li>}
-                    </ul>
-                  </div>}
+
               </div>
             </Section>
           </div>
