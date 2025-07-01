@@ -40,7 +40,7 @@ const PixelCanvas = dynamic(() => import("@/components/ui/pixel-canvas").then((m
   ssr: false,
 })
 
-// Floating particles component
+// Floating particles component - убираем Math.random() для избежания проблем с гидратацией
 const FloatingParticles = () => {
   const [mounted, setMounted] = useState(false)
   
@@ -50,9 +50,33 @@ const FloatingParticles = () => {
 
   if (!mounted) return null
 
+  // Предопределенные позиции для избежания проблем с гидратацией
+  const particleConfigs = [
+    { left: 10, top: 20, duration: 15, delay: 0 },
+    { left: 25, top: 40, duration: 18, delay: 1 },
+    { left: 45, top: 15, duration: 12, delay: 2 },
+    { left: 60, top: 60, duration: 20, delay: 3 },
+    { left: 80, top: 30, duration: 16, delay: 4 },
+    { left: 15, top: 70, duration: 14, delay: 1 },
+    { left: 35, top: 85, duration: 19, delay: 2 },
+    { left: 55, top: 10, duration: 13, delay: 3 },
+    { left: 75, top: 50, duration: 17, delay: 4 },
+    { left: 90, top: 80, duration: 15, delay: 0 },
+    { left: 5, top: 50, duration: 16, delay: 1 },
+    { left: 30, top: 25, duration: 18, delay: 2 },
+    { left: 50, top: 75, duration: 14, delay: 3 },
+    { left: 70, top: 5, duration: 20, delay: 4 },
+    { left: 85, top: 45, duration: 12, delay: 0 },
+    { left: 20, top: 65, duration: 17, delay: 1 },
+    { left: 40, top: 35, duration: 15, delay: 2 },
+    { left: 65, top: 90, duration: 19, delay: 3 },
+    { left: 78, top: 25, duration: 13, delay: 4 },
+    { left: 95, top: 60, duration: 16, delay: 0 },
+  ]
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 20 }).map((_, i) => (
+      {particleConfigs.map((config, i) => (
         <motion.div
           key={i}
           className="absolute w-2 h-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-20"
@@ -63,13 +87,13 @@ const FloatingParticles = () => {
             opacity: [0.2, 0.8, 0.2],
           }}
           transition={{
-            duration: Math.random() * 10 + 10,
+            duration: config.duration,
             repeat: Infinity,
-            delay: Math.random() * 5,
+            delay: config.delay,
           }}
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
+            left: `${config.left}%`,
+            top: `${config.top}%`,
           }}
         />
       ))}
@@ -109,14 +133,16 @@ export default function Home() {
 
   // Эффект для темы
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "light"
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    const initialTheme = savedTheme === "dark" || (savedTheme === "system" && prefersDark) ? "dark" : "light"
-    setTheme(initialTheme as "light" | "dark")
-    if (initialTheme === "dark") {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("theme") || "light"
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+      const initialTheme = savedTheme === "dark" || (savedTheme === "system" && prefersDark) ? "dark" : "light"
+      setTheme(initialTheme as "light" | "dark")
+      if (initialTheme === "dark") {
+        document.documentElement.classList.add("dark")
+      } else {
+        document.documentElement.classList.remove("dark")
+      }
     }
   }, [])
 
@@ -185,27 +211,45 @@ export default function Home() {
     },
   }
 
+  // Если компонент еще не смонтирован, показываем базовую структуру без анимаций
+  if (!mounted) {
+    return (
+      <div className="min-h-screen font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 relative overflow-hidden">
+        <ReaderNavigation />
+        <main className="relative z-10 container mx-auto px-4 py-20">
+          <div className="text-center space-y-12">
+            <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-blue-500 bg-clip-text text-transparent leading-tight">
+              Библиотека
+              <br />
+              <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
+                будущего
+              </span>
+            </h1>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 relative overflow-hidden">
       {/* Навигация */}
       <ReaderNavigation />
 
       {/* Анимированный фон */}
-      {mounted && (
-        <div className="fixed inset-0 z-0">
-          <PixelCanvas
-            colors={
-              theme === "dark"
-                ? ["#1e293b", "#334155", "#475569", "#64748b"]
-                : ["#e0e7ff", "#c7d2fe", "#a5b4fc", "#818cf8"]
-            }
-            speed={30}
-            gap={8}
-            noFocus={true}
-          />
-          <FloatingParticles />
-        </div>
-      )}
+      <div className="fixed inset-0 z-0">
+        <PixelCanvas
+          colors={
+            theme === "dark"
+              ? ["#1e293b", "#334155", "#475569", "#64748b"]
+              : ["#e0e7ff", "#c7d2fe", "#a5b4fc", "#818cf8"]
+          }
+          speed={30}
+          gap={8}
+          noFocus={true}
+        />
+        <FloatingParticles />
+      </div>
 
       {/* Gradient overlay */}
       <div className="fixed inset-0 z-0 bg-gradient-to-br from-transparent via-white/10 to-blue-500/10 dark:from-transparent dark:via-black/10 dark:to-blue-900/20" />
@@ -213,35 +257,31 @@ export default function Home() {
       <main className="relative z-10 container mx-auto px-4 py-20 space-y-32">
         {/* Героическая секция */}
         <motion.div style={{ y: y1, opacity }} className="text-center space-y-12 relative">
-          {/* Floating elements */}
-          {typeof window !== 'undefined' && (
-            <>
-              <motion.div
-                className="absolute -top-20 -left-20 w-40 h-40 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  rotate: [0, 180, 360],
-                }}
-                transition={{
-                  duration: 20,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-              <motion.div
-                className="absolute -top-10 -right-32 w-32 h-32 bg-gradient-to-r from-pink-400/20 to-yellow-400/20 rounded-full blur-3xl"
-                animate={{
-                  scale: [1.2, 1, 1.2],
-                  rotate: [360, 180, 0],
-                }}
-                transition={{
-                  duration: 15,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-            </>
-          )}
+          {/* Floating elements - убираем проверку window */}
+          <motion.div
+            className="absolute -top-20 -left-20 w-40 h-40 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, 180, 360],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
+          <motion.div
+            className="absolute -top-10 -right-32 w-32 h-32 bg-gradient-to-r from-pink-400/20 to-yellow-400/20 rounded-full blur-3xl"
+            animate={{
+              scale: [1.2, 1, 1.2],
+              rotate: [360, 180, 0],
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
 
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}

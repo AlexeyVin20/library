@@ -14,6 +14,7 @@ import { Loader2, BookOpen, User, Mail, Phone, Calendar, FileText, MapPin, Lock 
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { USER_ROLES } from "@/lib/types";
 
 // Схема валидации для формы регистрации
 const registerSchema = z.object({
@@ -114,11 +115,20 @@ export default function RegisterPage() {
     const formattedData = {
       ...registerData,
       dateOfBirth: new Date(registerData.dateOfBirth).toISOString(),
-      passportIssuedDate: new Date(registerData.passportIssuedDate).toISOString()
+      passportIssuedDate: new Date(registerData.passportIssuedDate).toISOString(),
+      // Автоматически устанавливаем ограничения для роли "Гость"
+      maxBooksAllowed: USER_ROLES.GUEST.maxBooksAllowed,
+      loanPeriodDays: USER_ROLES.GUEST.loanPeriodDays,
+      fineAmount: 0,
+      borrowedBooksCount: 0,
+      dateRegistered: new Date().toISOString(),
+      isActive: true,
+      borrowedBooks: null,
     };
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/Auth/register`, {
+      // Создаём пользователя без ролей через /api/User
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -141,27 +151,75 @@ export default function RegisterPage() {
         throw new Error(errorMessage);
       }
 
+      const newUser = await response.json();
+
+      // Назначаем роль "Гость" после создания пользователя
+      if (newUser.id) {
+        try {
+          const assignRoleResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User/assign-role`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: newUser.id,
+              roleId: USER_ROLES.GUEST.id // ID: 4
+            }),
+          });
+
+          if (!assignRoleResponse.ok) {
+            console.warn("Не удалось назначить роль 'Гость' пользователю, но регистрация прошла успешно");
+          }
+        } catch (roleError) {
+          console.warn("Ошибка при назначении роли 'Гость':", roleError);
+        }
+      }
+
+      // Теперь нужно авторизовать пользователя
+      // Попробуем войти с созданными учетными данными
       try {
-        const responseData = await response.json();
-
-        // Сохраняем токен в localStorage
-        localStorage.setItem("token", responseData.token);
-        localStorage.setItem("user", JSON.stringify({
-          id: responseData.userId,
-          username: responseData.username,
-          roles: responseData.roles,
-        }));
-
-        toast({
-          title: "Успешная регистрация",
-          description: "Вы успешно зарегистрировались и вошли в систему",
+        const loginResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/Auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: registerData.username,
+            password: registerData.password,
+          }),
         });
 
-        // Редирект на главную страницу
-        router.push("/");
-      } catch (parseError) {
-        console.error("Ошибка при парсинге ответа:", parseError);
-        throw new Error("Ошибка при обработке ответа сервера");
+        if (loginResponse.ok) {
+          const loginData = await loginResponse.json();
+          
+          // Сохраняем токен в localStorage
+          localStorage.setItem("token", loginData.token);
+          localStorage.setItem("user", JSON.stringify({
+            id: loginData.userId || newUser.id,
+            username: loginData.username || registerData.username,
+            roles: loginData.roles || ["Гость"],
+          }));
+
+          toast({
+            title: "Успешная регистрация",
+            description: "Вы успешно зарегистрировались и вошли в систему как гость",
+          });
+
+          // Редирект на главную страницу
+          router.push("/");
+        } else {
+          // Если автоматический вход не удался, просто уведомляем о успешной регистрации
+          toast({
+            title: "Регистрация завершена",
+            description: "Аккаунт создан. Пожалуйста, войдите в систему.",
+          });
+          
+          router.push("/auth/login");
+        }
+      } catch (loginError) {
+        console.warn("Не удалось автоматически войти после регистрации:", loginError);
+        toast({
+          title: "Регистрация завершена",
+          description: "Аккаунт создан. Пожалуйста, войдите в систему.",
+        });
+        
+        router.push("/auth/login");
       }
     } catch (err) {
       console.error("Ошибка регистрации:", err);

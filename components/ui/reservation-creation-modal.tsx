@@ -38,6 +38,7 @@ interface UserType {
   fullName: string;
   email?: string;
   phone?: string;
+  loanPeriodDays?: number;
 }
 
 interface BookType {
@@ -85,6 +86,7 @@ export function CreateReservationDialog({
 
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [selectedBook, setSelectedBook] = useState<BookType | null>(null);
+  const [isExpirationDateManuallySet, setIsExpirationDateManuallySet] = useState(false);
 
   const userSearchInputRef = useRef<HTMLInputElement>(null);
   const bookSearchInputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +102,7 @@ export function CreateReservationDialog({
       fetchData();
       setShowUserPicker(false);
       setShowBookPicker(false);
+      setIsExpirationDateManuallySet(false);
     }
   }, [open]);
 
@@ -182,6 +185,12 @@ export function CreateReservationDialog({
   }, [selectedBook]);
 
   // ───────────────────────── helpers ─────────────────────────
+  const calculateExpirationDate = (startDate: Date, loanPeriodDays: number = 14): Date => {
+    const expiration = new Date(startDate);
+    expiration.setDate(startDate.getDate() + loanPeriodDays);
+    return expiration;
+  };
+
   const fetchData = async () => {
     try {
       setLoadingData(true);
@@ -201,8 +210,24 @@ export function CreateReservationDialog({
     }
   };
 
-  const handleChange = (field: string, value: any) =>
-    setFormData((p) => ({ ...p, [field]: value }));
+  const handleChange = (field: string, value: any) => {
+    if (field === "reservationDate" && !isExpirationDateManuallySet && selectedUser) {
+      // Автоматически пересчитываем дату окончания при изменении даты начала
+      const loanPeriod = selectedUser.loanPeriodDays || 14;
+      const newExpirationDate = calculateExpirationDate(value, loanPeriod);
+      setFormData((p) => ({ 
+        ...p, 
+        [field]: value, 
+        expirationDate: newExpirationDate 
+      }));
+    } else if (field === "expirationDate") {
+      // Если пользователь вручную изменяет дату окончания, запоминаем это
+      setIsExpirationDateManuallySet(true);
+      setFormData((p) => ({ ...p, [field]: value }));
+    } else {
+      setFormData((p) => ({ ...p, [field]: value }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,15 +254,50 @@ export function CreateReservationDialog({
       setSelectedBook(null);
       setUserSearch("");
       setBookSearch("");
+      setIsExpirationDateManuallySet(false);
       onOpenChange(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUserSelect = (user: UserType) => {
-    setSelectedUser(user);
-    setFormData((p) => ({ ...p, userId: user.id }));
+  const handleUserSelect = async (user: UserType) => {
+    try {
+      // Загружаем полную информацию о пользователе для получения loanPeriodDays
+      const response = await fetch(`${baseUrl}/api/User/${user.id}`);
+      if (response.ok) {
+        const fullUserData = await response.json();
+        const userWithLoanPeriod = {
+          ...user,
+          loanPeriodDays: fullUserData.loanPeriodDays || 14
+        };
+        
+        setSelectedUser(userWithLoanPeriod);
+        
+        // Если дата окончания еще не была изменена вручную, пересчитываем её
+        if (!isExpirationDateManuallySet) {
+          const newExpirationDate = calculateExpirationDate(
+            formData.reservationDate, 
+            userWithLoanPeriod.loanPeriodDays
+          );
+          setFormData((p) => ({ 
+            ...p, 
+            userId: user.id,
+            expirationDate: newExpirationDate
+          }));
+        } else {
+          setFormData((p) => ({ ...p, userId: user.id }));
+        }
+      } else {
+        // Если не удалось загрузить полные данные, используем базовые
+        setSelectedUser(user);
+        setFormData((p) => ({ ...p, userId: user.id }));
+      }
+    } catch (error) {
+      console.error("Ошибка при загрузке данных пользователя:", error);
+      setSelectedUser(user);
+      setFormData((p) => ({ ...p, userId: user.id }));
+    }
     setShowUserPicker(false);
   };
 
@@ -360,7 +420,14 @@ export function CreateReservationDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Дата окончания</Label>
+                    <Label>
+                      Дата окончания
+                      {selectedUser && selectedUser.loanPeriodDays && !isExpirationDateManuallySet && (
+                        <span className="text-xs text-blue-600 ml-1">
+                          (срок займа: {selectedUser.loanPeriodDays} дн.)
+                        </span>
+                      )}
+                    </Label>
                     <Popover modal>
                       <PopoverTrigger asChild>
                         <Button
@@ -384,6 +451,36 @@ export function CreateReservationDialog({
                         />
                       </PopoverContent>
                     </Popover>
+                    {selectedUser && selectedUser.loanPeriodDays && !isExpirationDateManuallySet && (
+                      <p className="text-xs text-gray-500">
+                        Дата рассчитана автоматически на основе срока займа пользователя
+                      </p>
+                    )}
+                    {isExpirationDateManuallySet && (
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-amber-600">
+                          Дата изменена вручную
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-6 px-2"
+                          onClick={() => {
+                            if (selectedUser && selectedUser.loanPeriodDays) {
+                              const newExpirationDate = calculateExpirationDate(
+                                formData.reservationDate, 
+                                selectedUser.loanPeriodDays
+                              );
+                              setFormData(p => ({ ...p, expirationDate: newExpirationDate }));
+                              setIsExpirationDateManuallySet(false);
+                            }
+                          }}
+                        >
+                          Восстановить автоматический расчет
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

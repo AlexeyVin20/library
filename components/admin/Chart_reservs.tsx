@@ -720,11 +720,6 @@ export function ReservationsChart({ reservations }: ReservationsChartProps) {
                   </div>
                 )}
 
-                {/* Debug Toggle */}
-                <Button variant="outline" size="sm" onClick={() => setDebugMode(!debugMode)} className="text-xs">
-                  Debug: {debugMode ? "ON" : "OFF"}
-                </Button>
-
               {/* Селектор года */}
               <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(Number(value))}>
                 <SelectTrigger className="w-[120px]">

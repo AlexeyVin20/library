@@ -663,9 +663,6 @@ export default function DashboardPage() {
           </PinContainer>
         </div>
 
-        {/* Быстрые действия в виде плавающей панели */}
-        <QuickActionsMenu />
-
         {/* Календарь и фильтр событий */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="flex flex-col items-center min-h-[200px]">

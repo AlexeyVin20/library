@@ -44,6 +44,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { cn, getInitials } from "@/lib/utils"
 import { useAuth } from "@/lib/auth"
+import { USER_ROLES, getRoleById, getRoleDescription, getHighestPriorityRole, getHighestPriorityRoleFromApi } from "@/lib/types"
 
 // User model interface
 interface UserType {
@@ -64,6 +65,7 @@ interface UserType {
   maxBooksAllowed: number
   username: string
   roles: string[]
+  rolesData?: Array<{roleId: number, roleName: string}>
   borrowedBooks?: Book[]
   reservations?: Reservation[]
 }
@@ -172,6 +174,8 @@ const AnimatedTabsTrigger = ({
   )
 }
 
+
+
 export default function ProfilePage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -229,18 +233,37 @@ export default function ProfilePage() {
           throw new Error("Токен авторизации не найден")
         }
 
-        // Fetch user data from API
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+        // Fetch user data and roles in parallel
+        const [userResponse, rolesResponse] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User/${id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User/${id}/roles`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        ])
 
-        if (!response.ok) {
+        if (!userResponse.ok) {
           throw new Error("Не удалось загрузить данные пользователя")
         }
 
-        const data = await response.json()
+        const data = await userResponse.json()
+        
+        // Get user roles
+        let userRoles: string[] = []
+        let rolesData: Array<{roleId: number, roleName: string}> = []
+        if (rolesResponse.ok) {
+          rolesData = await rolesResponse.json()
+          console.log("Роли пользователя:", rolesData) // Для отладки
+          // API возвращает массив объектов: { userId, roleId, roleName }
+          userRoles = rolesData.map((roleItem: any) => roleItem.roleName).filter((role: string) => role)
+        }
+        
+        console.log("Обработанные роли:", userRoles) // Для отладки
         
         // Убедимся, что у нас есть все необходимые поля, или установим значения по умолчанию
         const processedUser: UserType = {
@@ -253,14 +276,15 @@ export default function ProfilePage() {
           passportIssuedBy: data.passportIssuedBy || "",
           passportIssuedDate: data.passportIssuedDate || "",
           address: data.address || "",
-          registrationDate: data.registrationDate || "",
+          registrationDate: data.dateRegistered || data.registrationDate || "",
           borrowedBooksCount: data.borrowedBooksCount || 0,
           fineAmount: data.fineAmount || 0,
           isActive: data.isActive ?? true,
           loanPeriodDays: data.loanPeriodDays || 0,
           maxBooksAllowed: data.maxBooksAllowed || 0,
           username: data.username || "",
-          roles: Array.isArray(data.roles) ? data.roles : [],
+          roles: userRoles,
+          rolesData: rolesData,
           borrowedBooks: Array.isArray(data.borrowedBooks) ? data.borrowedBooks : [],
           reservations: Array.isArray(data.reservations) ? data.reservations : [],
         }
@@ -533,24 +557,65 @@ export default function ProfilePage() {
                     <h2 className="text-xl font-bold text-gray-800 mb-1">{user?.fullName}</h2>
                     <p className="text-blue-500 mb-3">{user?.username}</p>
 
-                    <div className="flex flex-wrap gap-2 justify-center mb-4">
-                      {user?.roles && user.roles.length > 0 ? (
-                        user.roles.map((role) => (
-                          <Badge
-                            key={role}
-                            variant="outline"
-                            className="bg-blue-300 border-blue-500 text-blue-700"
-                          >
-                            {role}
-                          </Badge>
-                        ))
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-blue-300 border-blue-500 text-blue-700"
-                        >
-                          Пользователь
-                        </Badge>
+                    <div className="space-y-3 mb-4">
+                      <h4 className="text-sm font-medium text-gray-600 text-center">Основная роль</h4>
+                      {(() => {
+                        const highestPriorityRole = user?.rolesData ? 
+                          getHighestPriorityRoleFromApi(user.rolesData) : 
+                          getHighestPriorityRole(user?.roles || []);
+                        return (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge
+                                variant="outline"
+                                className="bg-blue-300 border-blue-500 text-blue-700"
+                              >
+                                {highestPriorityRole.name}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-gray-600 mb-2">
+                              {highestPriorityRole.description}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="bg-white rounded p-2 border">
+                                <div className="font-medium text-blue-600">Макс. книг</div>
+                                <div className="text-gray-800">{highestPriorityRole.maxBooksAllowed}</div>
+                              </div>
+                              <div className="bg-white rounded p-2 border">
+                                <div className="font-medium text-blue-600">Срок займа</div>
+                                <div className="text-gray-800">{highestPriorityRole.loanPeriodDays} дней</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      
+                      {user?.roles && user.roles.length > 1 && (
+                        <details className="mt-2">
+                          <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                            Все роли ({user.roles.length})
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            {user.roles.map((role) => {
+                              const roleInfo = Object.values(USER_ROLES).find(r => r.name === role);
+                              return (
+                                <div key={role} className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-gray-200 border-gray-400 text-gray-700 text-xs"
+                                    >
+                                      {role}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs text-gray-600">
+                                    {getRoleDescription(role)}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
                       )}
                     </div>
 
@@ -581,7 +646,12 @@ export default function ProfilePage() {
                           <span>Срок займа:</span>
                         </div>
                         <span className="font-medium text-gray-800">
-                          {user?.loanPeriodDays || 0} дней
+                          {(() => {
+                            const highestRole = user?.rolesData ? 
+                              getHighestPriorityRoleFromApi(user.rolesData) : 
+                              getHighestPriorityRole(user?.roles || []);
+                            return highestRole.loanPeriodDays;
+                          })()} дней
                         </span>
                       </div>
 
@@ -590,7 +660,14 @@ export default function ProfilePage() {
                           <BookMarked className="h-4 w-4 text-blue-500" />
                           <span>Макс. книг:</span>
                         </div>
-                        <span className="font-medium text-gray-800">{user?.maxBooksAllowed || 0}</span>
+                        <span className="font-medium text-gray-800">
+                          {(() => {
+                            const highestRole = user?.rolesData ? 
+                              getHighestPriorityRoleFromApi(user.rolesData) : 
+                              getHighestPriorityRole(user?.roles || []);
+                            return highestRole.maxBooksAllowed;
+                          })()}
+                        </span>
                       </div>
 
                       <div className="flex justify-between items-center">

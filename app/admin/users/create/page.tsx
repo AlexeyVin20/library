@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, User } from "lucide-react";
+import { USER_ROLES } from "@/lib/types";
 
 interface UserRole {
   roleId: number;
@@ -25,10 +26,6 @@ interface UserCreateDto {
   address: string | null;
   dateRegistered: string;
   borrowedBooksCount: number | null;
-  fineAmount: number;
-  isActive: boolean;
-  loanPeriodDays: number;
-  maxBooksAllowed: number | null;
   password: string;
   username: string;
   userRoles: UserRole[] | null;
@@ -61,41 +58,20 @@ export default function CreateUserPage() {
     address: "",
     dateRegistered: new Date().toISOString().slice(0, 10),
     borrowedBooksCount: 0,
-    fineAmount: 0,
-    isActive: true,
-    loanPeriodDays: 0,
-    maxBooksAllowed: 0,
     password: "",
     username: "",
-    userRoles: null,
+    userRoles: [{ roleId: USER_ROLES.EMPLOYEE.id }], // ID: 3
     borrowedBooks: null,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    if (name === "userRoles") {
-      const roleId = parseInt(value, 10);
-      setFormData((prev) => {
-        const exists = prev.userRoles?.some((r) => r.roleId === roleId);
-        if (exists) {
-          const filtered = prev.userRoles!.filter((r) => r.roleId !== roleId);
-          return {
-            ...prev,
-            userRoles: filtered.length > 0 ? filtered : null,
-          };
-        } else {
-          return {
-            ...prev,
-            userRoles: prev.userRoles ? [...prev.userRoles, { roleId }] : [{ roleId }],
-          };
-        }
-      });
-    } else if (["dateOfBirth", "passportIssuedDate", "dateRegistered"].includes(name)) {
+    if (["dateOfBirth", "passportIssuedDate", "dateRegistered"].includes(name)) {
       setFormData((prev) => ({
         ...prev,
         [name]: value, // YYYY-MM-DD
       }));
-    } else if (["borrowedBooksCount", "maxBooksAllowed", "loanPeriodDays", "fineAmount"].includes(name)) {
+    } else if (["borrowedBooksCount"].includes(name)) {
       setFormData((prev) => ({
         ...prev,
         [name]: value === "" ? 0 : Number(value),
@@ -108,7 +84,7 @@ export default function CreateUserPage() {
     } else {
       setFormData((prev) => ({
         ...prev,
-        [name]: type === "checkbox" ? checked : value,
+        [name]: value,
       }));
     }
   };
@@ -130,21 +106,41 @@ export default function CreateUserPage() {
         passportIssuedBy: formData.passportIssuedBy ?? "",
         address: formData.address ?? "",
         borrowedBooksCount: formData.borrowedBooksCount ?? 0,
-        maxBooksAllowed: formData.maxBooksAllowed ?? 0,
-        loanPeriodDays: formData.loanPeriodDays ?? 0,
-        fineAmount: formData.fineAmount ?? 0,
-        userRoles: formData.userRoles && formData.userRoles.length > 0 ? formData.userRoles : null,
+        fineAmount: 0, // Штраф всегда 0 при создании
+        isActive: true, // Аккаунт всегда активен при создании
+        maxBooksAllowed: USER_ROLES.EMPLOYEE.maxBooksAllowed, // Из роли сотрудника
+        loanPeriodDays: USER_ROLES.EMPLOYEE.loanPeriodDays, // Из роли сотрудника
         borrowedBooks: null,
       };
+      
+      // Создаём пользователя без ролей
       const response = await fetch(`${baseUrl}/api/User`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend),
       });
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Ошибка при создании пользователя");
       }
+
+      const newUser = await response.json();
+      
+      // Назначаем роль "Сотрудник" после создания пользователя
+      const assignRoleResponse = await fetch(`${baseUrl}/api/User/assign-role`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: newUser.id,
+          roleId: USER_ROLES.EMPLOYEE.id
+        }),
+      });
+
+      if (!assignRoleResponse.ok) {
+        console.warn("Не удалось назначить роль пользователю, но пользователь создан");
+      }
+
       router.push("/admin/users");
       router.refresh();
     } catch (err) {
@@ -183,6 +179,23 @@ export default function CreateUserPage() {
 
       <FadeInView delay={0.2}>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Информационное сообщение о роли */}
+          <motion.div 
+            className="bg-blue-50 border border-blue-200 rounded-xl p-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5 text-blue-500" />
+              <div>
+                <h3 className="font-medium text-blue-800">Роль сотрудника</h3>
+                <p className="text-sm text-blue-600">
+                  Пользователь будет создан с ролью "{USER_ROLES.EMPLOYEE.name}" и сможет брать до {USER_ROLES.EMPLOYEE.maxBooksAllowed} книг на срок до {USER_ROLES.EMPLOYEE.loanPeriodDays} дней.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
           <motion.div
             className="bg-white rounded-xl p-6 shadow-lg border border-gray-200"
             whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1)" }}
@@ -200,10 +213,6 @@ export default function CreateUserPage() {
                 { label: "Дата выдачи паспорта", name: "passportIssuedDate", type: "date" },
                 { label: "Адрес", name: "address", type: "text" },
                 { label: "Дата регистрации", name: "dateRegistered", type: "date"},
-                { label: "Срок выдачи (дней)", name: "loanPeriodDays", type: "number", min: 1},
-                { label: "Максимальное количество книг", name: "maxBooksAllowed", type: "number", min: 1 },
-                { label: "Текущее количество книг", name: "borrowedBooksCount", type: "number", min: 0 },
-                { label: "Штраф (руб.)", name: "fineAmount", type: "number", min: 0, step: 0.01 },
               ].map((field, index) => (
                 <div key={field.name}>
                   <label htmlFor={field.name} className="block text-sm font-medium text-gray-800 mb-1">
@@ -216,8 +225,6 @@ export default function CreateUserPage() {
                     value={formData[field.name as keyof UserCreateDto] as string | number}
                     onChange={handleChange}
                     required={field.required}
-                    min={field.min}
-                    step={field.step}
                     className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     whileFocus={{ scale: 1.02 }}
                   />
