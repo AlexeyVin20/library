@@ -72,12 +72,12 @@ const AutoAssignGenres: React.FC<AutoAssignGenresProps> = ({
           targetBooks = books.filter(book => !book.genre || book.genre.trim() === '');
           break;
         case 'missing-categorization':
-          targetBooks = books.filter(book => !book.categorization || book.categorization.trim() === '');
+          targetBooks = books.filter(book => !(book as any).categorization || (book as any).categorization.trim() === '');
           break;
         case 'missing-both':
           targetBooks = books.filter(book => 
             (!book.genre || book.genre.trim() === '') || 
-            (!book.categorization || book.categorization.trim() === '')
+            (!(book as any).categorization || (book as any).categorization.trim() === '')
           );
           break;
         case 'all':
@@ -100,10 +100,10 @@ const AutoAssignGenres: React.FC<AutoAssignGenresProps> = ({
         authors: book.authors,
         description: book.description,
         publisher: book.publisher,
-        publishedYear: book.publishedYear,
+        publicationYear: book.publicationYear,
         isbn: book.isbn,
         currentGenre: book.genre || '',
-        currentCategorization: book.categorization || ''
+        currentCategorization: (book as any).categorization || ''
       }));
 
       // Формируем задачи для ИИ в зависимости от режима
@@ -129,7 +129,25 @@ const AutoAssignGenres: React.FC<AutoAssignGenresProps> = ({
 3. Проверь актуальные классификации и стандарты жанров в 2024-2025 году
 4. Используй найденную информацию для точного определения жанров и категоризации
 
+СТАТИСТИКА ОБРАБАТЫВАЕМЫХ КНИГ:
+- Всего книг в базе: ${books.length}
+- Книг без жанра: ${books.filter(book => !book.genre || book.genre.trim() === '').length}
+- Книг без категоризации: ${books.filter(book => !(book as any).categorization || (book as any).categorization.trim() === '').length}
+- Книг с категоризацией: ${books.filter(book => (book as any).categorization && (book as any).categorization.trim() !== '').length}
+- Выбрано для обработки: ${targetBooks.length} книг
+
 КНИГИ ДЛЯ АНАЛИЗА:
+Каждая книга имеет следующие поля:
+- id: уникальный идентификатор книги
+- title: название книги
+- authors: авторы книги
+- description: описание книги (может отсутствовать)
+- publisher: издательство (может отсутствовать)
+- publicationYear: год издания (может отсутствовать)
+- isbn: ISBN книги (может отсутствовать)
+- currentGenre: текущий жанр (пустая строка = не указан)
+- currentCategorization: текущая категоризация (пустая строка = не указана, реальное поле в данных: "categorization")
+
 ${JSON.stringify(booksData, null, 2)}
 
 ЗАДАЧИ:
@@ -150,10 +168,12 @@ ${assignmentMode === 'categorization' || assignmentMode === 'both' ? `
 ПРАВИЛА:
 1. ОБЯЗАТЕЛЬНО используй веб-поиск для каждой книги для получения актуальной информации
 2. Анализируй название, авторов, описание, издательство, год издания И найденную в интернете информацию
-3. Для книг с существующими жанрами/категоризацией предлагай улучшения только если текущее значение явно неподходящее или устаревшее
-4. Жанры должны быть краткими, точными и современными (1-3 слова)
-5. Категоризация должна следовать актуальным библиотечным стандартам
-6. Обоснуй каждое назначение со ссылкой на источник информации из интернета
+3. ВАЖНО: Поле currentGenre="" означает что жанр НЕ УКАЗАН (пустая строка)
+4. ВАЖНО: Поле currentCategorization="" означает что категоризация НЕ УКАЗАНА (пустая строка, в реальных данных это поле "categorization")  
+5. Для книг с существующими жанрами/категоризацией предлагай улучшения только если текущее значение явно неподходящее или устаревшее
+6. Жанры должны быть краткими, точными и современными (1-3 слова)
+7. Категоризация должна следовать актуальным библиотечным стандартам
+8. Обоснуй каждое назначение со ссылкой на источник информации из интернета
 
 ФОРМАТ ОТВЕТА (только JSON, без дополнительного текста):
 {
@@ -270,7 +290,7 @@ ${assignmentMode === 'categorization' || assignmentMode === 'both' ? `
               validCategorizationAssignments.push({
                 bookId: book.id,
                 categorization: assignment.categorization,
-                originalCategorization: book.categorization || '',
+                originalCategorization: (book as any).categorization || '',
                 selected: true,
                 reason: assignment.reason || "Автоматическое назначение категоризации"
               });
@@ -461,11 +481,11 @@ ${assignmentMode === 'categorization' || assignmentMode === 'both' ? `
       case 'missing-genre':
         return books.filter(book => !book.genre || book.genre.trim() === '').length;
       case 'missing-categorization':
-        return books.filter(book => !book.categorization || book.categorization.trim() === '').length;
+        return books.filter(book => !(book as any).categorization || (book as any).categorization.trim() === '').length;
       case 'missing-both':
         return books.filter(book => 
           (!book.genre || book.genre.trim() === '') || 
-          (!book.categorization || book.categorization.trim() === '')
+          (!(book as any).categorization || (book as any).categorization.trim() === '')
         ).length;
       case 'all':
         return books.length;
@@ -580,27 +600,42 @@ ${assignmentMode === 'categorization' || assignmentMode === 'both' ? `
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-6">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="font-medium">Без жанра</div>
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-sm text-gray-600 mb-6">
+                  <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                    <div className="font-medium text-red-800">Без жанра</div>
                     <div className="text-2xl font-bold text-red-600">
                       {books.filter(book => !book.genre || book.genre.trim() === '').length}
                     </div>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="font-medium">Без категоризации</div>
+                  <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg">
+                    <div className="font-medium text-orange-800">Без категоризации</div>
                     <div className="text-2xl font-bold text-orange-600">
-                      {books.filter(book => !book.categorization || book.categorization.trim() === '').length}
+                      {books.filter(book => !(book as any).categorization || (book as any).categorization.trim() === '').length}
                     </div>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="font-medium">С жанром</div>
+                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                    <div className="font-medium text-green-800">С жанром</div>
                     <div className="text-2xl font-bold text-green-600">
                       {books.filter(book => book.genre && book.genre.trim() !== '').length}
                     </div>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="font-medium">Всего книг</div>
+                  <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg">
+                    <div className="font-medium text-emerald-800">С категоризацией</div>
+                    <div className="text-2xl font-bold text-emerald-600">
+                      {books.filter(book => (book as any).categorization && (book as any).categorization.trim() !== '').length}
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
+                    <div className="font-medium text-purple-800">Полностью заполнено</div>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {books.filter(book => 
+                        book.genre && book.genre.trim() !== '' && 
+                        (book as any).categorization && (book as any).categorization.trim() !== ''
+                      ).length}
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                    <div className="font-medium text-blue-800">Всего книг</div>
                     <div className="text-2xl font-bold text-blue-600">
                       {books.length}
                     </div>

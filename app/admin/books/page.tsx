@@ -22,6 +22,7 @@ interface Book {
   genre?: string;
   cover?: string;
   availableCopies?: number;
+  categorization?: string;
 }
 
 /**
@@ -534,7 +535,8 @@ export default function BooksPage() {
             authors: Array.isArray(book.authors) ? book.authors.join(', ') : book.authors,
             genre: book.genre,
             cover: coverUrl,
-            availableCopies: book.availableCopies
+            availableCopies: book.availableCopies,
+            categorization: book.categorization
           };
         }));
       } catch (error) {
@@ -658,7 +660,8 @@ export default function BooksPage() {
             authors: Array.isArray(book.authors) ? book.authors.join(', ') : book.authors,
             genre: book.genre,
             cover: coverUrl,
-            availableCopies: book.availableCopies
+            availableCopies: book.availableCopies,
+            categorization: book.categorization
           };
         }));
       } catch (error) {

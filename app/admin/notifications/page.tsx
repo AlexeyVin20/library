@@ -920,29 +920,6 @@ export default function AdminNotificationsPage() {
 
           {/* Дополнительная административная статистика */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard
-              title="Пользователей"
-              value={stats.totalUsers || 0}
-              subtitle={`активных: ${stats.activeUsers || 0}`}
-              icon={<Users className="w-5 h-5" />}
-              color="bg-indigo-500"
-              delay={0.5}
-            />
-            
-            {stats.averageResponseTime !== undefined && (
-              <StatCard
-                title="Время отклика"
-                value={stats.averageResponseTime > 0 
-                  ? `${Math.round(stats.averageResponseTime)}ч`
-                  : 'N/A'
-                }
-                subtitle="среднее время до прочтения"
-                icon={<Clock className="w-5 h-5" />}
-                color="bg-cyan-500"
-                delay={0.6}
-              />
-            )}
-            
             {stats.topNotificationTypes && stats.topNotificationTypes.length > 0 && (
               <StatCard
                 title="Популярный тип"

@@ -101,7 +101,10 @@ const generateBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     '/help': 'Справка',
     '/faq': 'FAQ',
     '/contact': 'Контакты',
-    '/search': 'Поиск'
+    '/search': 'Поиск',
+    '/users/quick-overview': 'Быстрый обзор',
+    '/notifications': 'Уведомления',
+    '/fines': 'Штрафы',
   }
 
   const segments = cleanPath.split('/').filter(Boolean)
@@ -249,10 +252,10 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           icon: <Users className="h-5 w-5" />,
         },
         {
-          title: "Добавить пользователя",
-          href: "/admin/users/create",
-          description: "Регистрация нового пользователя",
-          icon: <PlusCircle className="h-5 w-5" />,
+          title: "Быстрый просмотр",
+          href: "/admin/users/quick-overview",
+          description: "Быстрый обзор пользователей",
+          icon: <Users className="h-5 w-5" />,
         },
         {
           title: "Управление ролями",
@@ -270,12 +273,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           href: "/admin/reservations",
           description: "Управление резервациями книг",
           icon: <Calendar className="h-5 w-5" />,
-        },
-        {
-          title: "Создать резервацию",
-          href: "/admin/reservations/create",
-          description: "Новая резервация книги",
-          icon: <PlusCircle className="h-5 w-5" />,
         },
         {
           title: "Статистика",
@@ -562,6 +559,13 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           title: "Полки",
           type: "page" as const,
           url: "/admin/shelfs",
+          icon: <FileText className="h-4 w-4 text-blue-300" />,
+        },
+        {
+          id: "Quick-overview",
+          title: "Быстрый обзор",
+          type: "page" as const,
+          url: "/admin/users/quick-overview",
           icon: <FileText className="h-4 w-4 text-blue-300" />,
         },
       ].filter((page) => page.title.toLowerCase().includes(query.toLowerCase()))
