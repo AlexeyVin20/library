@@ -17,7 +17,6 @@ import {
   DollarSign,
   Barcode,
   BookOpen,
-  Zap,
   Copy,
   User,
   Clock
@@ -127,7 +126,7 @@ export default function BookInstanceManager({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [autoCreateLoading, setAutoCreateLoading] = useState(false);
+
   const [showMultipleCreateModal, setShowMultipleCreateModal] = useState(false);
   const [multipleCount, setMultipleCount] = useState(1);
   const [multipleCreateLoading, setMultipleCreateLoading] = useState(false);
@@ -282,54 +281,7 @@ export default function BookInstanceManager({
     }
   };
 
-  const handleAutoCreateInstances = async () => {
-    try {
-      setAutoCreateLoading(true);
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-      const token = localStorage.getItem('token');
 
-      if (!token) {
-        toast({
-          title: "Ошибка авторизации",
-          description: "Токен авторизации не найден. Пожалуйста, войдите в систему заново.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const response = await fetch(`${baseUrl}/api/BookInstance/auto-create/${bookId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Ошибка при автосоздании экземпляров');
-      }
-
-      const result = await response.json();
-      
-      // Перезагружаем список экземпляров
-      await fetchInstances();
-
-      toast({
-        title: "Успешно",
-        description: result.message || `Создано ${result.createdCount} экземпляров`
-      });
-    } catch (error) {
-      console.error("Ошибка автосоздания экземпляров", error);
-      toast({
-        title: "Ошибка",
-        description: error instanceof Error ? error.message : "Не удалось создать экземпляры",
-        variant: "destructive"
-      });
-    } finally {
-      setAutoCreateLoading(false);
-    }
-  };
 
   const handleCreateMultipleInstances = async () => {
     if (multipleCount <= 0 || multipleCount > 100) {
@@ -532,32 +484,7 @@ export default function BookInstanceManager({
             Добавить
           </motion.button>
 
-          <motion.button
-            onClick={handleAutoCreateInstances}
-            disabled={autoCreateLoading || !bookData?.isbn}
-            className={`${
-              bookData?.isbn 
-                ? "bg-green-500 hover:bg-green-700 text-white" 
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            } font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md disabled:opacity-50 text-sm`}
-            whileHover={bookData?.isbn ? {
-              y: -2,
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-            } : {}}
-            whileTap={bookData?.isbn ? { scale: 0.98 } : {}}
-            title={!bookData?.isbn ? "Отсутствует ISBN для автосоздания" : "Автоматически создать экземпляры"}
-          >
-            {autoCreateLoading ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-              />
-            ) : (
-              <Zap className="h-4 w-4" />
-            )}
-            Авто
-          </motion.button>
+
 
           <motion.button
             onClick={() => setShowMultipleCreateModal(true)}
@@ -844,7 +771,7 @@ export default function BookInstanceManager({
                   max="100"
                   value={multipleCount}
                   onChange={(e) => setMultipleCount(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-800"
                   disabled={multipleCreateLoading}
                 />
               </div>

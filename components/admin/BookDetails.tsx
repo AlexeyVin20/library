@@ -193,12 +193,14 @@ export default function BookDetails({
                 </Book>
                 {/* Book status indicators */}
                 <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2 text-gray-800 bg-blue-300 p-2 rounded-lg">
-                    <BookCopy className="w-5 h-5" />
-                    <span>
-                      Доступно копий: <strong>{book.availableCopies}</strong>
-                    </span>
-                  </div>
+                  {!book.isEbook && (
+                    <div className="flex items-center gap-2 text-gray-800 bg-blue-300 p-2 rounded-lg">
+                      <BookCopy className="w-5 h-5" />
+                      <span>
+                        Доступно копий: <strong>{book.availableCopies}</strong>
+                      </span>
+                    </div>
+                  )}
                   {book.isEbook && <div className="flex items-center gap-2 text-gray-800 bg-gray-100 p-2 rounded-lg">
                       <Bookmark className="w-5 h-5" />
                       <span>Электронная книга</span>
@@ -240,7 +242,7 @@ export default function BookDetails({
               <Tabs defaultValue="details" onValueChange={setActiveTab}>
                 <TabsList className="border-b border-gray-200 p-0 rounded-none bg-blue-300 shadow-none">
                   <AnimatedTabsTrigger value="details" label="Детальная информация" isActive={activeTab === "details"} />
-                  <AnimatedTabsTrigger value="instances" label="Экземпляры" isActive={activeTab === "instances"} />
+                  {!book.isEbook && <AnimatedTabsTrigger value="instances" label="Экземпляры" isActive={activeTab === "instances"} />}
                   <AnimatedTabsTrigger value="additional" label="Дополнительно" isActive={activeTab === "additional"} />
                 </TabsList>
 
@@ -269,17 +271,19 @@ export default function BookDetails({
                   </motion.div>
                 </TabsContent>
 
-                <TabsContent value="instances" className="mt-6">
-                  <BookInstanceManager 
-                    bookId={book.id}
-                    bookData={{
-                      isbn: book.isbn,
-                      title: book.title
-                    }}
-                    onCreateInstance={handleCreateInstance}
-                    onEditInstance={handleEditInstance}
-                  />
-                </TabsContent>
+                {!book.isEbook && (
+                  <TabsContent value="instances" className="mt-6">
+                    <BookInstanceManager 
+                      bookId={book.id}
+                      bookData={{
+                        isbn: book.isbn,
+                        title: book.title
+                      }}
+                      onCreateInstance={handleCreateInstance}
+                      onEditInstance={handleEditInstance}
+                    />
+                  </TabsContent>
+                )}
 
                 <TabsContent value="additional" className="mt-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -308,17 +312,19 @@ export default function BookDetails({
 
             {/* Buttons */}
             <div className="flex gap-4 justify-end mt-8">
-              <Link href={`/admin/books/${book.id}/instances`}>
-                <motion.button className="bg-purple-500 hover:bg-purple-700 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md" whileHover={{
-                y: -3,
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-              }} whileTap={{
-                scale: 0.98
-              }}>
-                  <BookCopy className="w-4 h-4" />
-                  Экземпляры
-                </motion.button>
-              </Link>
+              {!book.isEbook && (
+                <Link href={`/admin/books/${book.id}/instances`}>
+                  <motion.button className="bg-purple-500 hover:bg-purple-700 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md" whileHover={{
+                  y: -3,
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+                }} whileTap={{
+                  scale: 0.98
+                }}>
+                    <BookCopy className="w-4 h-4" />
+                    Экземпляры
+                  </motion.button>
+                </Link>
+              )}
               <Link href={`/admin/books/${book.id}/update`}>
                 <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md" whileHover={{
                 y: -3,
