@@ -12,6 +12,8 @@ import { BookOpen, Search, Filter, BookMarked, ArrowUpDown, ChevronDown, Heart }
 import { Book } from "@/components/ui/book";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
+import type { BookInstance } from "@/lib/types";
+
 interface Book {
   id: string;
   title: string;
@@ -64,11 +66,22 @@ export default function BooksPage() {
     const fetchBooksAndFavorites = async () => {
       try {
         setLoading(true);
-        const booksResponse = await fetch(`${baseUrl}/api/books`);
+        // Загружаем книги и экземпляры параллельно
+        const [booksResponse, instancesResponse] = await Promise.all([
+          fetch(`${baseUrl}/api/books`),
+          fetch(`${baseUrl}/api/bookinstances`)
+        ]);
+        
         if (!booksResponse.ok) {
           throw new Error("Ошибка при получении книг");
         }
         const booksData = await booksResponse.json();
+        
+        let instancesData = [];
+        if (instancesResponse.ok) {
+          instancesData = await instancesResponse.json();
+        }
+        
         const processedBooks = booksData.map((book: {
           id: string;
           title: string;
@@ -84,13 +97,23 @@ export default function BooksPage() {
           // rating поле удалено из Book интерфейса, так что здесь оно не нужно
         }) => {
           const coverUrl = book.cover || book.coverImage || book.coverImageUrl || book.image || book.coverUrl || book.imageUrl || "";
+          
+          // Подсчитываем экземпляры на полках для данной книги
+          const bookInstances = instancesData.filter((instance: BookInstance) =>  
+            instance.bookId === book.id && 
+            instance.shelfId && 
+            instance.isActive &&
+            instance.status.toLowerCase() !== 'утеряна' &&
+            instance.status.toLowerCase() !== 'списана'
+          );
+          
           return {
             id: book.id,
             title: book.title,
             authors: Array.isArray(book.authors) ? book.authors.join(", ") : book.authors,
             genre: book.genre || "Общая литература",
             cover: coverUrl,
-            availableCopies: book.availableCopies
+            availableCopies: bookInstances.length
           };
         });
         const uniqueGenres = Array.from(new Set(processedBooks.map((book: Book) => book.genre || ""))).filter(Boolean);
@@ -300,6 +323,12 @@ export default function BooksPage() {
               </Button>
             </motion.div> : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
               {filteredBooks.map((book, index) => <div key={book.id} className="relative group">
+                  {/* Бейдж с количеством экземпляров */}
+                  {book.availableCopies !== undefined && book.availableCopies > 0 && (
+                    <div className="absolute -top-2 -left-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg z-20">
+                      {book.availableCopies}
+                    </div>
+                  )}
                   <Link href={`/readers/books/${book.id}`}>
                     <motion.div className="text-gray-800" initial={{
                 opacity: 0,

@@ -264,10 +264,10 @@ const ShelfCanvas = ({
               data-book-id={book?.id || ""}
               title={
                 item
-                  ? `${item.title} (${journal ? "Журнал" : "Книга"})${book?.authors ? ` - ${book.authors}` : ""}`
+                  ? `${item.title} (${journal ? "Журнал" : "Книга"})${book?.authors ? ` - ${book.authors}` : ""}${book?.instancesOnShelf ? ` - Экземпляров на полке: ${book.instancesOnShelf}` : ""}`
                   : "Пустое место"
               }
-              className={`w-6 h-8 rounded transition-all duration-200 transform hover:scale-105 hover:-translate-y-0.5 active:scale-95 ${getBackground()}`}
+              className={`w-6 h-8 rounded transition-all duration-200 transform hover:scale-105 hover:-translate-y-0.5 active:scale-95 relative ${getBackground()}`}
               style={{
                 cursor: item && !isEditMode ? (isDraggingItem ? 'grabbing' : 'grab') : 'pointer'
               }}
@@ -314,7 +314,14 @@ const ShelfCanvas = ({
                 }
                 e.stopPropagation()
               }}
-            ></div>
+            >
+              {/* Отображение количества экземпляров для книг */}
+              {book && book.instancesOnShelf !== undefined && (
+                <div className="absolute -top-1 -right-1 bg-white text-black text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center border border-gray-300 shadow-md">
+                  {book.instancesOnShelf}
+                </div>
+              )}
+            </div>
           )
         })}
       </div>
@@ -481,7 +488,12 @@ const ShelfCanvas = ({
                 >
                   <div className="shelf-container">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="font-semibold text-gray-800">{shelf.category}</span>
+                      <span
+                        className="font-semibold text-gray-800 text-sm leading-snug break-words whitespace-normal overflow-hidden text-ellipsis"
+                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+                      >
+                        {shelf.category}
+                      </span>
                       <span className="bg-blue-100 px-2 py-1 rounded-lg text-xs text-blue-800">
                         #{shelf.shelfNumber}
                       </span>

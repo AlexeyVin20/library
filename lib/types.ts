@@ -9,6 +9,15 @@ export interface Book {
   position?: number;
   genre?: string;
   categorization?: string;
+  // Дополнительные сведения для расширенного отображения
+  publisher?: string;
+  publicationYear?: number;
+  pageCount?: number;
+  language?: string;
+  description?: string;
+  // Новые поля для работы с экземплярами
+  instancesOnShelf?: number;
+  instances?: BookInstance[];
 }
 
 export interface Journal {
@@ -19,6 +28,8 @@ export interface Journal {
   coverImageUrl?: string;
   shelfId?: number;
   position?: number;
+  publicationDate?: string;
+  publicationYear?: number;
 }
 
 export interface Shelf {

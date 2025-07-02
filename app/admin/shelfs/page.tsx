@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Lock, Unlock, X, Search, Upload, Library, ChevronLeft, AlertCircle, Bot, Undo } from "lucide-react";
-import type { Book, Shelf, Journal } from "@/lib/types";
+import type { Book, Shelf, Journal, BookInstance } from "@/lib/types";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,17 @@ import ShelfCanvas from "@/components/admin/ShelfCanvas";
 import BookSelectorModal from "@/components/admin/BookSelectorModal";
 import BookInfoModal from "@/components/admin/BookInfoModal";
 import AutoArrangeBooks from "@/components/admin/AutoArrangeBooks";
+// Тип для предложений полок от ИИ
+interface AIShelfSuggestion {
+  category: string;
+  shelfNumber: number;
+  capacity?: number;
+  posX?: number;
+  posY?: number;
+  reason: string;
+  action: 'create' | 'delete';
+}
+
 interface Position {
   x: number;
   y: number;
@@ -60,7 +71,7 @@ function isRectOverlap(a: {x: number, y: number, width: number, height: number},
 
 // Функция для вычисления ширины и высоты полки
 function getShelfSize(capacity: number) {
-  const width = Math.max(100, Math.min(40 * capacity + 30, 500));
+  const width = Math.max(160, Math.min(40 * capacity + 30, 500));
   const height = 150; // Можно сделать чуть больше для capacity > 10, если нужно
   return { width, height };
 }
@@ -132,7 +143,7 @@ export default function ShelfsPage() {
   const [showBookInfoModal, setShowBookInfoModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Book | Journal | null>(null);
   const [selectedItemIsJournal, setSelectedItemIsJournal] = useState(false);
-  const [selectedItemShelfId, setSelectedItemShelfId] = useState<number>(0);
+  const [selectedItemShelfNumber, setSelectedItemShelfNumber] = useState<number>(0);
   const [selectedItemPosition, setSelectedItemPosition] = useState<number>(0);
   // Add these new state variables for book/journal dragging
   const [draggedItem, setDraggedItem] = useState<{
@@ -193,11 +204,53 @@ export default function ShelfsPage() {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-      const response = await fetch(`${baseUrl}/api/Books`);
-      if (!response.ok) throw new Error(`API ответил с кодом: ${response.status}`);
-      const data = await response.json();
-      setBooks(data);
-      setFilteredBooks(data);
+      
+      // Получаем токен авторизации
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: "Ошибка авторизации",
+          description: "Токен авторизации не найден. Пожалуйста, войдите в систему заново.",
+          variant: "destructive"
+        });
+        return;
+      }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+      // Загружаем книги и экземпляры параллельно
+      const [booksResponse, instancesResponse] = await Promise.all([
+        fetch(`${baseUrl}/api/Books`),
+        fetch(`${baseUrl}/api/BookInstance`, { headers })
+      ]);
+      
+      if (!booksResponse.ok) throw new Error(`API ответил с кодом: ${booksResponse.status}`);
+      const booksData = await booksResponse.json();
+      
+      let instancesData = [];
+      if (instancesResponse.ok) {
+        instancesData = await instancesResponse.json();
+      }
+      
+      // Обогащаем книги информацией об экземплярах на полках
+      const enrichedBooks = booksData.map((book: Book) => {
+        const bookInstances = instancesData.filter((instance: BookInstance) =>  
+          instance.book && instance.book.id === book.id && 
+          instance.isActive &&
+          instance.status.toLowerCase() !== 'утеряна' &&
+          instance.status.toLowerCase() !== 'списана'
+        );
+        
+        return {
+          ...book,
+          instancesOnShelf: book.availableCopies ?? bookInstances.length,
+          instances: bookInstances
+        };
+      });
+      
+      setBooks(enrichedBooks);
+      setFilteredBooks(enrichedBooks);
     } catch (err) {
       console.error("Ошибка при загрузке книг:", err);
       toast({
@@ -594,6 +647,13 @@ export default function ShelfsPage() {
       } else {
         await fetchBooks();
       }
+      
+      // Уведомляем другие компоненты об изменении экземпляров
+      if (!isJournal) {
+        window.dispatchEvent(new CustomEvent('bookInstancesUpdated', { 
+          detail: { bookId: itemId, action: 'position' } 
+        }));
+      }
       setShowBookSelector(false);
       setSelectedEmptySlot(null);
       setSearchTerm("");
@@ -669,6 +729,13 @@ export default function ShelfsPage() {
       } else {
         await fetchBooks();
       }
+      
+      // Уведомляем другие компоненты об изменении экземпляров
+      if (!currentIsJournal) {
+        window.dispatchEvent(new CustomEvent('bookInstancesUpdated', { 
+          detail: { bookId: itemId, action: 'remove' } 
+        }));
+      }
       setShowContextMenu(false);
       setContextMenuData(null);
       // Также закрываем BookInfoModal, если удаление было инициировано оттуда
@@ -723,7 +790,8 @@ export default function ShelfsPage() {
   const handleItemClick = (item: Book | Journal | null, isJournal: boolean, shelfId: number, position: number) => {
     setSelectedItem(item);
     setSelectedItemIsJournal(isJournal);
-    setSelectedItemShelfId(shelfId);
+    const shelf = shelves.find(s => s.id === shelfId);
+    setSelectedItemShelfNumber(shelf ? shelf.shelfNumber : shelfId);
     setSelectedItemPosition(position);
     setShowBookInfoModal(true);
   };
@@ -875,6 +943,11 @@ export default function ShelfsPage() {
       // Refresh data
       await fetchBooks();
       await fetchJournals();
+      
+      // Уведомляем другие компоненты об изменении экземпляров
+      window.dispatchEvent(new CustomEvent('bookInstancesUpdated', { 
+        detail: { bookId: sourceItem.id, action: 'move' } 
+      }));
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при перемещении элемента");
@@ -1035,6 +1108,72 @@ export default function ShelfsPage() {
       toast({
         title: "Ошибка отмены",
         description: err instanceof Error ? err.message : "Ошибка при отмене автоматической расстановки",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShelfSuggestion = async (suggestions: AIShelfSuggestion[]) => {
+    try {
+      setLoading(true);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
+
+      for (const suggestion of suggestions) {
+        if (suggestion.action === 'create') {
+          const createResp = await fetch(`${baseUrl}/api/shelf/auto-position`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              category: suggestion.category,
+              capacity: suggestion.capacity ?? 20,
+              shelfNumber: suggestion.shelfNumber
+            })
+          });
+
+          if (!createResp.ok) {
+            console.warn(`Не удалось создать полку ${suggestion.shelfNumber}`);
+            continue;
+          }
+
+          const createdShelf = await createResp.json();
+          const shelfId = createdShelf?.id;
+          if (!shelfId) continue;
+
+          // Обновляем координаты
+          if (suggestion.posX !== undefined && suggestion.posY !== undefined) {
+            await fetch(`${baseUrl}/api/shelf/${shelfId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                category: suggestion.category,
+                capacity: suggestion.capacity ?? 20,
+                shelfNumber: suggestion.shelfNumber,
+                posX: suggestion.posX,
+                posY: suggestion.posY
+              })
+            });
+          }
+        } else if (suggestion.action === 'delete') {
+          // Удаляем полку по номеру (ищем id)
+          const shelfToDelete = shelves.find(s => s.shelfNumber === suggestion.shelfNumber);
+          if (!shelfToDelete) continue;
+          await fetch(`${baseUrl}/api/shelf/${shelfToDelete.id}`, { method: 'DELETE' });
+        }
+      }
+
+      await fetchShelves();
+      toast({
+        title: "Полки созданы",
+        description: `Создано ${suggestions.length} полок`,
+      });
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Не удалось создать полки",
         variant: "destructive"
       });
     } finally {
@@ -1272,8 +1411,8 @@ export default function ShelfsPage() {
                         repeat: Number.POSITIVE_INFINITY,
                         ease: "linear"
                       }} className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                            Сохранение...
-                          </> : <>Сохранить изменения</>}
+                                Сохранение...
+                              </> : <>Сохранить изменения</>}
                       </Button>
                     </div>
                   </form>
@@ -1360,6 +1499,14 @@ export default function ShelfsPage() {
                     <div className="w-6 h-8 bg-gradient-to-br from-green-400 to-blue-500 border border-purple-400 mr-3 rounded animate-pulse"></div>
                     <span className="text-gray-500">Размещено ИИ</span>
                   </div>
+                  <div className="flex items-center">
+                    <div className="w-6 h-8 bg-green-500 mr-3 rounded relative">
+                      <div className="absolute -top-1 -right-1 bg-white text-black text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center border border-gray-300 shadow-md">
+                        2
+                      </div>
+                    </div>
+                    <span className="text-gray-500">Количество экземпляров</span>
+                  </div>
                 </div>
               </motion.div>
             </TabsContent>
@@ -1391,10 +1538,13 @@ export default function ShelfsPage() {
     journals={journals.filter(j => !j.shelfId)} // Only show journals that aren't already on shelves
     onSelect={(itemId, isJournal) => addItemToShelf(itemId, isJournal)} shelfCategory={selectedEmptySlot ? shelves.find(s => s.id === selectedEmptySlot.shelfId)?.category : undefined} />
       {/* Book Info Modal */}
-      <BookInfoModal open={showBookInfoModal} onOpenChange={setShowBookInfoModal} item={selectedItem} isJournal={selectedItemIsJournal} shelfId={selectedItemShelfId} position={selectedItemPosition} onRemove={() => {
+      <BookInfoModal open={showBookInfoModal} onOpenChange={setShowBookInfoModal} item={selectedItem} isJournal={selectedItemIsJournal} shelfNumber={selectedItemShelfNumber} position={selectedItemPosition} onRemove={() => {
       if (selectedItem) {
-        removeItemFromShelf(selectedItemShelfId, selectedItemPosition, selectedItemIsJournal);
+        removeItemFromShelf(selectedItemShelfNumber, selectedItemPosition, selectedItemIsJournal);
       }
+    }} onInstancesChange={() => {
+      // Обновляем данные о книгах при изменении экземпляров
+      fetchBooks();
     }} />
       {/* Context Menu */}
       {showContextMenu && contextMenuData && <ShelfItemContextMenu item={contextMenuData.item} isJournal={contextMenuData.isJournal} position={contextMenuData.position} onClose={handleCloseMenu} onRemove={handleRemoveItem} />}
@@ -1406,6 +1556,7 @@ export default function ShelfsPage() {
         books={books}
         shelves={shelves}
         onArrangement={handleAiArrangement}
+        onShelfSuggestion={handleShelfSuggestion}
         onUndo={undoAiArrangement}
       />
     </div>;

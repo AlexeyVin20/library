@@ -62,7 +62,7 @@ function PrintFormularsContent() {
 
         // Получаем экземпляры для каждой книги
         const instancePromises = bookIdsArray.map(bookId => 
-          fetch(`${baseUrl}/api/BookInstance?bookId=${bookId.trim()}`, { headers })
+          fetch(`${baseUrl}/api/bookinstances?bookId=${bookId.trim()}`, { headers })
             .then(response => {
               if (!response.ok) {
                 console.warn(`Не удалось получить экземпляры для книги ${bookId}`);

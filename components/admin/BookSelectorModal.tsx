@@ -54,8 +54,8 @@ const BookSelectorModal = ({
   const [selectedYears, setSelectedYears] = useState<string[]>([])
 
   // Extract unique genres and years for filtering
-  const bookGenres = [...new Set(books.map((book) => book.genre).filter(Boolean))]
-  const bookYears = [...new Set(books.map((book) => book.publicationYear?.toString()).filter(Boolean))].sort(
+  const bookGenres: string[] = [...new Set(books.map((book) => book.genre).filter((g): g is string => Boolean(g)))]
+  const bookYears: string[] = [...new Set(books.map((book) => book.publicationYear?.toString()).filter((y): y is string => Boolean(y)))].sort(
     (a, b) => Number(b) - Number(a),
   )
 
@@ -79,7 +79,7 @@ const BookSelectorModal = ({
     }
 
     if (selectedGenres.length > 0) {
-      filtered = filtered.filter((book) => book.genre && selectedGenres.includes(book.genre))
+      filtered = filtered.filter((book) => book.genre && selectedGenres.includes(book.genre as string))
     }
 
     if (selectedYears.length > 0) {
@@ -90,8 +90,8 @@ const BookSelectorModal = ({
 
     // Sort
     filtered.sort((a, b) => {
-      let fieldA: any = a[sortField]
-      let fieldB: any = b[sortField]
+      let fieldA: any = (a as any)[sortField]
+      let fieldB: any = (b as any)[sortField]
 
       // Handle undefined values
       if (fieldA === undefined) fieldA = ""
@@ -122,8 +122,8 @@ const BookSelectorModal = ({
 
     // Sort
     filtered.sort((a, b) => {
-      let fieldA: any = a[sortField === "authors" ? "publisher" : sortField]
-      let fieldB: any = b[sortField === "authors" ? "publisher" : sortField]
+      let fieldA: any = (a as any)[sortField === "authors" ? "publisher" : sortField]
+      let fieldB: any = (b as any)[sortField === "authors" ? "publisher" : sortField]
 
       // Handle undefined values
       if (fieldA === undefined) fieldA = ""
@@ -267,11 +267,12 @@ const BookSelectorModal = ({
                       >
                         <Filter size={18} />
                         <span className="ml-2 hidden sm:inline">Фильтры</span>
-                        {(filters.available || selectedGenres.length > 0 || selectedYears.length > 0) && (
-                          <Badge className="ml-2 bg-blue-300 text-blue-700">
-                            {filters.available + selectedGenres.length + selectedYears.length}
-                          </Badge>
-                        )}
+                        {(() => {
+                          const activeFilters = (filters.available ? 1 : 0) + selectedGenres.length + selectedYears.length;
+                          return activeFilters > 0 ? (
+                            <Badge className="ml-2 bg-blue-300 text-blue-700">{activeFilters}</Badge>
+                          ) : null;
+                        })()}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="bg-white border-blue-500/50 text-gray-800 rounded-lg">
@@ -298,20 +299,20 @@ const BookSelectorModal = ({
                         {bookGenres.map((genre) => (
                           <DropdownMenuItem
                             key={genre}
-                            className={selectedGenres.includes(genre) ? "bg-emerald-600/50" : ""}
-                            onClick={() => toggleGenreFilter(genre)}
+                            className={selectedGenres.includes(genre as string) ? "bg-emerald-600/50" : ""}
+                            onClick={() => toggleGenreFilter(genre as string)}
                           >
                             <div className="flex items-center">
                               <div
                                 className={`w-4 h-4 mr-2 border rounded flex items-center justify-center ${
-                                  selectedGenres.includes(genre)
+                                  selectedGenres.includes(genre as string)
                                     ? "bg-emerald-500 border-emerald-500"
                                     : "border-white/50"
                                 }`}
                               >
-                                {selectedGenres.includes(genre) && <Check className="h-3 w-3 text-white" />}
+                                {selectedGenres.includes(genre as string) && <Check className="h-3 w-3 text-white" />}
                               </div>
-                              {genre}
+                              {genre as string}
                             </div>
                           </DropdownMenuItem>
                         ))}
@@ -401,6 +402,14 @@ const BookSelectorModal = ({
                                 {book.publicationYear && (
                                   <Badge className="bg-blue-500 text-white text-xs">{book.publicationYear}</Badge>
                                 )}
+                                {book.categorization && (
+                                  <Badge className="bg-yellow-100 text-yellow-800 text-xs">{book.categorization}</Badge>
+                                )}
+                                {book.availableCopies !== undefined && (
+                                  <Badge className="bg-gray-100 text-gray-800 text-xs border border-gray-300">
+                                    {book.availableCopies} экз.
+                                  </Badge>
+                                )}
                                 {book.availableCopies && book.availableCopies > 0 ? (
                                   <Badge className="bg-green-100 text-green-800 text-xs border-l-4 border-green-500">Доступна</Badge>
                                 ) : (
@@ -469,9 +478,9 @@ const BookSelectorModal = ({
                                 {journal.issn && (
                                   <Badge className="bg-blue-500 text-white text-xs">ISSN: {journal.issn}</Badge>
                                 )}
-                                {journal.publicationDate && (
+                                {(journal.publicationDate || journal.publicationYear) && (
                                   <Badge className="bg-blue-700 text-white text-xs">
-                                    {new Date(journal.publicationDate).getFullYear()}
+                                    {journal.publicationYear ?? (journal.publicationDate ? new Date(journal.publicationDate).getFullYear() : "")}
                                   </Badge>
                                 )}
                               </div>

@@ -1,26 +1,101 @@
 "use client"
 
-import { useState } from "react"
-import { BookOpen, User, Calendar, Hash, BookCopy, Languages, Bookmark, FileText, X, ExternalLink } from "lucide-react"
-import type { Book, Journal } from "@/lib/types"
+import { useState, useEffect } from "react"
+import { BookOpen, User, Calendar, Hash, BookCopy, Languages, Bookmark, FileText, X, ExternalLink, Package } from "lucide-react"
+import type { Book, Journal, BookInstance } from "@/lib/types"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { toast } from "@/hooks/use-toast"
 
 interface BookInfoModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   item: Book | Journal | null
   isJournal: boolean
-  shelfId: number
+  shelfNumber: number
   position: number
   onRemove: () => void
+  onInstancesChange?: () => void // Колбэк для обновления данных родительского компонента
 }
 
-const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position, onRemove }: BookInfoModalProps) => {
+const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfNumber, position, onRemove, onInstancesChange }: BookInfoModalProps) => {
   const [activeTab, setActiveTab] = useState("info")
+  const [instances, setInstances] = useState<BookInstance[]>([])
+  const [loadingInstances, setLoadingInstances] = useState(false)
+
+  // Загружаем экземпляры книги при открытии модального окна
+  useEffect(() => {
+    if (open && item && !isJournal) {
+      fetchBookInstances()
+    }
+  }, [open, item, isJournal])
+
+  // Слушаем события обновления экземпляров
+  useEffect(() => {
+    const handleInstanceUpdate = () => {
+      if (open && item && !isJournal) {
+        fetchBookInstances()
+        if (onInstancesChange) {
+          onInstancesChange()
+        }
+      }
+    }
+
+    window.addEventListener('instanceStatusUpdate', handleInstanceUpdate)
+    window.addEventListener('bookInstancesUpdated', handleInstanceUpdate)
+
+    return () => {
+      window.removeEventListener('instanceStatusUpdate', handleInstanceUpdate)
+      window.removeEventListener('bookInstancesUpdated', handleInstanceUpdate)
+    }
+  }, [open, item, isJournal, onInstancesChange])
+
+  const fetchBookInstances = async () => {
+    if (!item || isJournal) return
+
+    try {
+      setLoadingInstances(true)
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL is not defined")
+
+      // Получаем токен авторизации
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: "Ошибка авторизации",
+          description: "Токен авторизации не найден. Пожалуйста, войдите в систему заново.",
+          variant: "destructive"
+        });
+        setLoadingInstances(false);
+        return;
+      }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+
+      const response = await fetch(`${baseUrl}/api/BookInstance?bookId=${item.id}`, { headers })
+      if (response.ok) {
+        const data = await response.json()
+        setInstances(data)
+      } else {
+        console.warn('Не удалось загрузить экземпляры книги')
+        setInstances([])
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки экземпляров", error)
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить экземпляры книги",
+        variant: "destructive"
+      })
+    } finally {
+      setLoadingInstances(false)
+    }
+  }
 
   if (!item) return null
 
@@ -65,7 +140,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
               <div className="bg-gray-100 rounded-xl p-3 text-center border-l-4 border-blue-500">
                 <p className="text-gray-500 text-sm">Расположение</p>
                 <p className="text-lg font-medium text-gray-800">
-                  Полка #{shelfId}, Позиция {position + 1}
+                  Полка #{shelfNumber}, Позиция {instances.length > 1 ? `1-${instances.length}` : '1'}
                 </p>
               </div>
             </div>
@@ -77,6 +152,9 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                 <TabsTrigger value="info" className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white text-blue-500 rounded-xl">Информация</TabsTrigger>
                 <TabsTrigger value="description" className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white text-blue-500 rounded-xl">Описание</TabsTrigger>
                 <TabsTrigger value="details" className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white text-blue-500 rounded-xl">Детали</TabsTrigger>
+                {!isJournal && (
+                  <TabsTrigger value="instances" className="flex-1 data-[state=active]:bg-blue-500 data-[state=active]:text-white text-blue-500 rounded-xl">Экземпляры</TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="info" className="mt-4">
@@ -93,7 +171,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                     <Calendar className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-gray-500 text-sm">Год публикации</p>
-                      <p className="text-gray-800 font-medium">{'Нет данных'}</p>
+                      <p className="text-gray-800 font-medium">{book.publicationYear ?? 'Нет данных'}</p>
                     </div>
                   </div>
 
@@ -109,7 +187,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                     <BookCopy className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-gray-500 text-sm">Издательство</p>
-                      <p className="text-gray-800 font-medium">{'Нет данных'}</p>
+                      <p className="text-gray-800 font-medium">{book.publisher ?? 'Нет данных'}</p>
                     </div>
                   </div>
 
@@ -117,7 +195,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                     <Languages className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-gray-500 text-sm">Язык</p>
-                      <p className="text-gray-800 font-medium">{'Нет данных'}</p>
+                      <p className="text-gray-800 font-medium">{book.language ?? 'Нет данных'}</p>
                     </div>
                   </div>
 
@@ -128,16 +206,28 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                       <p className="text-gray-800 font-medium">{book.genre || "Не указан"}</p>
                     </div>
                   </div>
+
+                  {book.categorization && (
+                    <div className="flex items-start gap-3">
+                      <Bookmark className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-gray-500 text-sm">Классификация (УДК/ББК)</p>
+                        <p className="text-gray-800 font-medium">{book.categorization}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
               <TabsContent value="description" className="mt-4">
-                <ScrollArea className="h-[300px] pr-4">
+                {book.description ? (
+                  <p className="text-gray-800 whitespace-pre-line">{book.description}</p>
+                ) : (
                   <div className="flex flex-col items-center justify-center h-full py-8 text-gray-500">
                     <FileText className="h-12 w-12 mb-2 text-gray-400" />
                     <p>Описание отсутствует</p>
                   </div>
-                </ScrollArea>
+                )}
               </TabsContent>
 
               <TabsContent value="details" className="mt-4">
@@ -146,7 +236,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-white p-3 rounded-xl border-l-4 border-blue-500 shadow">
                         <p className="text-gray-500 text-sm">Количество страниц</p>
-                        <p className="text-gray-800 font-medium">{'Нет данных'}</p>
+                        <p className="text-gray-800 font-medium">{book.pageCount ?? 'Нет данных'}</p>
                       </div>
 
                       <div className="bg-white p-3 rounded-xl border-l-4 border-blue-500 shadow">
@@ -161,6 +251,106 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
                     </div>
                   </div>
                 </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="instances" className="mt-4">
+                <div className="space-y-4">
+                  {/* Header с статистикой */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-blue-500" />
+                      <h4 className="font-medium text-gray-800">Экземпляры книги</h4>
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
+                        {instances.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Статистика экземпляров */}
+                  <div className="grid grid-cols-4 gap-2 mb-4">
+                    <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-center text-sm">
+                      <div className="font-bold">{instances.filter(i => i.status.toLowerCase() === 'доступна' && i.isActive).length}</div>
+                      <div className="text-xs">Доступно</div>
+                    </div>
+                    <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-center text-sm">
+                      <div className="font-bold">{instances.filter(i => i.status.toLowerCase() === 'выдана' && i.isActive).length}</div>
+                      <div className="text-xs">Выдано</div>
+                    </div>
+                    <div className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-center text-sm">
+                      <div className="font-bold">{instances.filter(i => i.status.toLowerCase() === 'зарезервирована' && i.isActive).length}</div>
+                      <div className="text-xs">Зарезервировано</div>
+                    </div>
+                    <div className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-center text-sm">
+                      <div className="font-bold">{instances.filter(i => !i.isActive).length}</div>
+                      <div className="text-xs">Неактивно</div>
+                    </div>
+                  </div>
+
+                  {/* Список экземпляров */}
+                  <ScrollArea className="h-[250px] pr-4">
+                    {loadingInstances ? (
+                      <div className="flex justify-center items-center h-32">
+                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    ) : instances.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Package className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p>Нет экземпляров для этой книги</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {instances.map((instance) => (
+                          <div
+                            key={instance.id}
+                            className={`p-3 rounded-lg border-l-4 ${
+                              !instance.isActive
+                                ? 'bg-gray-50 border-gray-400'
+                                : instance.status.toLowerCase() === 'доступна'
+                                ? 'bg-green-50 border-green-500'
+                                : instance.status.toLowerCase() === 'выдана'
+                                ? 'bg-yellow-50 border-yellow-500'
+                                : instance.status.toLowerCase() === 'зарезервирована'
+                                ? 'bg-purple-50 border-purple-500'
+                                : 'bg-blue-50 border-blue-500'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-gray-800">{instance.instanceCode}</span>
+                                  <Badge 
+                                    className={`text-xs ${
+                                      !instance.isActive
+                                        ? 'bg-gray-200 text-gray-700'
+                                        : instance.status.toLowerCase() === 'доступна'
+                                        ? 'bg-green-200 text-green-800'
+                                        : instance.status.toLowerCase() === 'выдана'
+                                        ? 'bg-yellow-200 text-yellow-800'
+                                        : instance.status.toLowerCase() === 'зарезервирована'
+                                        ? 'bg-purple-200 text-purple-800'
+                                        : 'bg-blue-200 text-blue-800'
+                                    }`}
+                                  >
+                                    {instance.status}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-gray-600">Состояние: {instance.condition}</p>
+                                {instance.location && (
+                                  <p className="text-sm text-gray-600">Местоположение: {instance.location}</p>
+                                )}
+                                {instance.dateAcquired && (
+                                  <p className="text-xs text-gray-500">
+                                    Поступила: {new Date(instance.dateAcquired).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </div>
               </TabsContent>
             </Tabs>
           </div>
@@ -196,7 +386,7 @@ const BookInfoModal = ({ open, onOpenChange, item, isJournal, shelfId, position,
               <div className="bg-blue-300 rounded-xl p-3 text-center border-l-4 border-blue-500">
                 <p className="text-blue-700 text-sm">Расположение</p>
                 <p className="text-lg font-medium text-gray-800">
-                  Полка #{shelfId}, Позиция {position + 1}
+                  Полка #{shelfNumber}, Позиция {position + 1}
                 </p>
               </div>
             </div>

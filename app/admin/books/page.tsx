@@ -6,11 +6,11 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
-import { CreditCard, Box, BookOpen, List, Plus, Search, ArrowUpDown, Edit, Trash2, BookMarked, CheckSquare, Square, Printer } from 'lucide-react';
+import { CreditCard, Box, BookOpen, List, Plus, Search, ArrowUpDown, Edit, Trash2, BookMarked, CheckSquare, Square, Printer, Brain } from 'lucide-react';
 import BookCover from "@/components/BookCover";
 import { Book } from "@/components/ui/book";
 import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
-import ColorThief from "colorthief";
+import AutoAssignGenres from "@/components/admin/AutoAssignGenres";
 
 /**
  * Interface for book item
@@ -176,21 +176,11 @@ const ThreeDBookView = ({
         img.crossOrigin = "Anonymous";
         img.src = book.cover;
         img.onload = () => {
-          try {
-            const colorThief = new ColorThief();
-            const color = colorThief.getColor(img);
-            const rgb = `rgb(${color[0]},${color[1]},${color[2]})`;
-            setSpineColors(prev => ({
-              ...prev,
-              [book.id]: rgb
-            }));
-          } catch (e) {
-            // fallback
-            setSpineColors(prev => ({
-              ...prev,
-              [book.id]: ""
-            }));
-          }
+          // Используем fallback цвет
+          setSpineColors(prev => ({
+            ...prev,
+            [book.id]: "#3B82F6"
+          }));
         };
       }
     });
@@ -508,6 +498,7 @@ export default function BooksPage() {
   const [viewMode, setViewMode] = useState("cards");
   const [loading, setLoading] = useState(true);
   const [selectedBooks, setSelectedBooks] = useState<string[]>([]);
+  const [showAutoAssignGenres, setShowAutoAssignGenres] = useState(false);
 
   // Загружаем сохраненный режим отображения при инициализации
   useEffect(() => {
@@ -648,6 +639,34 @@ export default function BooksPage() {
       });
     }
   };
+
+  const handleGenreAssignmentComplete = () => {
+    // Обновляем список книг после назначения жанров/категорий
+    const fetchBooks = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+        const response = await fetch(`${baseUrl}/api/books`);
+        if (!response.ok) {
+          throw new Error('Ошибка при получении книг');
+        }
+        const data = await response.json();
+        setBooks(data.map((book: any) => {
+          const coverUrl = book.cover || book.coverImage || book.coverImageUrl || book.image || book.coverUrl || book.imageUrl || "";
+          return {
+            id: book.id,
+            title: book.title,
+            authors: Array.isArray(book.authors) ? book.authors.join(', ') : book.authors,
+            genre: book.genre,
+            cover: coverUrl,
+            availableCopies: book.availableCopies
+          };
+        }));
+      } catch (error) {
+        console.error("Ошибка обновления книг", error);
+      }
+    };
+    fetchBooks();
+  };
   return <div className="min-h-screen bg-gray-200">
       <div className="container mx-auto p-6">
         {/* Header */}
@@ -679,6 +698,21 @@ export default function BooksPage() {
                     Добавить книгу
                   </motion.button>
                 </Link>
+                
+                <motion.button 
+                  onClick={() => setShowAutoAssignGenres(true)}
+                  className="bg-purple-500 hover:bg-purple-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" 
+                  whileHover={{
+                    y: -3,
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+                  }} 
+                  whileTap={{
+                    scale: 0.98
+                  }}
+                >
+                  <Brain className="h-4 w-4" />
+                  ИИ Жанры/Категории
+                </motion.button>
                 
                 <motion.button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="bg-white text-blue-500 font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md border border-blue-500" whileHover={{
                 y: -3,
@@ -762,6 +796,14 @@ export default function BooksPage() {
               )}
             </motion.div>}
         </FadeInView>
+
+        {/* Модальное окно для автоматического назначения жанров и категорий */}
+        <AutoAssignGenres
+          open={showAutoAssignGenres}
+          onOpenChange={setShowAutoAssignGenres}
+          books={books}
+          onAssignment={handleGenreAssignmentComplete}
+        />
       </div>
     </div>;
 }
