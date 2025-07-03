@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronLeft, PlusCircle, Edit, Trash2, ShieldCheck } from "lucide-react";
+import { ChevronLeft, PlusCircle, Edit, Trash2, ShieldCheck, BookOpen, Clock, Info } from "lucide-react";
+import { USER_ROLES, getRoleDescription } from "@/lib/types";
 interface Role {
   id: number;
   name: string;
@@ -377,6 +378,45 @@ export default function RolesPage() {
               </motion.button>
             </div>
           </div>
+        </FadeInView>
+
+        {/* Информация о системных ролях */}
+        <FadeInView delay={0.15}>
+          <motion.div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+            <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
+              <Info className="w-5 h-5" />
+              Системные роли пользователей
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.values(USER_ROLES).map(role => (
+                <div key={role.id} className="bg-white rounded-lg p-4 border border-blue-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-800">{role.name}</h4>
+                    <span className="text-xs text-gray-500">ID: {role.id}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {getRoleDescription(role.name)}
+                  </p>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1">
+                      <BookOpen className="w-3 h-3 text-blue-500" />
+                      <span>{role.maxBooksAllowed} книг</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-blue-500" />
+                      <span>{role.loanPeriodDays} дней</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Примечание:</strong> При самостоятельной регистрации пользователи получают роль "Гость". 
+                При создании через админ-панель - роль "Сотрудник". Роли автоматически определяют ограничения по количеству книг и срокам займа.
+              </p>
+            </div>
+          </motion.div>
         </FadeInView>
 
         {error && <motion.div initial={{

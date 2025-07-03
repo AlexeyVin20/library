@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Edit, Trash2, User, Calendar, Book, CheckCircle, XCircle, Mail, Phone, Shield, Plus, UserMinus, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, User, Calendar, Book, CheckCircle, XCircle, Mail, Phone, Shield, Plus, UserMinus, ShieldCheck, Key, X } from "lucide-react";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 import Image from "next/image";
 interface UserDetail {
@@ -12,11 +12,6 @@ interface UserDetail {
   fullName: string;
   email: string;
   phone: string;
-  dateOfBirth: string;
-  passportNumber: string;
-  passportIssuedBy: string;
-  passportIssuedDate: string;
-  address: string;
   dateRegistered: string;
   borrowedBooksCount: number;
   fineAmount: number;
@@ -158,6 +153,14 @@ export default function UserDetailPage() {
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState<number | "">("");
   const [isAssigningRole, setIsAssigningRole] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
   const fetchUserData = useCallback(async () => {
     try {
@@ -341,6 +344,62 @@ export default function UserDetailPage() {
       setError(err instanceof Error ? err.message : "Произошла ошибка при удалении роли");
     }
   };
+
+  const handlePasswordChange = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("Новые пароли не совпадают");
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError("Новый пароль должен содержать минимум 6 символов");
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    setPasswordError(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${baseUrl}/api/User/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: userId,
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Ошибка при смене пароля");
+      }
+      
+      // Успешная смена пароля
+      setIsPasswordModalOpen(false);
+      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      alert("Пароль успешно изменен");
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Произошла ошибка при смене пароля");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handlePasswordFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordForm(prev => ({ ...prev, [name]: value }));
+    setPasswordError(null);
+  };
+
+  const closePasswordModal = () => {
+    setIsPasswordModalOpen(false);
+    setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    setPasswordError(null);
+  };
   const formatDate = (dateString: string) => dateString ? new Date(dateString).toLocaleDateString("ru-RU") : "Не указано";
   const filteredAvailableRoles = availableRoles.filter(role => !userRoles.includes(role.id));
   const userRolesWithDetails = userRoles.map(roleId => availableRoles.find(role => role.id === roleId)).filter(role => role !== undefined) as Role[];
@@ -387,6 +446,14 @@ export default function UserDetailPage() {
               scale: 1.05
             }} whileTap={{
               scale: 0.95
+            }} onClick={() => setIsPasswordModalOpen(true)} className="bg-green-500 hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md">
+                <Key className="w-4 h-4" />
+                Сменить пароль
+              </motion.button>
+              <motion.button whileHover={{
+              scale: 1.05
+            }} whileTap={{
+              scale: 0.95
             }} onClick={handleDeleteUser} className="bg-red-100 hover:bg-red-200 text-red-800 border border-red-200 font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md">
                 <Trash2 className="w-4 h-4" />
                 Удалить
@@ -419,8 +486,6 @@ export default function UserDetailPage() {
                     <h4 className="text-gray-800 font-semibold mb-2">Основная информация</h4>
                     <ul className="space-y-2 text-gray-500">
                       <li><span className="font-medium">Логин:</span> {user.username}</li>
-                      <li><span className="font-medium">Дата рождения:</span> {formatDate(user.dateOfBirth)}</li>
-                      <li><span className="font-medium">Адрес:</span> {user.address || "Не указан"}</li>
                       <li><span className="font-medium">Дата регистрации:</span> {formatDate(user.dateRegistered)}</li>
                       <li><span className="font-medium">Последний вход:</span> {formatDate(user.lastLoginDate)}</li>
                     </ul>
@@ -434,14 +499,7 @@ export default function UserDetailPage() {
                     </ul>
                   </div>
                 </div>
-                {user.passportNumber && <div>
-                    <h4 className="text-gray-800 font-semibold mb-2">Паспортные данные</h4>
-                    <ul className="space-y-2 text-gray-500">
-                      <li><span className="font-medium">Номер паспорта:</span> {user.passportNumber}</li>
-                      {user.passportIssuedBy && <li><span className="font-medium">Кем выдан:</span> {user.passportIssuedBy}</li>}
-                      {user.passportIssuedDate && <li><span className="font-medium">Дата выдачи:</span> {formatDate(user.passportIssuedDate)}</li>}
-                    </ul>
-                  </div>}
+
               </div>
             </Section>
           </div>
@@ -605,5 +663,88 @@ export default function UserDetailPage() {
             </div> : <p className="text-gray-500 text-center py-4">У пользователя нет резерваций</p>}
         </Section>
       </main>
+
+      {/* Модальное окно смены пароля */}
+      {isPasswordModalOpen && <motion.div initial={{
+        opacity: 0
+      }} animate={{
+        opacity: 1
+      }} className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div initial={{
+          scale: 0.9,
+          opacity: 0
+        }} animate={{
+          scale: 1,
+          opacity: 1
+        }} className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Key className="w-5 h-5 text-green-500" />
+                Смена пароля
+              </h3>
+              <motion.button whileHover={{
+              scale: 1.1
+            }} whileTap={{
+              scale: 0.9
+            }} onClick={closePasswordModal} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </motion.button>
+            </div>
+
+            {passwordError && <div className="mb-4 p-3 bg-red-100 border border-red-200 text-red-800 rounded-lg text-sm">
+                {passwordError}
+              </div>}
+
+            <form onSubmit={e => {
+            e.preventDefault();
+            handlePasswordChange();
+          }} className="space-y-4">
+              <div>
+                <label htmlFor="oldPassword" className="block text-sm font-medium text-gray-800 mb-1">
+                  Текущий пароль
+                </label>
+                <input id="oldPassword" name="oldPassword" type="password" value={passwordForm.oldPassword} onChange={handlePasswordFormChange} required className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+
+              <div>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-800 mb-1">
+                  Новый пароль
+                </label>
+                <input id="newPassword" name="newPassword" type="password" value={passwordForm.newPassword} onChange={handlePasswordFormChange} required minLength={6} className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-800 mb-1">
+                  Подтвердите новый пароль
+                </label>
+                <input id="confirmPassword" name="confirmPassword" type="password" value={passwordForm.confirmPassword} onChange={handlePasswordFormChange} required minLength={6} className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <motion.button whileHover={{
+                y: -2
+              }} whileTap={{
+                scale: 0.95
+              }} type="button" onClick={closePasswordModal} className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 shadow-md">
+                  Отмена
+                </motion.button>
+                <motion.button whileHover={{
+                y: -2
+              }} whileTap={{
+                scale: 0.95
+              }} type="submit" disabled={isChangingPassword} className="bg-green-500 hover:bg-green-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md disabled:opacity-50">
+                  {isChangingPassword && <motion.div animate={{
+                  rotate: 360
+                }} transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  ease: "linear"
+                }} className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />}
+                  Сменить пароль
+                </motion.button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>}
     </div>;
 }

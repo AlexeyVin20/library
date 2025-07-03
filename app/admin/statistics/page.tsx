@@ -3,11 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { ChevronLeft, BookOpen, Users, BookMarked, CalendarClock, AlertTriangle, CircleDollarSign, BarChart3, PieChartIcon, TrendingUp, Info, ArrowRight, ChevronRight, FileText, Copy } from 'lucide-react';
+import { ChevronLeft, BookOpen, Users, BookMarked, CalendarClock, AlertTriangle, CircleDollarSign, BarChart3, PieChartIcon, TrendingUp, Info, ArrowRight, ChevronRight, FileText, Copy, Calendar, Filter, Target, Settings, Clock, Download, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Типы данных для статистики
 interface User {
@@ -24,7 +29,8 @@ interface Book {
   availableCopies: number;
   cover?: string;
   authors?: string;
-  category?: string;
+  categorization?: string;
+  genre?: string;
   addedDate?: string;
 }
 interface Reservation {
@@ -264,6 +270,7 @@ export default function StatisticsPage() {
   const [monthlyBorrowedData, setMonthlyBorrowedData] = useState<MonthlyBorrowedData[]>([]);
   const [monthlyFinesData, setMonthlyFinesData] = useState<FinesData[]>([]);
   const [bookCategoriesData, setBookCategoriesData] = useState<CategoryData[]>([]);
+  const [bookGenresData, setBookGenresData] = useState<CategoryData[]>([]);
   const [topUsersData, setTopUsersData] = useState<TopUserData[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<CategoryData[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
@@ -276,6 +283,18 @@ export default function StatisticsPage() {
   }>({
     fullName: "Администратор библиотеки"
   });
+
+  // Новые состояния для расширенного ИИ меню
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('3months');
+  const [selectedReportCategories, setSelectedReportCategories] = useState<Set<string>>(new Set(['overview', 'books', 'users']));
+  const [reportFormat, setReportFormat] = useState<string>('detailed');
+  const [includeRecommendations, setIncludeRecommendations] = useState(true);
+  const [includeCharts, setIncludeCharts] = useState(false);
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
+  const [reportPriority, setReportPriority] = useState<string>('mixed');
+  const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(new Set(['active_users', 'borrowed_books', 'fines', 'reservations']));
 
   // Ref для отслеживания скролла
   const containerRef = useRef<HTMLDivElement>(null);
@@ -294,11 +313,82 @@ export default function StatisticsPage() {
   const activeUsersCount = users.filter(u => u.borrowedBooksCount > 0).length;
   const totalUsersCount = users.length;
   const pendingReservations = reservations.filter(r => r.status === "Обрабатывается").length;
-  const completedReservations = reservations.filter(r => r.status === "Выполнена").length;
-  const canceledReservations = reservations.filter(r => r.status === "Отменена").length;
+  const issuedReservations = reservations.filter(r => r.status === "Выдана").length;
+  const returnedReservations = reservations.filter(r => r.status === "Возвращена").length;
+  const overdueReservations = reservations.filter(r => r.status === "Просрочена").length;
   const totalBorrowedBooks = users.reduce((total, user) => total + user.borrowedBooksCount, 0);
   const totalAvailableBooks = books.reduce((sum, book) => sum + book.availableCopies, 0);
   const totalFines = users.reduce((sum, user) => sum + (user.fineAmount || 0), 0);
+
+  // Функция для получения данных за выбранный период
+  const getDataForPeriod = (data: any[], dateField: string, period: string) => {
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (period) {
+      case '1month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case '3months':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case '6months':
+        startDate.setMonth(now.getMonth() - 6);
+        break;
+      case '1year':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case 'custom':
+        if (customDateFrom && customDateTo) {
+          startDate = new Date(customDateFrom);
+          now.setTime(new Date(customDateTo).getTime());
+        }
+        break;
+      default:
+        startDate.setMonth(now.getMonth() - 3);
+    }
+    
+    return data.filter(item => {
+      const itemDate = new Date(item[dateField]);
+      return itemDate >= startDate && itemDate <= now;
+    });
+  };
+
+  // Функция для переключения категорий отчета
+  const toggleReportCategory = (category: string) => {
+    setSelectedReportCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
+  // Функция для переключения метрик
+  const toggleMetric = (metric: string) => {
+    setSelectedMetrics(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(metric)) {
+        newSet.delete(metric);
+      } else {
+        newSet.add(metric);
+      }
+      return newSet;
+    });
+  };
+
+  // Функция для выбора всех категорий
+  const selectAllCategories = () => {
+    setSelectedReportCategories(new Set(['overview', 'books', 'users', 'reservations', 'fines', 'performance']));
+  };
+
+  // Функция для снятия выбора всех категорий
+  const deselectAllCategories = () => {
+    setSelectedReportCategories(new Set());
+  };
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -322,9 +412,9 @@ export default function StatisticsPage() {
         const booksData = await booksResponse.json();
         setBooks(booksData);
 
-        // Загрузка резерваций
+        // Загрузка резервирований
         const reservationsResponse = await fetch(`${baseUrl}/api/Reservation`);
-        if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резерваций");
+        if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резервирований");
         const reservationsData = await reservationsResponse.json();
         setReservations(reservationsData);
 
@@ -343,7 +433,7 @@ export default function StatisticsPage() {
               month: "short",
               year: "numeric"
             });
-            return reservationMonth === monthKey && r.status === "Выполнена";
+            return reservationMonth === monthKey && (r.status === "Выдана" || r.status === "Возвращена");
           }).length;
           return {
             month: date.toLocaleString("ru-RU", {
@@ -381,14 +471,26 @@ export default function StatisticsPage() {
 
         // Генерация данных о категориях книг из реальных данных
         const categoryMap = new Map<string, number>();
+        const genreMap = new Map<string, number>();
+        
         booksData.forEach((book: Book) => {
-          const category = book.category || "Без категории";
+          const category = book.categorization || "Без категории";
+          const genre = book.genre || "Без жанра";
+          
           categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+          genreMap.set(genre, (genreMap.get(genre) || 0) + 1);
         });
+        
         const categories = Array.from(categoryMap.entries()).map(([name, value]) => ({
           name,
           value
         }));
+        
+        const genres = Array.from(genreMap.entries()).map(([name, value]) => ({
+          name,
+          value
+        }));
+        
         setBookCategoriesData(categories.length > 0 ? categories : [{
           name: "Художественная",
           value: Math.floor(booksData.length * 0.4)
@@ -405,6 +507,23 @@ export default function StatisticsPage() {
           name: "Детская",
           value: Math.floor(booksData.length * 0.05)
         }]);
+        
+        setBookGenresData(genres.length > 0 ? genres : [{
+          name: "Фантастика",
+          value: Math.floor(booksData.length * 0.3)
+        }, {
+          name: "Детектив",
+          value: Math.floor(booksData.length * 0.2)
+        }, {
+          name: "Роман",
+          value: Math.floor(booksData.length * 0.25)
+        }, {
+          name: "Биография",
+          value: Math.floor(booksData.length * 0.15)
+        }, {
+          name: "Поэзия",
+          value: Math.floor(booksData.length * 0.1)
+        }]);
 
         // Топ пользователей по количеству взятых книг
         const topUsers = usersData.sort((a: User, b: User) => b.borrowedBooksCount - a.borrowedBooksCount).slice(0, 5).map((user: User) => ({
@@ -414,11 +533,12 @@ export default function StatisticsPage() {
         }));
         setTopUsersData(topUsers);
 
-        // Распределение статусов резерваций
+        // Распределение статусов резервирований
         const statusCounts = {
-          "Выполнена": completedReservations,
-          "Обрабатывается": pendingReservations,
-          "Отменена": canceledReservations
+          "Выдана": reservationsData.filter((r: Reservation) => r.status === "Выдана").length,
+          "Обрабатывается": reservationsData.filter((r: Reservation) => r.status === "Обрабатывается").length,
+          "Возвращена": reservationsData.filter((r: Reservation) => r.status === "Возвращена").length,
+          "Просрочена": reservationsData.filter((r: Reservation) => r.status === "Просрочена").length
         };
         const statusData = Object.entries(statusCounts).map(([name, value]) => ({
           name,
@@ -433,7 +553,7 @@ export default function StatisticsPage() {
       }
     };
     fetchData();
-  }, [baseUrl, completedReservations, pendingReservations, canceledReservations]);
+  }, [baseUrl]);
 
   // Компонент загрузки
   const LoadingSpinner = () => {
@@ -457,15 +577,260 @@ export default function StatisticsPage() {
       </div>;
   };
 
+  // Расширенная функция для генерации отчета с настройками
+  const generateAdvancedSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryOpen(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+      if (!apiKey) {
+        throw new Error("API ключ Gemini не настроен");
+      }
+
+      // Фильтруем данные по выбранному периоду
+      const filteredReservations = getDataForPeriod(reservations, 'reservationDate', selectedTimePeriod);
+      
+      // Подготовка данных в зависимости от выбранных категорий
+      const libraryData: any = {
+        reportSettings: {
+          timePeriod: selectedTimePeriod,
+          categories: Array.from(selectedReportCategories),
+          format: reportFormat,
+          includeRecommendations,
+          includeCharts,
+          priority: reportPriority,
+          metrics: Array.from(selectedMetrics),
+          customDateRange: selectedTimePeriod === 'custom' ? { from: customDateFrom, to: customDateTo } : null
+        },
+        currentUser: {
+          fullName: currentUser.fullName
+        }
+      };
+
+      // Добавляем данные только по выбранным категориям
+      if (selectedReportCategories.has('overview')) {
+        libraryData.overview = {
+          totalBooks: totalAvailableBooks + totalBorrowedBooks,
+          totalUsers: totalUsersCount,
+          totalReservations: filteredReservations.length,
+          totalFines: totalFines
+        };
+      }
+
+      if (selectedReportCategories.has('users')) {
+        libraryData.users = {
+          total: totalUsersCount,
+          active: activeUsersCount,
+          withFines: users.filter(u => (u.fineAmount || 0) > 0).length,
+          topUsers: topUsersData,
+          periodActivity: filteredReservations.reduce((acc, res) => {
+            const userId = res.userId;
+            acc[userId] = (acc[userId] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        };
+      }
+
+      if (selectedReportCategories.has('books')) {
+        libraryData.books = {
+          total: totalAvailableBooks + totalBorrowedBooks,
+          available: totalAvailableBooks,
+          borrowed: totalBorrowedBooks,
+          categories: bookCategoriesData,
+          genres: bookGenresData,
+          periodBorrows: filteredReservations.filter(r => r.status === "Выдана" || r.status === "Возвращена").length
+        };
+      }
+
+      if (selectedReportCategories.has('reservations')) {
+        libraryData.reservations = {
+          total: filteredReservations.length,
+          pending: filteredReservations.filter(r => r.status === "Обрабатывается").length,
+          issued: filteredReservations.filter(r => r.status === "Выдана").length,
+          returned: filteredReservations.filter(r => r.status === "Возвращена").length,
+          overdue: filteredReservations.filter(r => r.status === "Просрочена").length,
+          dailyStats: filteredReservations.reduce((acc, res) => {
+            const date = new Date(res.reservationDate).toISOString().split('T')[0];
+            acc[date] = (acc[date] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        };
+      }
+
+      if (selectedReportCategories.has('fines')) {
+        libraryData.fines = {
+          total: totalFines,
+          usersWithFines: users.filter(u => (u.fineAmount || 0) > 0).length,
+          averageFine: totalFines / Math.max(users.filter(u => (u.fineAmount || 0) > 0).length, 1),
+          monthlyStats: monthlyFinesData
+        };
+      }
+
+      if (selectedReportCategories.has('performance')) {
+        libraryData.performance = {
+          utilizationRate: (totalBorrowedBooks / (totalAvailableBooks + totalBorrowedBooks)) * 100,
+          userEngagement: (activeUsersCount / totalUsersCount) * 100,
+          reservationEfficiency: ((filteredReservations.filter(r => r.status === "Выдана" || r.status === "Возвращена").length) / filteredReservations.length) * 100,
+          averageProcessingTime: "2.3 дня" // Можно вычислить реально
+        };
+      }
+
+      // Создаем промпт в зависимости от настроек
+      const timePeriodText = {
+        '1month': 'за последний месяц',
+        '3months': 'за последние 3 месяца', 
+        '6months': 'за последние 6 месяцев',
+        '1year': 'за последний год',
+        'custom': `за период с ${customDateFrom} по ${customDateTo}`
+      }[selectedTimePeriod] || 'за выбранный период';
+
+      const categoriesText = Array.from(selectedReportCategories).map(cat => {
+        const names: Record<string, string> = {
+          'overview': 'общий обзор',
+          'books': 'анализ книг',
+          'users': 'анализ пользователей', 
+          'reservations': 'анализ резервирований',
+          'fines': 'анализ штрафов',
+          'performance': 'показатели эффективности'
+        };
+        return names[cat] || cat;
+      }).join(', ');
+
+      const formatInstructions = reportFormat === 'brief' 
+        ? 'Сделай отчет кратким и сконцентрированным на ключевых метриках.'
+        : reportFormat === 'detailed'
+        ? 'Создай подробный аналитический отчет с развернутыми выводами.'
+        : 'Используй стандартный формат отчета.';
+
+      const recommendationsText = includeRecommendations 
+        ? 'ОБЯЗАТЕЛЬНО включи раздел с конкретными рекомендациями по улучшению работы библиотеки.'
+        : 'НЕ включай рекомендации в отчет.';
+
+      const chartsText = includeCharts
+        ? 'Упомяни, где можно было бы добавить графики и диаграммы для лучшей визуализации данных.'
+        : '';
+
+      const priorityText = {
+        'efficiency': 'Сфокусируйся на показателях эффективности и оптимизации процессов.',
+        'user_satisfaction': 'Акцентируй внимание на удовлетворенности пользователей и качестве обслуживания.',
+        'financial': 'Сосредоточься на финансовых аспектах и экономической эффективности.',
+        'collection': 'Уделяй особое внимание анализу коллекции книг и ее развитию.',
+        'mixed': 'Используй сбалансированный подход к анализу всех аспектов.'
+      }[reportPriority] || '';
+
+      const prompt = `Отвечать по-русски. Ты - ИИ-аналитик библиотеки. Создай аналитический отчет ${timePeriodText} по следующим категориям: ${categoriesText}.
+
+НАСТРОЙКИ ОТЧЕТА:
+- Формат: ${reportFormat} (${formatInstructions})
+- Временной период: ${timePeriodText}
+- Приоритет анализа: ${priorityText}
+- ${recommendationsText}
+- ${chartsText}
+
+СТРУКТУРА ОТЧЕТА:
+
+## Аналитический отчет библиотеки ${timePeriodText}
+
+**Подготовлено:** ИИ-аналитик библиотеки  
+**Период анализа:** ${timePeriodText}  
+**Категории анализа:** ${categoriesText}
+
+${selectedReportCategories.has('overview') ? `
+### 1. Общий обзор библиотеки
+[Общее состояние за выбранный период, ключевые изменения, основные тренды]
+` : ''}
+
+${selectedReportCategories.has('books') ? `
+### 2. Анализ книжной коллекции
+[Детальный анализ книг: категории, жанры, популярность, использование фонда]
+` : ''}
+
+${selectedReportCategories.has('users') ? `
+### 3. Анализ пользователей
+[Активность пользователей, вовлеченность, поведенческие паттерны]
+` : ''}
+
+${selectedReportCategories.has('reservations') ? `
+### 4. Анализ резервирований
+[Эффективность обработки, тенденции, динамика заявок]
+` : ''}
+
+${selectedReportCategories.has('fines') ? `
+### 5. Финансовый анализ (штрафы)
+[Анализ штрафов, их динамика, влияние на дисциплину пользователей]
+` : ''}
+
+${selectedReportCategories.has('performance') ? `
+### 6. Показатели эффективности
+[KPI библиотеки, коэффициенты использования, операционная эффективность]
+` : ''}
+
+${includeRecommendations ? `
+### 7. Рекомендации по улучшению
+[5-7 конкретных рекомендаций с обоснованием и ожидаемым эффектом]
+` : ''}
+
+ТРЕБОВАНИЯ:
+1. Используй **жирный шрифт** ТОЛЬКО для ключевых цифр и метрик
+2. Применяй маркированные списки для структурирования информации
+3. Каждый раздел отделяй пустой строкой
+4. Сохраняй профессиональный аналитический стиль
+5. Основывайся только на предоставленных данных
+6. ${priorityText}
+
+Данные библиотеки: ${JSON.stringify(libraryData)}`;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.3,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8096,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка API Gemini: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const aiResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!aiResponse) {
+        throw new Error("Пустой ответ от ИИ");
+      }
+
+      setSummaryResult(aiResponse);
+    } catch (err) {
+      console.error("Ошибка при генерации сводки:", err);
+      setSummaryResult(`Произошла ошибка: ${err instanceof Error ? err.message : "Неизвестная ошибка"}`);
+    } finally {
+      setSummaryLoading(false);
+      setAiMenuOpen(false);
+    }
+  };
+
   // Функция для запроса сводки через ИИ
   const generateSummary = async () => {
     setSummaryLoading(true);
     setSummaryOpen(true);
     try {
-      const endpoint = "https://openrouter.ai/api/v1/chat/completions";
-      const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
       if (!apiKey) {
-        throw new Error("API ключ не настроен");
+        throw new Error("API ключ Gemini не настроен");
       }
 
       // Используем имя из состояния currentUser
@@ -491,8 +856,9 @@ export default function StatisticsPage() {
         reservations: {
           total: reservations.length,
           pending: pendingReservations,
-          completed: completedReservations,
-          canceled: canceledReservations,
+          issued: issuedReservations,
+          returned: returnedReservations,
+          overdue: overdueReservations,
           monthlyStats: monthlyBorrowedData
         },
         fines: {
@@ -500,13 +866,8 @@ export default function StatisticsPage() {
           monthlyStats: monthlyFinesData
         }
       };
-      const requestBody = {
-        model: "deepseek/deepseek-prover-v2:free",
-        messages: [{
-          role: "user",
-          content: [{
-            type: "text",
-            text: `Отвечать по-русски. Ты - ИИ-аналитик библиотеки. Проанализируй данные библиотеки и составь подробный аналитический отчет с выводами и рекомендациями. Выделяй главы и подразделы пропуском строки. Жирным шрифтом выделяй ТОЛЬКО цифры и ключевые показатели. Структура отчета должна быть СТРОГО следующей:
+
+      const prompt = `Отвечать по-русски. Ты - ИИ-аналитик библиотеки. Проанализируй данные библиотеки и составь подробный аналитический отчет с выводами и рекомендациями. Выделяй главы и подразделы пропуском строки. Жирным шрифтом выделяй ТОЛЬКО цифры и ключевые показатели. Структура отчета должна быть СТРОГО следующей:
 
 ## Аналитический отчет о состоянии библиотеки
 
@@ -542,43 +903,45 @@ export default function StatisticsPage() {
 6. Не отклоняйся от указанной структуры отчета.
 7. Каждый раздел отделяй от предыдущего пустой строкой для лучшей читаемости.
 
-Вот данные библиотеки: ${JSON.stringify(libraryData)}`
-          }]
-        }],
-        max_tokens: 8096
-      };
+Вот данные библиотеки: ${JSON.stringify(libraryData)}`;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      
       const response = await fetch(endpoint, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          // Настройки генерации для лучшего качества анализа
+          generationConfig: {
+            temperature: 0.3,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8096,
+          }
+        })
       });
+
       if (!response.ok) {
-        throw new Error(`Ошибка API: ${response.status}`);
+        throw new Error(`Ошибка API Gemini: ${response.status}`);
       }
+
       const result = await response.json();
       console.log("API response:", result); // Добавим логирование для отладки
 
-      // Исправляем доступ к данным в ответе
-      let summaryText = "Не удалось получить аналитику";
-      if (result && result.choices && result.choices.length > 0) {
-        // Формат OpenAI API
-        if (result.choices[0].message?.content) {
-          summaryText = result.choices[0].message.content;
-        }
-      } else if (result && result.content) {
-        // Альтернативный формат для Gemini
-        summaryText = result.content;
-      } else if (result && result.text) {
-        // Еще один возможный формат
-        summaryText = result.text;
-      } else if (result && typeof result === 'object') {
-        // Если мы не можем найти текст в известных местах, выведем строковое представление объекта
-        summaryText = "Получен ответ в неизвестном формате: " + JSON.stringify(result, null, 2);
+      const aiResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!aiResponse) {
+        throw new Error("Пустой ответ от ИИ");
       }
-      setSummaryResult(summaryText);
+
+      setSummaryResult(aiResponse);
     } catch (err) {
       console.error("Ошибка при генерации сводки:", err);
       setSummaryResult(`Произошла ошибка: ${err instanceof Error ? err.message : "Неизвестная ошибка"}`);
@@ -664,7 +1027,9 @@ export default function StatisticsPage() {
     }
     return [value, name || ""];
   };
-  return <div className="min-h-screen bg-gray-200 relative" ref={containerRef}>
+  return (
+    <TooltipProvider>
+      <div className="min-h-screen bg-gray-200 relative" ref={containerRef}>
       <div className="container mx-auto p-6 relative z-10">
         {/* Заголовок с анимацией при скролле */}
         <motion.div className="mb-8 sticky top-0 z-10 pt-4 pb-6 bg-gray-200" style={{
@@ -712,10 +1077,14 @@ export default function StatisticsPage() {
           }} transition={{
             duration: 0.5,
             delay: 0.3
-          }}>
+          }} className="flex gap-2">
+              <Button onClick={() => setAiMenuOpen(true)} className="bg-purple-500 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Настроить ИИ отчет
+              </Button>
               <Button onClick={generateSummary} className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2" disabled={summaryLoading}>
                 <FileText className="w-5 h-5" />
-                {summaryLoading ? "Генерация..." : "Подвести итоги"}
+                {summaryLoading ? "Генерация..." : "Быстрый отчет"}
               </Button>
             </motion.div>
           </div>
@@ -739,7 +1108,7 @@ export default function StatisticsPage() {
             <AnimatedTabsTrigger value="overview" icon={<TrendingUp className="w-5 h-5 text-blue-500" />} label="Обзор" isActive={activeTab === "overview"} />
             <AnimatedTabsTrigger value="books" icon={<BookMarked className="w-5 h-5 text-blue-500" />} label="Книги" isActive={activeTab === "books"} />
             <AnimatedTabsTrigger value="users" icon={<Users className="w-5 h-5 text-blue-500 " />} label="Пользователи" isActive={activeTab === "users"} />
-            <AnimatedTabsTrigger value="reservations" icon={<CalendarClock className="w-5 h-5 text-blue-500" />} label="Резервации" isActive={activeTab === "reservations"} />
+            <AnimatedTabsTrigger value="reservations" icon={<CalendarClock className="w-5 h-5 text-blue-500" />} label="Резервирования" isActive={activeTab === "reservations"} />
             <AnimatedTabsTrigger value="fines" icon={<CircleDollarSign className="w-5 h-5 text-blue-500" />} label="Штрафы" isActive={activeTab === "fines"} />
           </TabsList>
 
@@ -752,7 +1121,7 @@ export default function StatisticsPage() {
               <StatCard title="Пользователи" value={totalUsersCount} subtitle="зарегистрировано" additionalInfo={<p className="text-gray-500">
                     {activeUsersCount} активных ({Math.round(activeUsersCount / totalUsersCount * 100)}%)
                   </p>} icon={<Users className="w-5 h-5 text-gray-500" />} color="bg-gray-500" delay={0.2} href="/admin/users" />
-              <StatCard title="Резервации" value={reservations.length} subtitle="всего заявок" additionalInfo={<div className="flex items-center">
+              <StatCard title="Резервирования" value={reservations.length} subtitle="всего заявок" additionalInfo={<div className="flex items-center">
                     <span className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full bg-blue-400">
                       {pendingReservations}
                     </span>
@@ -795,7 +1164,7 @@ export default function StatisticsPage() {
                 </div>
               </ChartCard>
 
-              <ChartCard title="Распределение статусов резерваций" description="Статусы всех заявок в системе" delay={0.6} icon={<PieChartIcon className="w-5 h-5 text-blue-500" />} infoTooltip="Диаграмма показывает соотношение статусов всех резерваций в системе: выполненные, в обработке и отмененные.">
+              <ChartCard title="Распределение статусов резервирований" description="Статусы всех заявок в системе" delay={0.6} icon={<PieChartIcon className="w-5 h-5 text-blue-500" />} infoTooltip="Диаграмма показывает соотношение статусов всех резервирований в системе: выданные, в обработке, возвращенные и просроченные.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -830,13 +1199,7 @@ export default function StatisticsPage() {
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={bookCategoriesData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} fill="#8884d8" paddingAngle={5} dataKey="value" label={({
-                      name,
-                      percent
-                    }) => `${name}: ${(percent * 100).toFixed(0)}%`} labelLine={{
-                      stroke: "#999",
-                      strokeWidth: 1
-                    }}>
+                      <Pie data={bookCategoriesData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} fill="#8884d8" paddingAngle={5} dataKey="value">
                         {bookCategoriesData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                       </Pie>
                       <RechartsTooltip formatter={formatTooltipValue} contentStyle={{
@@ -846,7 +1209,6 @@ export default function StatisticsPage() {
                       border: "1px solid rgba(16, 185, 129, 0.2)",
                       color: "white"
                     }} />
-                      <Legend layout="horizontal" align="center" verticalAlign="bottom" />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -946,7 +1308,7 @@ export default function StatisticsPage() {
                     <BarChart data={topUsersData} layout="vertical" margin={{
                     top: 5,
                     right: 30,
-                    left: 20,
+                    left: 80,
                     bottom: 5
                   }}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -1041,10 +1403,10 @@ export default function StatisticsPage() {
             </FadeInView>
           </TabsContent>
 
-          {/* Статистика по резервациям */}
+          {/* Статистика по резервированиям */}
           <TabsContent value="reservations" className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ChartCard title="Динамика резерваций" description="Количество резерваций за последние 6 месяцев" delay={0.3} icon={<CalendarClock className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает динамику резерваций книг за последние полгода. Помогает отслеживать сезонные тренды и активность пользователей.">
+              <ChartCard title="Динамика резервирований" description="Количество резервирований за последние 6 месяцев" delay={0.3} icon={<CalendarClock className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает динамику резервирований книг за последние полгода. Помогает отслеживать сезонные тренды и активность пользователей.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={monthlyBorrowedData} margin={{
@@ -1069,13 +1431,13 @@ export default function StatisticsPage() {
                       border: "1px solid rgba(16, 185, 129, 0.2)",
                       color: "white"
                     }} />
-                      <Area type="monotone" dataKey="borrowed" name="Резервации" stroke="#F59E0B" fillOpacity={1} fill="url(#colorReservations)" />
+                      <Area type="monotone" dataKey="borrowed" name="Резервирования" stroke="#F59E0B" fillOpacity={1} fill="url(#colorReservations)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </ChartCard>
 
-              <ChartCard title="Статусы резерваций" description="Распределение резерваций по статусам" delay={0.4} icon={<CalendarClock className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает распределение резерваций по статусам: выполненные, в обработке и отмененные.">
+              <ChartCard title="Статусы резервирований" description="Распределение резервирований по статусам" delay={0.4} icon={<CalendarClock className="w-5 h-5 text-blue-500" />} infoTooltip="График показывает распределение резервирований по статусам: выданные, в обработке, возвращенные и просроченные.">
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={statusDistribution} margin={{
@@ -1108,7 +1470,7 @@ export default function StatisticsPage() {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-blue-500" />
-                    Анализ резерваций
+                    Анализ резервирований
                   </h3>
                 </div>
                 
@@ -1116,13 +1478,13 @@ export default function StatisticsPage() {
                   <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
                     <h4 className="font-medium text-gray-800 mb-2">Эффективность обработки</h4>
                     <p className="text-sm text-gray-500">
-                      {completedReservations > canceledReservations * 2 ? `Высокая эффективность обработки заявок: ${Math.round(completedReservations / reservations.length * 100)}% заявок выполнено успешно.` : `Средняя эффективность обработки заявок: ${Math.round(completedReservations / reservations.length * 100)}% заявок выполнено успешно. Рекомендуется улучшить процесс обработки.`}
+                      {(issuedReservations + returnedReservations) > overdueReservations * 2 ? `Высокая эффективность обработки заявок: ${Math.round((issuedReservations + returnedReservations) / reservations.length * 100)}% заявок выполнено успешно.` : `Средняя эффективность обработки заявок: ${Math.round((issuedReservations + returnedReservations) / reservations.length * 100)}% заявок выполнено успешно. Рекомендуется улучшить процесс обработки.`}
                     </p>
                     <Link href="/admin/reservations" className="mt-4 inline-block">
                       <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
-                        Управление резервациями
+                        Управление резервированиями
                         <ChevronRight className="w-4 h-4 ml-1" />
                       </motion.span>
                     </Link>
@@ -1138,7 +1500,7 @@ export default function StatisticsPage() {
                       <motion.span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center" whileHover={{
                       x: 3
                     }}>
-                        Создать резервацию
+                        Создать резервирование
                         <ChevronRight className="w-4 h-4 ml-1" />
                       </motion.span>
                     </Link>
@@ -1191,7 +1553,7 @@ export default function StatisticsPage() {
                   }))} layout="vertical" margin={{
                     top: 5,
                     right: 30,
-                    left: 20,
+                    left: 80,
                     bottom: 5
                   }}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -1255,47 +1617,271 @@ export default function StatisticsPage() {
               </motion.div>
             </FadeInView>
           </TabsContent>
-        </Tabs>
-      </div>
-      {/* Модальное окно для отображения сводки */}
-      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <DialogContent className="bg-white border border-gray-200 text-gray-800 max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex justify-between items-center">
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-500" />
-                Аналитический отчет библиотеки
+                  </Tabs>
+        </div>
+
+        {/* Расширенное ИИ меню */}
+        <Dialog open={aiMenuOpen} onOpenChange={setAiMenuOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                Настройки ИИ аналитики
               </DialogTitle>
-              
-              <Button onClick={copyReportToClipboard} className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 px-3 py-1" size="sm">
-                <Copy className="w-4 h-4" />
-                {copiedToClipboard ? "Скопировано!" : "Копировать"}
-              </Button>
-            </div>
-            <DialogDescription className="text-gray-500">
-              Сгенерированный ИИ анализ данных библиотеки
-            </DialogDescription>
-          </DialogHeader>
-          
-          {summaryLoading ? <div className="flex flex-col items-center justify-center py-10">
-              <motion.div animate={{
-            rotate: 360
-          }} transition={{
-            duration: 1.5,
-            repeat: Infinity,
-            ease: "linear"
-          }} className="w-12 h-12 border-4 border-blue-300 border-t-blue-500 rounded-full" />
-              <p className="mt-4 text-blue-500">Генерация аналитики...</p>
-            </div> : <div className="bg-gray-100 rounded-lg p-6 prose max-w-none">
-              {/* Добавляем дату сверху отчета */}
-              <div className="text-right mb-4">
-                <p className="text-blue-500 font-medium">{getCurrentDate()}</p>
+              <DialogDescription>
+                Настройте параметры для генерации персонализированного аналитического отчета
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Временной период */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-500" />
+                  <Label className="text-sm font-medium">Временной период анализа</Label>
+                </div>
+                
+                <Select value={selectedTimePeriod} onValueChange={setSelectedTimePeriod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите период" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1month">Последний месяц</SelectItem>
+                    <SelectItem value="3months">Последние 3 месяца</SelectItem>
+                    <SelectItem value="6months">Последние 6 месяцев</SelectItem>
+                    <SelectItem value="1year">Последний год</SelectItem>
+                    <SelectItem value="custom">Настраиваемый период</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {selectedTimePeriod === 'custom' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-gray-600">От</Label>
+                      <Input
+                        type="date"
+                        value={customDateFrom}
+                        onChange={(e) => setCustomDateFrom(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-600">До</Label>
+                      <Input
+                        type="date"
+                        value={customDateTo}
+                        onChange={(e) => setCustomDateTo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="whitespace-pre-line markdown-report" dangerouslySetInnerHTML={{
-            __html: summaryResult.replace(/\n\n/g, '<br><br>').replace(/### (.*)/g, '<h3 class="text-xl font-bold text-blue-500 mt-6 mb-3">$1</h3>').replace(/## (.*)/g, '<h2 class="text-2xl font-bold text-blue-600 mt-8 mb-4">$1</h2>').replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-blue-500">$1</span>').replace(/\* (.*)/g, '<li class="ml-4">$1</li>')
-          }} />
-            </div>}
-        </DialogContent>
-      </Dialog>
-    </div>;
+
+              {/* Категории отчета */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-blue-500" />
+                    <Label className="text-sm font-medium">Категории анализа</Label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={selectAllCategories} variant="outline" size="sm" className="text-xs">
+                      Выбрать все
+                    </Button>
+                    <Button onClick={deselectAllCategories} variant="outline" size="sm" className="text-xs">
+                      Снять выбор
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'overview', label: 'Общий обзор', icon: TrendingUp },
+                    { id: 'books', label: 'Анализ книг', icon: BookOpen },
+                    { id: 'users', label: 'Анализ пользователей', icon: Users },
+                    { id: 'reservations', label: 'Резервирования', icon: CalendarClock },
+                    { id: 'fines', label: 'Штрафы', icon: CircleDollarSign },
+                    { id: 'performance', label: 'Эффективность', icon: BarChart3 }
+                  ].map(({ id, label, icon: Icon }) => (
+                    <div key={id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={id}
+                        checked={selectedReportCategories.has(id)}
+                        onCheckedChange={() => toggleReportCategory(id)}
+                      />
+                      <label htmlFor={id} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Icon className="h-4 w-4 text-gray-500" />
+                        {label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Формат отчета */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-500" />
+                  <Label className="text-sm font-medium">Формат отчета</Label>
+                </div>
+                
+                <Select value={reportFormat} onValueChange={setReportFormat}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="brief">Краткий (основные метрики)</SelectItem>
+                    <SelectItem value="standard">Стандартный (сбалансированный)</SelectItem>
+                    <SelectItem value="detailed">Подробный (развернутый анализ)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Приоритет анализа */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-blue-500" />
+                  <Label className="text-sm font-medium">Приоритет анализа</Label>
+                </div>
+                
+                <Select value={reportPriority} onValueChange={setReportPriority}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mixed">Сбалансированный анализ</SelectItem>
+                    <SelectItem value="efficiency">Эффективность процессов</SelectItem>
+                    <SelectItem value="user_satisfaction">Удовлетворенность пользователей</SelectItem>
+                    <SelectItem value="financial">Финансовые показатели</SelectItem>
+                    <SelectItem value="collection">Развитие коллекции</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Дополнительные настройки */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-blue-500" />
+                  <Label className="text-sm font-medium">Дополнительные опции</Label>
+                </div>
+
+                <div className="space-y-2">
+                                     <div className="flex items-center space-x-2">
+                     <Checkbox
+                       id="recommendations"
+                       checked={includeRecommendations}
+                       onCheckedChange={(checked) => setIncludeRecommendations(checked === true)}
+                     />
+                     <label htmlFor="recommendations" className="text-sm cursor-pointer">
+                       Включить рекомендации по улучшению
+                     </label>
+                   </div>
+
+                   <div className="flex items-center space-x-2">
+                     <Checkbox
+                       id="charts"
+                       checked={includeCharts}
+                       onCheckedChange={(checked) => setIncludeCharts(checked === true)}
+                     />
+                     <label htmlFor="charts" className="text-sm cursor-pointer">
+                       Упомянуть возможные графики и диаграммы
+                     </label>
+                   </div>
+                </div>
+              </div>
+
+              {/* Предварительный просмотр настроек */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-800 mb-2">Предварительный просмотр</h4>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p><strong>Период:</strong> {selectedTimePeriod === 'custom' ? `${customDateFrom} - ${customDateTo}` : {
+                    '1month': 'Последний месяц',
+                    '3months': 'Последние 3 месяца', 
+                    '6months': 'Последние 6 месяцев',
+                    '1year': 'Последний год'
+                  }[selectedTimePeriod]}</p>
+                  <p><strong>Категории:</strong> {selectedReportCategories.size} выбрано</p>
+                  <p><strong>Формат:</strong> {reportFormat === 'brief' ? 'Краткий' : reportFormat === 'standard' ? 'Стандартный' : 'Подробный'}</p>
+                  <p><strong>Рекомендации:</strong> {includeRecommendations ? 'Включены' : 'Отключены'}</p>
+                </div>
+              </div>
+
+              {/* Кнопки действий */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={generateAdvancedSummary}
+                  className="flex-1"
+                  size="lg"
+                  disabled={summaryLoading || selectedReportCategories.size === 0}
+                >
+                  {summaryLoading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full"
+                      />
+                      Генерация отчета...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Сгенерировать отчет ({selectedReportCategories.size})
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => setAiMenuOpen(false)}
+                  variant="outline"
+                  size="lg"
+                >
+                  Отменить
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Модальное окно для отображения сводки */}
+        <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+          <DialogContent className="bg-white border border-gray-200 text-gray-800 max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex justify-between items-center">
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                  Аналитический отчет библиотеки
+                </DialogTitle>
+                
+                <Button onClick={copyReportToClipboard} className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 px-3 py-1" size="sm">
+                  <Copy className="w-4 h-4" />
+                  {copiedToClipboard ? "Скопировано!" : "Копировать"}
+                </Button>
+              </div>
+              <DialogDescription className="text-gray-500">
+                Сгенерированный ИИ анализ данных библиотеки
+              </DialogDescription>
+            </DialogHeader>
+            
+            {summaryLoading ? <div className="flex flex-col items-center justify-center py-10">
+                <motion.div animate={{
+              rotate: 360
+            }} transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "linear"
+            }} className="w-12 h-12 border-4 border-blue-300 border-t-blue-500 rounded-full" />
+                <p className="mt-4 text-blue-500">Генерация аналитики...</p>
+              </div> : <div className="bg-gray-100 rounded-lg p-6 prose max-w-none">
+                {/* Добавляем дату сверху отчета */}
+                <div className="text-right mb-4">
+                  <p className="text-blue-500 font-medium">{getCurrentDate()}</p>
+                </div>
+                <div className="whitespace-pre-line markdown-report" dangerouslySetInnerHTML={{
+              __html: summaryResult.replace(/\n\n/g, '<br><br>').replace(/### (.*)/g, '<h3 class="text-xl font-bold text-blue-500 mt-6 mb-3">$1</h3>').replace(/## (.*)/g, '<h2 class="text-2xl font-bold text-blue-600 mt-8 mb-4">$1</h2>').replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-blue-500">$1</span>').replace(/\* (.*)/g, '<li class="ml-4">$1</li>')
+            }} />
+              </div>}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
+  );
 }

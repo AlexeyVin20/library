@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, User } from "lucide-react";
+import { ArrowLeft, Loader2, User, Key, X } from "lucide-react";
 
 interface UserRole {
   roleId: number;
@@ -17,18 +17,13 @@ interface UserUpdateDto {
   id: string;
   fullName: string;
   email: string;
-  phone: string | null;
-  dateOfBirth: string;
-  passportNumber: string | null;
-  passportIssuedBy: string | null;
-  passportIssuedDate: string | null;
-  address: string | null;
+  phone: string;
   dateRegistered: string;
   username: string;
   password: string;
   isActive: boolean;
-  borrowedBooksCount: number | null;
-  maxBooksAllowed: number | null;
+  borrowedBooksCount: number;
+  maxBooksAllowed: number;
   loanPeriodDays: number;
   fineAmount: number;
   userRoles: UserRole[] | null;
@@ -68,7 +63,30 @@ export default function UpdateUserPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<UserUpdateDto | null>(null);
+  const [formData, setFormData] = useState<UserUpdateDto>({
+    id: "",
+    fullName: "",
+    email: "",
+    phone: "",
+    dateRegistered: "",
+    username: "",
+    password: "",
+    isActive: true,
+    borrowedBooksCount: 0,
+    maxBooksAllowed: 0,
+    loanPeriodDays: 0,
+    fineAmount: 0,
+    userRoles: null,
+    borrowedBooks: null,
+  });
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
@@ -94,13 +112,8 @@ export default function UpdateUserPage() {
           userRoles,
           // Убедимся, что все строковые поля имеют значения (не null)
           phone: userData.phone || "",
-          passportNumber: userData.passportNumber || "",
-          passportIssuedBy: userData.passportIssuedBy || "",
           // Корректно форматируем даты для input type="date"
-          dateOfBirth: formatDateForInput(userData.dateOfBirth),
-          passportIssuedDate: formatDateForInput(userData.passportIssuedDate),
           dateRegistered: formatDateForInput(userData.dateRegistered),
-          address: userData.address || "",
           // И числовые поля тоже
           borrowedBooksCount: userData.borrowedBooksCount || 0,
           maxBooksAllowed: userData.maxBooksAllowed || 0,
@@ -123,51 +136,43 @@ export default function UpdateUserPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     
-    if (["dateOfBirth", "passportIssuedDate", "dateRegistered"].includes(name)) {
-      setFormData((prev) => prev ? ({
+    if (["dateRegistered"].includes(name)) {
+      setFormData((prev) => ({
         ...prev,
         [name]: value, // YYYY-MM-DD
-      }) : null);
+      }));
     } else if (["borrowedBooksCount", "maxBooksAllowed", "loanPeriodDays", "fineAmount"].includes(name)) {
-      setFormData((prev) => prev ? ({
+      setFormData((prev) => ({
         ...prev,
         [name]: value === "" ? 0 : Number(value),
-      }) : null);
-    } else if (["phone", "passportNumber", "passportIssuedBy", "address"].includes(name)) {
-      setFormData((prev) => prev ? ({
+      }));
+    } else if (["phone"].includes(name)) {
+      setFormData((prev) => ({
         ...prev,
         [name]: value,
-      }) : null);
+      }));
     } else {
-      setFormData((prev) => prev ? ({
+      setFormData((prev) => ({
         ...prev,
         [name]: type === "checkbox" ? checked : value,
-      }) : null);
+      }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData) return;
     setSubmitting(true);
     setError(null);
     try {
       const dataToSend = {
         ...formData,
         // Преобразуем даты в ISO строки для API
-        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : new Date().toISOString(),
-        passportIssuedDate: formData.passportIssuedDate && formData.passportIssuedDate.trim() !== "" 
-          ? new Date(formData.passportIssuedDate).toISOString() 
-          : null,
         dateRegistered: formData.dateRegistered ? new Date(formData.dateRegistered).toISOString() : new Date().toISOString(),
         phone: formData.phone || null,
-        passportNumber: formData.passportNumber || null,
-        passportIssuedBy: formData.passportIssuedBy || null,
-        address: formData.address || null,
-        borrowedBooksCount: formData.borrowedBooksCount ?? 0,
-        maxBooksAllowed: formData.maxBooksAllowed ?? 0,
-        loanPeriodDays: formData.loanPeriodDays ?? 0,
-        fineAmount: formData.fineAmount ?? 0,
+        borrowedBooksCount: formData.borrowedBooksCount,
+        maxBooksAllowed: formData.maxBooksAllowed,
+        loanPeriodDays: formData.loanPeriodDays,
+        fineAmount: formData.fineAmount,
         // Сохраняем существующие роли, но не даем их изменять
         userRoles: formData.userRoles,
         borrowedBooks: null,
@@ -188,43 +193,79 @@ export default function UpdateUserPage() {
     }
   };
 
-  if (loading) return (
-    <div className="flex flex-col justify-center items-center h-screen bg-gray-200">
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-        className="w-12 h-12 border-4 border-blue-300 border-t-blue-500 rounded-full"
-      />
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-4 text-blue-500 font-medium"
-      >
-        Загрузка данных...
-      </motion.p>
-    </div>
-  );
+  const handlePasswordChange = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("Новые пароли не совпадают");
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError("Новый пароль должен содержать минимум 6 символов");
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    setPasswordError(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${baseUrl}/api/User/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: userId,
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Ошибка при смене пароля");
+      }
+      
+      // Успешная смена пароля
+      setIsPasswordModalOpen(false);
+      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      alert("Пароль успешно изменен");
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Произошла ошибка при смене пароля");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
-  if (error && !formData) return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-6 bg-red-100 border border-red-200 text-red-800 rounded-lg"
-    >
-      {error}
-    </motion.div>
-  );
+  const handlePasswordFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordForm(prev => ({ ...prev, [name]: value }));
+    setPasswordError(null);
+  };
 
-  if (!formData) return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-6 bg-red-100 border border-red-200 text-red-800 rounded-lg"
-    >
-      Пользователь не найден
-    </motion.div>
-  );
+  const closePasswordModal = () => {
+    setIsPasswordModalOpen(false);
+    setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    setPasswordError(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <span className="ml-2 text-blue-500">Загрузка...</span>
+      </div>
+    );
+  }
+
+  if (loading && !formData.id) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <span className="ml-2 text-blue-500">Загрузка...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-200 p-6 max-w-2xl mx-auto">
@@ -266,16 +307,11 @@ export default function UpdateUserPage() {
                 { label: "ФИО", name: "fullName", type: "text", required: true },
                 { label: "Email", name: "email", type: "email", required: true },
                 { label: "Телефон", name: "phone", type: "tel" },
-                { label: "Дата рождения", name: "dateOfBirth", type: "date", required: true },
-                { label: "Номер паспорта", name: "passportNumber", type: "text" },
-                { label: "Кем выдан паспорт", name: "passportIssuedBy", type: "text" },
-                { label: "Дата выдачи паспорта", name: "passportIssuedDate", type: "date" },
-                { label: "Адрес", name: "address", type: "text" },
-                { label: "Дата регистрации", name: "dateRegistered", type: "date", required: true },
-                { label: "Срок выдачи (дней)", name: "loanPeriodDays", type: "number", min: 1 },
-                { label: "Максимальное количество книг", name: "maxBooksAllowed", type: "number", min: 1 },
-                { label: "Текущее количество книг", name: "borrowedBooksCount", type: "number", min: 0 },
-                { label: "Штраф (руб.)", name: "fineAmount", type: "number", min: 0, step: 0.01 },
+                { label: "Дата регистрации", name: "dateRegistered", type: "date"},
+                { label: "Количество взятых книг", name: "borrowedBooksCount", type: "number"},
+                { label: "Максимум книг", name: "maxBooksAllowed", type: "number"},
+                { label: "Период займа (дни)", name: "loanPeriodDays", type: "number"},
+                { label: "Штраф", name: "fineAmount", type: "number", step: "0.01"},
               ].map((field, index) => (
                 <div key={field.name}>
                   <label htmlFor={field.name} className="block text-sm font-medium text-gray-800 mb-1">
@@ -285,59 +321,162 @@ export default function UpdateUserPage() {
                     id={field.name}
                     name={field.name}
                     type={field.type}
+                    step={field.step}
                     value={
-                      field.type === "number" 
-                        ? (formData[field.name as keyof UserUpdateDto] as number) || 0
+                      typeof formData[field.name as keyof UserUpdateDto] === "number" 
+                        ? String(formData[field.name as keyof UserUpdateDto]) 
                         : (formData[field.name as keyof UserUpdateDto] as string) || ""
                     }
                     onChange={handleChange}
                     required={field.required}
-                    min={field.min}
-                    step={field.step}
                     className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     whileFocus={{ scale: 1.02 }}
                   />
                 </div>
               ))}
-              <div className="flex items-center gap-2">
-                <motion.input
+              
+              <div className="flex items-center space-x-2">
+                <input
                   id="isActive"
                   name="isActive"
                   type="checkbox"
                   checked={formData.isActive}
                   onChange={handleChange}
-                  className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-200 rounded"
-                  whileHover={{ scale: 1.1 }}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
                 <label htmlFor="isActive" className="text-sm font-medium text-gray-800">
-                  Активный пользователь
+                  Активный аккаунт
                 </label>
               </div>
             </div>
           </motion.div>
-          <div className="flex justify-end gap-4">
+
+          <div className="flex justify-between gap-4">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               type="button"
-              onClick={() => router.back()}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 shadow-md"
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md"
             >
-              Отмена
+              <Key className="w-4 h-4" />
+              Сменить пароль
             </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="submit"
-              disabled={submitting}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md disabled:opacity-50"
-            >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Сохранить изменения
-            </motion.button>
+            
+            <div className="flex gap-4">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                type="button"
+                onClick={() => router.back()}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 font-medium rounded-lg px-4 py-2 shadow-md"
+              >
+                Отмена
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                type="submit"
+                disabled={submitting}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md disabled:opacity-50"
+              >
+                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                Обновить пользователя
+              </motion.button>
+            </div>
           </div>
         </form>
       </FadeInView>
+
+      {/* Password Change Modal */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-800">Смена пароля</h3>
+              <button
+                onClick={closePasswordModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {passwordError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-200 text-red-800 rounded-lg text-sm">
+                {passwordError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-1">
+                  Старый пароль
+                </label>
+                <input
+                  type="password"
+                  name="oldPassword"
+                  value={passwordForm.oldPassword}
+                  onChange={handlePasswordFormChange}
+                  className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-1">
+                  Новый пароль
+                </label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={passwordForm.newPassword}
+                  onChange={handlePasswordFormChange}
+                  className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-1">
+                  Подтверждение пароля
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={passwordForm.confirmPassword}
+                  onChange={handlePasswordFormChange}
+                  className="w-full p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={closePasswordModal}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg px-4 py-2 shadow-md"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePasswordChange}
+                  disabled={isChangingPassword}
+                  className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isChangingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Изменить
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

@@ -25,7 +25,7 @@ const Loader = () => {
       transform: translateX(-50%);
       width: 240px;
       height: 160px;
-      background:rgb(200, 200, 200);
+      background:rgb(255, 255, 255);
       z-index: 10;
       border-radius: 4px 4px 0 0;
     }

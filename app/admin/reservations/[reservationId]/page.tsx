@@ -8,13 +8,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText, Printer, Mail, Phone, BookOpen, ArrowRight, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
+import { Book as BookComponent } from "@/components/ui/book";
 
 interface Reservation {
   id: string;
   userId: string;
   bookId: string;
+  bookInstanceId?: string; // Новое поле для связи с экземпляром книги
   reservationDate: string;
   expirationDate: string;
+  actualReturnDate?: string; // Новое поле для фактической даты возврата
   status: string;
   originalStatus?: string; // Оригинальный статус для операций
   notes?: string;
@@ -33,6 +37,20 @@ interface Reservation {
     category?: string;
     cover?: string;
     availableCopies?: number;
+  };
+  bookInstance?: { // Новое поле для информации об экземпляре
+    id: string;
+    instanceCode: string;
+    status: string;
+    condition: string;
+    location?: string;
+    shelf?: {
+      id: number;
+      category: string;
+      shelfNumber: number;
+    };
+    position?: number;
+    notes?: string;
   };
 }
 
@@ -542,8 +560,10 @@ export default function ReservationDetailsPage({
     reservationId: string;
   }>;
 }) {
+  const { toast } = useToast();
   const router = useRouter();
   const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [userDetails, setUserDetails] = useState<any>(null); // Отдельное состояние для данных пользователя
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("details");
@@ -578,7 +598,8 @@ export default function ReservationDetailsPage({
         ...baseReservation
       };
       let bookDetails = null;
-      let userDetails = null;
+      let fullUserDetails = null;
+      
       try {
         // 2. Запрашиваем полные детали книги
         if (baseReservation.bookId) {
@@ -592,9 +613,10 @@ export default function ReservationDetailsPage({
 
         // 3. Запрашиваем полные детали пользователя
         if (baseReservation.userId) {
-          const userRes = await fetch(`${baseUrl}/api/users/${baseReservation.userId}`);
+          const userRes = await fetch(`${baseUrl}/api/User/${baseReservation.userId}`);
           if (userRes.ok) {
-            userDetails = await userRes.json();
+            fullUserDetails = await userRes.json();
+            setUserDetails(fullUserDetails); // Сохраняем отдельно для гарантированного доступа
           } else {
             console.warn(`Не удалось загрузить пользователя ${baseReservation.userId}`);
           }
@@ -608,15 +630,16 @@ export default function ReservationDetailsPage({
             ...baseReservation.book,
             ...bookDetails
           } : baseReservation.book,
-          user: userDetails ? {
+          user: fullUserDetails ? {
             ...baseReservation.user,
-            ...userDetails
+            ...fullUserDetails
           } : baseReservation.user
         };
       } catch (err) {
         console.error(`Ошибка при дозагрузке данных для резервирования ${reservationId}:`, err);
         // Если дозагрузка не удалась, показываем хотя бы базовые данные
       }
+      
       // Устанавливаем резервирование с правильным отображаемым статусом
       setReservation({
         ...finalReservation,
@@ -630,18 +653,32 @@ export default function ReservationDetailsPage({
     }
   };
 
+  // Функция для правильного форматирования дат для PostgreSQL
+  const formatDateForPostgres = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toISOString();
+  };
+
   const handleStatusChange = async (newStatus: string) => {
     if (!reservation) return;
     
     // Проверяем, что новый статус является административным
     if (isSystemStatus(newStatus)) {
-      alert("Нельзя вручную установить системный статус. Системные статусы устанавливаются автоматически.");
+      toast({
+        title: "Ошибка",
+        description: "Нельзя вручную установить системный статус. Системные статусы устанавливаются автоматически",
+        variant: "destructive",
+      });
       return;
     }
     
     // Проверяем доступность экземпляров для статуса "Выдана"
     if (newStatus === "Выдана" && (reservation.book?.availableCopies || 0) === 0) {
-      alert("Нельзя выдать книгу: все экземпляры заняты. Дождитесь возврата хотя бы одного экземпляра.");
+      toast({
+        title: "Ошибка",
+        description: "Нельзя выдать книгу: все экземпляры заняты. Дождитесь возврата хотя бы одного экземпляра",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -652,12 +689,21 @@ export default function ReservationDetailsPage({
         throw new Error("Токен авторизации не найден. Пожалуйста, войдите в систему заново.");
       }
 
+      // Упрощенный подход - backend теперь сам управляет экземплярами
       const updatedReservation = {
         ...reservation,
         reservationDate: new Date(reservation.reservationDate).toISOString(),
         expirationDate: new Date(reservation.expirationDate).toISOString(),
+        actualReturnDate: reservation.actualReturnDate ? new Date(reservation.actualReturnDate).toISOString() : null,
         status: newStatus
       };
+      
+      // Удаляем поля, которые не нужны для API
+      delete updatedReservation.originalStatus;
+      delete updatedReservation.user;
+      delete updatedReservation.book;
+      delete updatedReservation.bookInstance;
+      
       const response = await fetch(`${baseUrl}/api/Reservation/${reservation.id}`, {
         method: "PUT",
         headers: {
@@ -666,25 +712,34 @@ export default function ReservationDetailsPage({
         },
         body: JSON.stringify(updatedReservation)
       });
+      
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || "Ошибка при обновлении статуса");
       }
       
-      // Обновляем локальное состояние с пересчетом отображаемого статуса
-      const reservationWithNewStatus = {
-        ...reservation,
-        originalStatus: newStatus
-      };
-      setReservation({
-        ...reservationWithNewStatus,
-        status: getDisplayStatus({ ...reservationWithNewStatus, status: newStatus })
-      });
+      // Перезагружаем данные резервирования чтобы получить обновленную информацию об экземпляре
+      await fetchReservation();
+      
+      // Отправляем событие для обновления других компонентов
+      window.dispatchEvent(new CustomEvent('instanceStatusUpdate'));
       
       console.log(`Статус изменен с ${reservation.status} на ${newStatus}`);
+      
+      // Показываем уведомление об успехе
+      toast({
+        title: "Статус обновлен",
+        description: `Статус резервирования изменен на "${newStatus}"`,
+        variant: "default",
+      });
+      
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
-      alert(err instanceof Error ? err.message : "Ошибка при обновлении статуса");
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при обновлении статуса",
+        variant: "destructive",
+      });
     }
   };
 
@@ -698,83 +753,23 @@ export default function ReservationDetailsPage({
     });
   };
 
-
-
   // Функция для генерации и скачивания HTML документа
-  // Функция начисления штрафа
-  const handleFineCalculation = async () => {
-    if (!reservation) return;
-    
-    const now = new Date();
-    const expirationDate = new Date(reservation.expirationDate);
-    
-    // Проверяем, что книга действительно просрочена
-    if (expirationDate >= now) {
-      alert("Штраф можно начислить только за просроченные резервирования.");
-      return;
-    }
-    
-    // Вычисляем количество дней просрочки
-    const overdueDays = Math.ceil((now.getTime() - expirationDate.getTime()) / (1000 * 60 * 60 * 24));
-    const fineAmount = overdueDays * 10; // 10 рублей за день
-    
-    const confirmMessage = `Начислить штраф пользователю ${reservation.user?.fullName}?\n\nПросрочка: ${overdueDays} дней\nСумма штрафа: ${fineAmount} рублей\n\nВнимание: Начисление штрафа НЕ означает автоматический возврат книги. Для возврата книги нужно отдельно изменить статус на "Возвращена".`;
-    
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-    
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Токен авторизации не найден. Пожалуйста, войдите в систему заново.");
-      }
-
-      // Отправляем запрос на начисление штрафа согласно новой API документации
-      const response = await fetch(`${baseUrl}/api/users/${reservation.userId}/fine`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          reservationId: reservation.id,
-          amount: fineAmount,
-          reason: `Просрочка возврата книги "${reservation.book?.title}" на ${overdueDays} дней`,
-          overdueDays: overdueDays,
-          fineType: "Overdue",
-          notes: "Начислено автоматически через интерфейс администратора"
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Ошибка при начислении штрафа");
-      }
-
-      const result = await response.json();
-      alert(`Штраф успешно начислен!\nСумма: ${result.amount}₽\nОбщая задолженность пользователя: ${result.totalFineAmount}₽\n\nПримечание: Для возврата книги необходимо отдельно изменить статус резервирования на "Возвращена".`);
-      
-    } catch (err) {
-      console.error("Ошибка при начислении штрафа:", err);
-      alert(err instanceof Error ? err.message : "Ошибка при начислении штрафа");
-    }
-  };
-
   const generateFormular = async () => {
     if (!reservation) return;
 
-    // Получаем актуальные данные о пользователе через API
-    let userData = null;
-    try {
-      const userResponse = await fetch(`${baseUrl}/api/user/${reservation.userId}`);
-      if (userResponse.ok) {
-        userData = await userResponse.json();
-      } else {
-        console.warn(`Не удалось загрузить данные пользователя для формуляра: ${reservation.userId}`);
+    // Используем уже загруженные данные пользователя или загружаем заново если нужно
+    let userData = userDetails;
+    if (!userData) {
+      try {
+        const userResponse = await fetch(`${baseUrl}/api/User/${reservation.userId}`);
+        if (userResponse.ok) {
+          userData = await userResponse.json();
+        } else {
+          console.warn(`Не удалось загрузить данные пользователя для формуляра: ${reservation.userId}`);
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке данных пользователя:', error);
       }
-    } catch (error) {
-      console.error('Ошибка при загрузке данных пользователя:', error);
     }
 
     // Используем полученные данные или данные из резервирования
@@ -913,7 +908,6 @@ export default function ReservationDetailsPage({
           <p><strong>ФИО:</strong> ${user.fullName || "Не указано"}</p>
           <p><strong>Email:</strong> ${user.email || "Не указано"}</p>
           <p><strong>Телефон:</strong> ${user.phone || "Не указано"}</p>
-          ${user.address ? `<p><strong>Адрес:</strong> ${user.address}</p>` : ''}
         </div>
 
         <div class="section">
@@ -994,6 +988,72 @@ export default function ReservationDetailsPage({
 
   // Отображаемый статус с учетом логики статусов
   const displayStatus = reservation ? getDisplayStatus(reservation) : null;
+
+  // Функция начисления штрафа
+  const handleFineCalculation = async () => {
+    if (!reservation) return;
+    
+    const now = new Date();
+    const expirationDate = new Date(reservation.expirationDate);
+    
+    // Проверяем, что книга действительно просрочена
+    if (expirationDate >= now) {
+      toast({
+        title: "Ошибка",
+        description: "Штраф можно начислить только за просроченные резервирования",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Вычисляем количество дней просрочки
+    const overdueDays = Math.ceil((now.getTime() - expirationDate.getTime()) / (1000 * 60 * 60 * 24));
+    const fineAmount = overdueDays * 10; // 10 рублей за день
+    
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден. Пожалуйста, войдите в систему заново.");
+      }
+
+      // Отправляем запрос на начисление штрафа согласно новой API документации
+      const response = await fetch(`${baseUrl}/api/User/${reservation.userId}/fine`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reservationId: reservation.id,
+          amount: fineAmount,
+          reason: `Просрочка возврата книги "${reservation.book?.title}" на ${overdueDays} дней`,
+          overdueDays: overdueDays,
+          fineType: "Overdue",
+          notes: "Начислено автоматически через интерфейс администратора"
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Ошибка при начислении штрафа");
+      }
+
+      const result = await response.json();
+      toast({
+        title: "Штраф начислен",
+        description: `Сумма: ${result.amount}₽. Общая задолженность: ${result.totalFineAmount}₽`,
+        variant: "default",
+      });
+      
+    } catch (err) {
+      console.error("Ошибка при начислении штрафа:", err);
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Ошибка при начислении штрафа",
+        variant: "destructive",
+      });
+    }
+  };
 
   return <div className="min-h-screen bg-gray-200">
       <div className="container mx-auto p-6">
@@ -1133,7 +1193,7 @@ export default function ReservationDetailsPage({
                 scale: 0.98
               }}>
                     <Printer className="h-4 w-4" />
-                    <span>Печать формуляра</span>
+                    <span>Печать формуляра бронирования</span>
                   </motion.button>
                 </div>
               </div>
@@ -1150,11 +1210,7 @@ export default function ReservationDetailsPage({
                 <TabsContent value="details" className="pt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <h2 className="text-xl font-bold mb-2 text-gray-800">{reservation.book?.title || "Книга не указана"}</h2>
-                      <p className="text-gray-500 mb-4">{reservation.book?.authors || "Автор не указан"}</p>
-
                       <div className="grid grid-cols-1 gap-4">
-                        <InfoField label="ID резервирования" value={reservation.id} icon={<FileText className="h-4 w-4 text-blue-500" />} />
                         <InfoField label="Дата резервирования" value={formatDate(reservation.reservationDate)} icon={<Calendar className="h-4 w-4 text-blue-500" />} />
                         <InfoField label="Дата окончания" value={formatDate(reservation.expirationDate)} icon={<Calendar className="h-4 w-4 text-blue-500" />} />
                         {(displayStatus === 'Просрочена' || displayStatus === 'Истекла') && (
@@ -1175,12 +1231,55 @@ export default function ReservationDetailsPage({
                             </span>
                           </motion.div>
                         )}
-                        {reservation.book?.isbn && <InfoField label="ISBN" value={reservation.book.isbn} icon={<BookOpen className="h-4 w-4 text-blue-500" />} />}
                         {reservation.book?.publishYear && <InfoField label="Год издания" value={reservation.book.publishYear.toString()} icon={<Calendar className="h-4 w-4 text-blue-500" />} />}
                         {reservation.book?.category && <InfoField label="Категория" value={reservation.book.category} icon={<Book className="h-4 w-4 text-blue-500" />} />}
+                        {reservation.actualReturnDate && (
+                          <InfoField 
+                            label="Дата возврата" 
+                            value={formatDate(reservation.actualReturnDate)} 
+                            icon={<CheckCircle className="h-4 w-4 text-green-500" />} 
+                          />
+                        )}
                       </div>
+
+                      {/* Информация об экземпляре книги */}
+                      {reservation.bookInstance && (
+                        <div className="bg-purple-50 rounded-xl p-4 border border-purple-200 mt-4">
+                          <h3 className="text-lg font-medium mb-3 text-purple-800 flex items-center gap-2">
+                            <Book className="h-5 w-5" />
+                            Назначенный экземпляр
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <InfoField 
+                              label="Код экземпляра" 
+                              value={reservation.bookInstance.instanceCode} 
+                              icon={<FileText className="h-4 w-4 text-purple-500" />} 
+                            />
+                            <InfoField 
+                              label="Состояние" 
+                              value={reservation.bookInstance.condition} 
+                              icon={<Settings className="h-4 w-4 text-purple-500" />} 
+                            />
+                            {reservation.bookInstance.location && (
+                              <InfoField 
+                                label="Расположение" 
+                                value={reservation.bookInstance.location} 
+                                icon={<FileText className="h-4 w-4 text-purple-500" />} 
+                              />
+                            )}
+                            {reservation.bookInstance.shelf && (
+                              <InfoField 
+                                label="Полка" 
+                                value={`${reservation.bookInstance.shelf.category} - ${reservation.bookInstance.shelf.shelfNumber}${reservation.bookInstance.position ? ` (поз. ${reservation.bookInstance.position})` : ''}`} 
+                                icon={<Book className="h-4 w-4 text-purple-500" />} 
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="bg-gray-100 rounded-xl p-4 border border-gray-300 h-auto mt-4">
-                        <h3 className="text-lg font-medium mb-3 text-gray-800">Примечания</h3>
+                        <h3 className="text-lg font-medium mb-3 text-gray-800">Примечания к резервированию</h3>
                         <p className="text-gray-800 text-sm">
                           {reservation.notes || "Нет дополнительных примечаний"}
                         </p>
@@ -1188,40 +1287,101 @@ export default function ReservationDetailsPage({
                     </div>
 
                     <div>
-                      {reservation.book?.cover && <div className="mb-4 rounded-lg overflow-hidden shadow-lg relative" style={{
-                    height: "34.5rem",
-                    width: "24.5rem"
-                  }}>
-                          <Image src={reservation.book.cover} alt={reservation.book.title || "Обложка книги"} fill style={{
-                      objectFit: "cover"
-                    }} className="rounded-lg transition-all duration-300 hover:scale-105" />
-                        </div>}
+                      <motion.div 
+                        className="mb-4 cursor-pointer"
+                        onClick={() => router.push(`/admin/books/${reservation.bookId}`)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <BookComponent
+                          color={reservation.book?.category === "Художественная литература" ? "#d97706" : 
+                                reservation.book?.category === "Научная литература" ? "#2563eb" :
+                                reservation.book?.category === "Техническая литература" ? "#059669" :
+                                reservation.book?.category === "Образовательная литература" ? "#dc2626" :
+                                "#6366f1"}
+                          width={380}
+                          depth={6}
+                          texture={true}
+                          // Растягиваем обложку на весь размер компонента
+                          illustration={
+                            reservation.book?.cover ? (
+                              <div style={{ width: "100%", height: "100%" }}>
+                                <Image 
+                                  src={reservation.book.cover} 
+                                  alt={reservation.book.title || "Обложка книги"} 
+                                  fill
+                                  className="object-cover w-full h-full"
+                                  style={{ objectFit: "cover" }}
+                                  sizes="380px"
+                                  priority
+                                />
+                              </div>
+                            ) : (
+                              // Если нет обложки, показываем заглушку
+                              <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-lg font-semibold">
+                                Нет обложки
+                              </div>
+                            )
+                          }
+                        >
+                          {/* Добавим отображение названия и автора, если нет обложки */}
+                          {!reservation.book?.cover && (
+                            <div className="absolute bottom-0 left-0 w-full bg-white/80 px-3 py-2 text-center">
+                              <div className="font-bold text-gray-800 truncate">{reservation.book?.title || "Без названия"}</div>
+                              {reservation.book?.authors && (
+                                <div className="text-xs text-gray-500 truncate">{reservation.book.authors}</div>
+                              )}
+                            </div>
+                          )}
+                        </BookComponent>
+                      </motion.div>
                     </div>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="user" className="pt-6">
                   <div className="bg-gray-100 rounded-xl p-6 border border-gray-300 mb-6">
-                    <h2 className="text-xl font-bold mb-2 text-gray-800">
-                      {reservation.user?.fullName || "Пользователь не указан"}
-                    </h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      {reservation.user?.email && <InfoField label="Email" value={reservation.user.email} icon={<Mail className="h-4 w-4 text-blue-500" />} />}
-                      {reservation.user?.phone && <InfoField label="Телефон" value={reservation.user.phone} icon={<Phone className="h-4 w-4 text-blue-500" />} />}
-                      {reservation.user?.address && <InfoField label="Адрес" value={reservation.user.address} icon={<FileText className="h-4 w-4 text-blue-500" />} />}
-                      {reservation.user?.registrationDate && <InfoField label="Дата регистрации" value={formatDate(reservation.user.registrationDate)} icon={<Calendar className="h-4 w-4 text-blue-500" />} />}
-                    </div>
-                    
-                    <div className="mt-6">
-                      <motion.button onClick={() => router.push(`/admin/users/${reservation.userId}`)} className="bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
-                    y: -3
-                  }} whileTap={{
-                    scale: 0.98
-                  }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-xl font-bold mb-2 text-gray-800">
+                          Информация о читателе
+                        </h2>
+                      </div>
+                      <motion.button 
+                        onClick={() => router.push(`/admin/users/${reservation.userId}`)} 
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" 
+                        whileHover={{ y: -3 }} 
+                        whileTap={{ scale: 0.98 }}
+                      >
                         <User className="h-4 w-4" />
-                        <span>Перейти к профилю пользователя</span>
+                        <span>Открыть профиль</span>
                       </motion.button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InfoField 
+                        label="Полное имя" 
+                        value={userDetails?.fullName || reservation.user?.fullName || "Не указано"} 
+                        icon={<User className="h-4 w-4 text-blue-500" />} 
+                      />
+                      <InfoField 
+                        label="Email" 
+                        value={userDetails?.email || reservation.user?.email || "Не указано"} 
+                        icon={<Mail className="h-4 w-4 text-blue-500" />} 
+                      />
+                      <InfoField 
+                        label="Телефон" 
+                        value={userDetails?.phone || reservation.user?.phone || "Не указано"} 
+                        icon={<Phone className="h-4 w-4 text-blue-500" />} 
+                      />
+                      {(userDetails?.registrationDate || reservation.user?.registrationDate) && (
+                        <InfoField 
+                          label="Дата регистрации" 
+                          value={formatDate(userDetails?.registrationDate || reservation.user?.registrationDate || "")} 
+                          icon={<Calendar className="h-4 w-4 text-blue-500" />} 
+                        />
+                      )}
                     </div>
                   </div>
                 </TabsContent>

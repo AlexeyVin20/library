@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { format } from "date-fns";
-import { CalendarIcon, ChevronDownIcon, ChevronUpIcon, XIcon, CheckIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon, XIcon, CheckIcon, User } from "lucide-react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -12,7 +11,8 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Calendar } from "@/components/ui/calendar";
+
+import { USER_ROLES } from "@/lib/types";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -383,17 +383,8 @@ export function CreateUserDialog({ open, onOpenChange, onCreateUser }: CreateUse
     fullName: "",
     email: "",
     phone: "",
-    dateOfBirth: undefined as Date | undefined,
-    passportNumber: "",
-    passportIssuedBy: "",
-    passportIssuedDate: undefined as Date | undefined,
-    address: "",
     dateRegistered: new Date().toISOString(),
     borrowedBooksCount: 0,
-    fineAmount: 0,
-    isActive: true,
-    loanPeriodDays: 14,
-    maxBooksAllowed: 5,
     password: "",
     username: "",
   });
@@ -406,14 +397,16 @@ export function CreateUserDialog({ open, onOpenChange, onCreateUser }: CreateUse
     try {
       const userData = {
         ...formData,
-        dateOfBirth: formData.dateOfBirth ? formData.dateOfBirth.toISOString() : null,
-        passportIssuedDate: formData.passportIssuedDate ? formData.passportIssuedDate.toISOString() : null,
+        id: crypto.randomUUID(),
         phone: formData.phone || null,
-        passportNumber: formData.passportNumber || null,
-        passportIssuedBy: formData.passportIssuedBy || null,
-        address: formData.address || null,
-        borrowedBooksCount: formData.borrowedBooksCount || null,
-        maxBooksAllowed: formData.maxBooksAllowed || null,
+        borrowedBooksCount: formData.borrowedBooksCount || 0,
+        fineAmount: 0, // Штраф всегда 0 при создании
+        isActive: true, // Аккаунт всегда активен при создании
+        maxBooksAllowed: USER_ROLES.EMPLOYEE.maxBooksAllowed, // Из роли сотрудника
+        loanPeriodDays: USER_ROLES.EMPLOYEE.loanPeriodDays, // Из роли сотрудника
+        borrowedBooks: null,
+        // Отмечаем что нужно назначить роль после создания
+        _assignEmployeeRole: true,
       };
       
       await onCreateUser(userData);
@@ -422,17 +415,8 @@ export function CreateUserDialog({ open, onOpenChange, onCreateUser }: CreateUse
         fullName: "",
         email: "",
         phone: "",
-        dateOfBirth: undefined,
-        passportNumber: "",
-        passportIssuedBy: "",
-        passportIssuedDate: undefined,
-        address: "",
         dateRegistered: new Date().toISOString(),
         borrowedBooksCount: 0,
-        fineAmount: 0,
-        isActive: true,
-        loanPeriodDays: 14,
-        maxBooksAllowed: 5,
         password: "",
         username: "",
       });
@@ -457,6 +441,19 @@ export function CreateUserDialog({ open, onOpenChange, onCreateUser }: CreateUse
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-6 p-6">
+            {/* Информационное сообщение о роли */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-500" />
+                <div>
+                  <h3 className="font-medium text-blue-800">Роль сотрудника</h3>
+                  <p className="text-sm text-blue-600">
+                    Пользователь будет создан с ролью "{USER_ROLES.EMPLOYEE.name}" и сможет брать до {USER_ROLES.EMPLOYEE.maxBooksAllowed} книг на срок до {USER_ROLES.EMPLOYEE.loanPeriodDays} дней.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Основная информация */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800">Основная информация</h3>
@@ -511,166 +508,20 @@ export function CreateUserDialog({ open, onOpenChange, onCreateUser }: CreateUse
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Телефон</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleChange("phone", e.target.value)}
-                    placeholder="+7 (999) 123-45-67"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Дата рождения</Label>
-                  <Popover modal>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="dateOfBirth"
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formData.dateOfBirth && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.dateOfBirth ? format(formData.dateOfBirth, "dd.MM.yyyy") : "Выберите дату"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-[100]" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.dateOfBirth}
-                        onSelect={(date: Date | undefined) => handleChange("dateOfBirth", date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </div>
-
-            {/* Паспортные данные */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">Паспортные данные</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="passportNumber">Номер паспорта</Label>
-                  <Input
-                    id="passportNumber"
-                    value={formData.passportNumber}
-                    onChange={(e) => handleChange("passportNumber", e.target.value)}
-                    placeholder="1234 567890"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="passportIssuedBy">Кем выдан</Label>
-                  <Input
-                    id="passportIssuedBy"
-                    value={formData.passportIssuedBy}
-                    onChange={(e) => handleChange("passportIssuedBy", e.target.value)}
-                    placeholder="УФМС России"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="passportIssuedDate">Дата выдачи</Label>
-                  <Popover modal>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="passportIssuedDate"
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formData.passportIssuedDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.passportIssuedDate ? format(formData.passportIssuedDate, "dd.MM.yyyy") : "Выберите дату"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-[100]" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.passportIssuedDate}
-                        onSelect={(date: Date | undefined) => handleChange("passportIssuedDate", date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address">Адрес</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => handleChange("address", e.target.value)}
-                    placeholder="г. Москва, ул. Пушкина, д. 1"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Настройки библиотеки */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">Настройки библиотеки</h3>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxBooksAllowed">Макс. книг</Label>
-                  <Input
-                    id="maxBooksAllowed"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={formData.maxBooksAllowed}
-                    onChange={(e) => handleChange("maxBooksAllowed", parseInt(e.target.value))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="loanPeriodDays">Период займа (дни)</Label>
-                  <Input
-                    id="loanPeriodDays"
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={formData.loanPeriodDays}
-                    onChange={(e) => handleChange("loanPeriodDays", parseInt(e.target.value))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fineAmount">Штраф</Label>
-                  <Input
-                    id="fineAmount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.fineAmount}
-                    onChange={(e) => handleChange("fineAmount", parseFloat(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => handleChange("isActive", e.target.checked)}
-                  className="rounded"
+              <div className="space-y-2">
+                <Label htmlFor="phone">Телефон</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => handleChange("phone", e.target.value)}
+                  placeholder="+7 (999) 123-45-67"
                 />
-                <Label htmlFor="isActive">Активный пользователь</Label>
               </div>
             </div>
-          </div>
+            </div>
+
+              
+
 
           <div className="flex items-center justify-end border-t p-4 space-x-2">
             <DialogClose asChild>

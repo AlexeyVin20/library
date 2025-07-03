@@ -38,6 +38,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast"
 import { bookSchema } from "@/lib/validations"
 import type { BookInput } from "@/lib/admin/actions/book"
+import { minioCovers } from "@/lib/minio-client"
+import { useMinIOUpload } from "@/hooks/use-minio-upload"
 import {
   Dialog,
   DialogContent,
@@ -183,6 +185,15 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
   const [formSuccess, setFormSuccess] = useState<string | null>(null)
   // Переключатель простого/расширенного режима
   const [isAdvancedMode, setIsAdvancedMode] = useState(true)
+  
+  // Хук для работы с MinIO
+  const { uploadFile, isUploading } = useMinIOUpload({
+    onSuccess: (url) => {
+      setPreviewUrl(url)
+      setValue("cover", url)
+      setFormSuccess("Обложка успешно загружена")
+    }
+  })
   // Переключатель ИИ модели
   const [aiModel, setAiModel] = useState<'openrouter' | 'gemini'>('openrouter')
 
@@ -235,7 +246,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       udk: initialData?.udk || "",
       bbk: initialData?.bbk || "",
       summary: initialData?.summary || "",
-      availableCopies: initialData?.availableCopies || 1,
+      availableCopies: initialData?.availableCopies || 0,
       edition: initialData?.edition || "",
       price: initialData?.price || 0,
       format: initialData?.format || "",
@@ -253,13 +264,19 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
   useEffect(() => {
     if (initialData) {
       setIsbn(initialData.isbn || "")
-      if (initialData?.cover) setPreviewUrl(initialData.cover)
+      if (initialData?.cover) {
+        setPreviewUrl(initialData.cover)
+      }
     }
   }, [initialData])
+
+  // Удалена функция поиска обложки в MinIO
 
   useEffect(() => {
     if (geminiImage) handleGeminiUpload()
   }, [geminiImage])
+
+  // Удален автоматический поиск обложки в MinIO
 
   // Очистка сообщений об ошибках и успехе через 5 секунд
   useEffect(() => {
@@ -352,38 +369,13 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
     }
   }
 
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
-
-      // Проверка размера файла (не более 5 МБ)
-      if (file.size > 5 * 1024 * 1024) {
-        setFormError("Размер файла не должен превышать 5 МБ")
-        toast({
-          title: "Ошибка",
-          description: "Размер файла не должен превышать 5 МБ",
-          variant: "destructive",
-        })
-        return
-      }
-
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        if (event.target && typeof event.target.result === "string") {
-          setPreviewUrl(event.target.result)
-          setValue("cover", event.target.result)
-          setFormSuccess("Обложка книги успешно загружена")
-        }
-      }
-      reader.onerror = () => {
-        setFormError("Ошибка при чтении файла")
-        toast({
-          title: "Ошибка",
-          description: "Не удалось прочитать файл",
-          variant: "destructive",
-        })
-      }
-      reader.readAsDataURL(file)
+      const bookId = initialData?.id
+      const currentIsbn = formValues.isbn || isbn
+      
+      await uploadFile(file, bookId, currentIsbn)
     }
   }
 
@@ -645,11 +637,36 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
     }
   }
 
-  // Функция для поиска обложки книги
+  // Функция для поиска обложки книги в MinIO
+  const findBookCoverInMinIO = async (bookId?: string, isbn?: string): Promise<string | null> => {
+    try {
+      if (bookId || isbn) {
+        const coverUrl = await minioCovers.findAvailableCover(bookId || 'temp', isbn)
+        if (coverUrl) {
+          console.log('Найдена обложка:', coverUrl)
+          return coverUrl
+        }
+      }
+    } catch (error) {
+      console.error("Ошибка при поиске обложки:", error)
+    }
+    return null
+  }
+
+  // Функция для поиска обложки книги (сначала MinIO, затем внешние API)
   const findBookCover = async (bookData: any): Promise<string | null> => {
     let coverUrl = null
 
-    // Поиск по ISBN
+    // 1. Сначала ищем в MinIO
+    if (bookData.id || bookData.isbn) {
+      coverUrl = await findBookCoverInMinIO(bookData.id, bookData.isbn)
+      if (coverUrl) {
+        console.log('Обложка найдена в хранилище:', coverUrl)
+        return coverUrl
+      }
+    }
+
+    // 2. Поиск по ISBN в внешних API
     if (bookData.isbn) {
       try {
         const coverRes = await fetch(`https://bookcover.longitood.com/bookcover/${bookData.isbn}`)
@@ -662,7 +679,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       }
     }
 
-    // Поиск по названию и автору
+    // 3. Поиск по названию и автору
     if (!coverUrl && bookData.title && bookData.authors) {
       try {
         const coverRes = await fetch(
@@ -679,7 +696,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       }
     }
 
-    // Поиск через Google Books API
+    // 4. Поиск через Google Books API
     if (!coverUrl && (bookData.isbn || (bookData.title && bookData.authors))) {
       try {
         const query = bookData.isbn ? `isbn:${bookData.isbn}` : `intitle:${bookData.title} inauthor:${bookData.authors}`
@@ -700,7 +717,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
       }
     }
 
-    // Если обложка не найдена, открываем поиск в Google
+    // 5. Если обложка не найдена, открываем поиск в Google
     if (!coverUrl && formValues.title) {
       const query = encodeURIComponent(formValues.title + " книга обложка")
       const searchUrl = `https://cse.google.com/cse?cx=b421413d1a0984f58#gsc.tab=0&gsc.q=${query}`
@@ -1256,6 +1273,12 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                     fill
                                     className="object-cover rounded-xl"
                                   />
+                                  {/* Индикатор источника обложки */}
+                                  {previewUrl?.includes(process.env.NEXT_PUBLIC_MINIO_ENDPOINT || 'localhost') && (
+                                    <div className="absolute top-2 left-2 bg-green-500/90 text-white px-2 py-1 rounded-full text-xs font-medium">
+                                      MinIO
+                                    </div>
+                                  )}
                                   <motion.button
                                     type="button"
                                     onClick={handleRemoveCover}
@@ -1271,22 +1294,51 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                   className="w-48 h-64 mb-4 flex items-center justify-center bg-gray-100 rounded-xl border border-gray-200 shadow-md text-gray-500"
                                   whileHover={{ scale: 1.02 }}
                                 >
-                                  <BookOpen className="h-12 w-12" />
+                                  {isUploading ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                      <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+                                      <span className="text-xs text-green-600">Загрузка в хранилище...</span>
+                                    </div>
+                                  ) : (
+                                    <BookOpen className="h-12 w-12" />
+                                  )}
                                 </motion.div>
                               )}
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 flex-wrap">
+                                <motion.button
+                                  type="button"
+                                  onClick={() => document.getElementById('minioFileInput')?.click()}
+                                  disabled={isUploading}
+                                  className="bg-green-600 hover:bg-green-800 text-white font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md text-sm"
+                                  whileHover={{ y: -2 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  {isUploading ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Upload className="h-3 w-3" />
+                                  )}
+                                  Загрузить обложку
+                                </motion.button>
+                                <input
+                                  id="minioFileInput"
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleCoverChange}
+                                  className="hidden"
+                                />
                                 <motion.button
                                   type="button"
                                   onClick={() => {
                                     setShowManualCoverInput(true)
                                     setTimeout(() => document.getElementById("manualCoverInput")?.focus(), 0)
                                   }}
-                                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md"
+                                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md text-sm"
                                   whileHover={{ y: -2 }}
                                   whileTap={{ scale: 0.98 }}
                                 >
-                                  <Upload className="h-4 w-4" />
-                                  {previewUrl ? "Изменить URL обложки" : "Указать URL обложки"}
+                                  <Upload className="h-3 w-3" />
+                                  URL
                                 </motion.button>
                                 <motion.button
                                   type="button"
@@ -1313,12 +1365,12 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                       })
                                     }
                                   }}
-                                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md"
+                                  className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md text-sm"
                                   whileHover={{ y: -2 }}
                                   whileTap={{ scale: 0.98 }}
                                 >
-                                  <Search className="h-4 w-4" />
-                                  Найти обложку
+                                  <Search className="h-3 w-3" />
+                                  Найти
                                 </motion.button>
                               </div>
                             </div>

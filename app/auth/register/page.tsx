@@ -10,21 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, BookOpen, User, Mail, Phone, Calendar, FileText, MapPin, Lock } from 'lucide-react';
+import { Loader2, BookOpen, User, Mail, Phone, Lock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { USER_ROLES } from "@/lib/types";
 
 // Схема валидации для формы регистрации
 const registerSchema = z.object({
   fullName: z.string().min(2, "Полное имя должно содержать не менее 2 символов"),
   email: z.string().email("Введите корректный email"),
   phone: z.string().min(10, "Введите корректный номер телефона"),
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Дата рождения должна быть в формате YYYY-MM-DD"),
-  passportNumber: z.string().min(10, "Номер паспорта должен содержать не менее 10 символов"),
-  passportIssuedBy: z.string().min(2, "Кем выдан паспорт должно содержать не менее 2 символов"),
-  passportIssuedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Дата выдачи паспорта должна быть в формате YYYY-MM-DD"),
-  address: z.string().min(5, "Адрес должен содержать не менее 5 символов"),
   username: z.string().min(3, "Имя пользователя должно содержать не менее 3 символов"),
   password: z.string().min(6, "Пароль должен содержать не менее 6 символов"),
   confirmPassword: z.string().min(6, "Пароль должен содержать не менее 6 символов"),
@@ -66,7 +62,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -74,11 +70,6 @@ export default function RegisterPage() {
       fullName: "",
       email: "",
       phone: "",
-      dateOfBirth: "",
-      passportNumber: "",
-      passportIssuedBy: "",
-      passportIssuedDate: "",
-      address: "",
       username: "",
       password: "",
       confirmPassword: "",
@@ -87,10 +78,8 @@ export default function RegisterPage() {
 
   const nextStep = () => {
     const fieldsToValidate = currentStep === 1 
-      ? ["fullName", "email", "phone", "dateOfBirth"] 
-      : currentStep === 2 
-        ? ["passportNumber", "passportIssuedBy", "passportIssuedDate", "address"] 
-        : ["username", "password", "confirmPassword"];
+      ? ["fullName", "email", "phone"] 
+      : ["username", "password", "confirmPassword"];
     
     form.trigger(fieldsToValidate as any).then(isValid => {
       if (isValid) {
@@ -110,15 +99,22 @@ export default function RegisterPage() {
     // Удаляем confirmPassword из данных отправки
     const { confirmPassword, ...registerData } = data;
 
-    // Преобразуем даты в формат ISO для API
+    // Формируем данные для API
     const formattedData = {
       ...registerData,
-      dateOfBirth: new Date(registerData.dateOfBirth).toISOString(),
-      passportIssuedDate: new Date(registerData.passportIssuedDate).toISOString()
+      // Автоматически устанавливаем ограничения для роли "Гость"
+      maxBooksAllowed: USER_ROLES.GUEST.maxBooksAllowed,
+      loanPeriodDays: USER_ROLES.GUEST.loanPeriodDays,
+      fineAmount: 0,
+      borrowedBooksCount: 0,
+      dateRegistered: new Date().toISOString(),
+      isActive: true,
+      borrowedBooks: null,
     };
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/Auth/register`, {
+      // Создаём пользователя без ролей через /api/User
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -141,27 +137,75 @@ export default function RegisterPage() {
         throw new Error(errorMessage);
       }
 
+      const newUser = await response.json();
+
+      // Назначаем роль "Гость" после создания пользователя
+      if (newUser.id) {
+        try {
+          const assignRoleResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User/assign-role`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: newUser.id,
+              roleId: USER_ROLES.GUEST.id // ID: 4
+            }),
+          });
+
+          if (!assignRoleResponse.ok) {
+            console.warn("Не удалось назначить роль 'Гость' пользователю, но регистрация прошла успешно");
+          }
+        } catch (roleError) {
+          console.warn("Ошибка при назначении роли 'Гость':", roleError);
+        }
+      }
+
+      // Теперь нужно авторизовать пользователя
+      // Попробуем войти с созданными учетными данными
       try {
-        const responseData = await response.json();
-
-        // Сохраняем токен в localStorage
-        localStorage.setItem("token", responseData.token);
-        localStorage.setItem("user", JSON.stringify({
-          id: responseData.userId,
-          username: responseData.username,
-          roles: responseData.roles,
-        }));
-
-        toast({
-          title: "Успешная регистрация",
-          description: "Вы успешно зарегистрировались и вошли в систему",
+        const loginResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/Auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: registerData.username,
+            password: registerData.password,
+          }),
         });
 
-        // Редирект на главную страницу
-        router.push("/");
-      } catch (parseError) {
-        console.error("Ошибка при парсинге ответа:", parseError);
-        throw new Error("Ошибка при обработке ответа сервера");
+        if (loginResponse.ok) {
+          const loginData = await loginResponse.json();
+          
+          // Сохраняем токен в localStorage
+          localStorage.setItem("token", loginData.token);
+          localStorage.setItem("user", JSON.stringify({
+            id: loginData.userId || newUser.id,
+            username: loginData.username || registerData.username,
+            roles: loginData.roles || ["Гость"],
+          }));
+
+          toast({
+            title: "Успешная регистрация",
+            description: "Вы успешно зарегистрировались и вошли в систему как гость",
+          });
+
+          // Редирект на главную страницу
+          router.push("/");
+        } else {
+          // Если автоматический вход не удался, просто уведомляем о успешной регистрации
+          toast({
+            title: "Регистрация завершена",
+            description: "Аккаунт создан. Пожалуйста, войдите в систему.",
+          });
+          
+          router.push("/auth/login");
+        }
+      } catch (loginError) {
+        console.warn("Не удалось автоматически войти после регистрации:", loginError);
+        toast({
+          title: "Регистрация завершена",
+          description: "Аккаунт создан. Пожалуйста, войдите в систему.",
+        });
+        
+        router.push("/auth/login");
       }
     } catch (err) {
       console.error("Ошибка регистрации:", err);
@@ -305,128 +349,13 @@ export default function RegisterPage() {
                         )}
                       />
                       
-                      <FormField
-                        control={form.control}
-                        name="dateOfBirth"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Дата рождения</FormLabel>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  type="date" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
+
                     </FormSection>
                   </FadeInView>
                 )}
                 
-                {/* Step 2: Document Information */}
+                {/* Step 2: Account Information */}
                 {currentStep === 2 && (
-                  <FadeInView>
-                    <FormSection title="Документы">
-                      <FormField
-                        control={form.control}
-                        name="passportNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Номер паспорта</FormLabel>
-                            <div className="relative">
-                              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  placeholder="1234 567890" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="passportIssuedBy"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Кем выдан</FormLabel>
-                            <div className="relative">
-                              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  placeholder="УМВД России по..." 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="passportIssuedDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Дата выдачи паспорта</FormLabel>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  type="date" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel className="text-gray-800 font-medium">Адрес</FormLabel>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  placeholder="г. Москва, ул. Ленина, д. 1, кв. 1" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </FormSection>
-                  </FadeInView>
-                )}
-                
-                {/* Step 3: Account Information */}
-                {currentStep === 3 && (
                   <FadeInView>
                     <FormSection title="Данные учетной записи">
                       <FormField

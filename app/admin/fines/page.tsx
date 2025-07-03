@@ -3,7 +3,6 @@
 import type React from "react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { 
   DollarSign, 
@@ -41,7 +40,6 @@ interface FineRecord {
   fineType: string;
   userName: string;
   bookTitle?: string;
-  reservationStatus?: string;
 }
 
 // Интерфейс для данных о штрафах пользователя
@@ -65,43 +63,17 @@ interface UserWithFines {
   email: string;
   phone: string;
   fineAmount: number;
-  borrowedBooksCount: number;
-  overdueBooks: Array<{
-    reservationId: string;
-    bookId: string;
-    cover?: string;
-    bookTitle: string;
-    bookAuthors: string;
-    bookISBN: string;
-    borrowDate: string;
-    dueDate: string;
-    daysOverdue: number;
-    reservationStatus: string;
-    notes?: string;
-  }>;
-  allReservations: Array<{
-    reservationId: string;
-    bookTitle: string;
-    borrowDate: string;
-    dueDate: string;
-    returnDate?: string;
-    isOverdue: boolean;
-    status: string;
-    notes?: string;
-  }>;
 }
 
 interface UsersWithFinesResponse {
   totalUsersWithFines: number;
   totalFineAmount: number;
-  totalOverdueBooks: number;
   users: UserWithFines[];
 }
 
 interface FineStats {
   totalUsers: number;
   totalFineAmount: number;
-  totalOverdueBooks: number;
 }
 
 const FadeInView = ({ 
@@ -177,8 +149,6 @@ const UserFineCard = ({
   const [loading, setLoading] = useState(false);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
-  const totalFineAmount = user.fineAmount;
-
   const fetchUserFineDetails = async () => {
     if (userFineDetails) return;
     
@@ -230,6 +200,7 @@ const UserFineCard = ({
       case "Overdue": return "Просрочка";
       case "Damage": return "Повреждение";
       case "Lost": return "Утеря";
+      case "Manual": return "Ручной";
       default: return type;
     }
   };
@@ -239,6 +210,7 @@ const UserFineCard = ({
       case "Overdue": return "bg-orange-100 text-orange-800";
       case "Damage": return "bg-red-100 text-red-800";
       case "Lost": return "bg-purple-100 text-purple-800";
+      case "Manual": return "bg-blue-100 text-blue-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -292,28 +264,6 @@ const UserFineCard = ({
           </div>
         </div>
 
-        {/* Краткая статистика */}
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-xs text-gray-500">Всего штрафов</div>
-            <div className="text-lg font-semibold text-gray-800">{formatCurrency(totalFineAmount)}</div>
-          </div>
-          <div className="bg-orange-50 rounded-lg p-3">
-            <div className="text-xs text-orange-600">Просроченных книг</div>
-            <div className="text-lg font-semibold text-orange-800">{user.overdueBooks.length}</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-3">
-            <div className="text-xs text-blue-600">Книг на руках</div>
-            <div className="text-lg font-semibold text-blue-800">{user.borrowedBooksCount}</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3">
-            <div className="text-xs text-green-600">Статус</div>
-            <div className="text-sm font-semibold text-green-800">
-              {user.overdueBooks.length > 0 ? "Есть просрочка" : "В порядке"}
-            </div>
-          </div>
-        </div>
-
         {/* Кнопка развернуть/свернуть */}
         <Button
           onClick={handleToggleExpand}
@@ -328,7 +278,7 @@ const UserFineCard = ({
           ) : (
             <>
               <ChevronDown className="w-4 h-4" />
-              Показать детали штрафов
+              Показать историю штрафов
             </>
           )}
         </Button>
@@ -402,13 +352,6 @@ const UserFineCard = ({
                               </div>
                             )}
                             
-                            {fine.overdueDays && (
-                              <div className="text-sm text-orange-600 mb-1">
-                                <Clock className="w-3 h-3 inline mr-1" />
-                                Просрочка: {fine.overdueDays} дней
-                              </div>
-                            )}
-                            
                             {fine.notes && (
                               <div className="text-sm text-gray-500 mb-1">
                                 <strong>Примечания:</strong> {fine.notes}
@@ -439,41 +382,6 @@ const UserFineCard = ({
                 <div className="text-center py-8 text-gray-500">
                   <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                   <p>История штрафов пуста</p>
-                </div>
-              )}
-
-              {/* Просроченные книги */}
-              {user.overdueBooks.length > 0 && (
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Просроченные книги</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {user.overdueBooks.map((book) => (
-                      <div key={book.reservationId} className="bg-white rounded-lg p-4 border border-red-200">
-                        <div className="flex items-start gap-3">
-                          {book.cover && (
-                            <Image 
-                              src={book.cover} 
-                              alt={book.bookTitle}
-                              width={48}
-                              height={64}
-                              className="object-cover rounded"
-                              unoptimized
-                            />
-                          )}
-                          <div className="flex-1">
-                            <h5 className="font-medium text-gray-800 mb-1">{book.bookTitle}</h5>
-                            <p className="text-sm text-gray-600 mb-2">{book.bookAuthors}</p>
-                            <div className="text-xs text-red-600 mb-1">
-                              Просрочено на {book.daysOverdue} дней
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Срок возврата: {new Date(book.dueDate).toLocaleDateString("ru-RU")}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
@@ -533,8 +441,7 @@ export default function FinesPage() {
       
       setStats({
         totalUsers: data.totalUsersWithFines,
-        totalFineAmount: data.totalFineAmount,
-        totalOverdueBooks: data.totalOverdueBooks
+        totalFineAmount: data.totalFineAmount
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка");
@@ -652,7 +559,7 @@ export default function FinesPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Управление штрафами</h1>
-              <p className="text-gray-500">Подробная информация о пользователях со штрафами</p>
+              <p className="text-gray-500">Ручное начисление и управление штрафами пользователей</p>
             </div>
           </div>
         </div>
@@ -661,7 +568,7 @@ export default function FinesPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Статистика */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <StatCard
               title="Со штрафами"
               value={stats.totalUsers}
@@ -686,19 +593,11 @@ export default function FinesPage() {
               color="bg-purple-500"
               delay={0.3}
             />
-            <StatCard
-              title="Просроченных книг"
-              value={stats.totalOverdueBooks}
-              subtitle="книг с просрочкой"
-              icon={<Clock className="w-5 h-5" />}
-              color="bg-blue-500"
-              delay={0.4}
-            />
           </div>
         )}
 
         {/* Поиск и фильтры */}
-        <FadeInView delay={0.5}>
+        <FadeInView delay={0.4}>
           <div className="bg-white rounded-xl p-6 shadow-lg mb-8">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
               <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -730,7 +629,7 @@ export default function FinesPage() {
         </FadeInView>
 
         {/* Список пользователей со штрафами */}
-        <FadeInView delay={0.6}>
+        <FadeInView delay={0.5}>
           <div className="bg-white rounded-xl shadow-lg">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">

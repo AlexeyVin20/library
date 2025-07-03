@@ -1,3 +1,0 @@
-{
-  "connectionString": "Host=localhost;Port=5433;Database=librarydb;Username=admin;Password=admin",
-}

@@ -10,6 +10,7 @@ import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 import { FinesChart } from "@/components/admin/FinesChart";
 import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
 import { CreateUserDialog } from "@/components/ui/user-creation-modal";
+import { USER_ROLES } from "@/lib/types";
 
 // CSS для анимации строк таблицы
 const fadeInAnimation = `
@@ -250,12 +251,15 @@ export default function AllUsersPage() {
 
   const handleCreateUser = useCallback(async (userData: any) => {
     try {
+      // Убираем флаг назначения роли из данных пользователя
+      const { _assignEmployeeRole, ...userDataToSend } = userData;
+      
       const response = await fetch(`${baseUrl}/api/User`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(userDataToSend),
       });
 
       if (!response.ok) {
@@ -264,6 +268,27 @@ export default function AllUsersPage() {
       }
 
       const newUser = await response.json();
+      
+      // Если нужно назначить роль "Сотрудник"
+      if (_assignEmployeeRole) {
+        try {
+          const assignRoleResponse = await fetch(`${baseUrl}/api/User/assign-role`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: newUser.id,
+              roleId: USER_ROLES.EMPLOYEE.id
+            }),
+          });
+
+          if (!assignRoleResponse.ok) {
+            console.warn("Не удалось назначить роль пользователю, но пользователь создан");
+          }
+        } catch (roleError) {
+          console.warn("Ошибка при назначении роли:", roleError);
+        }
+      }
+      
       setUsers(prev => [...prev, newUser]);
     } catch (err) {
       throw new Error(err instanceof Error ? err.message : "Ошибка при создании пользователя");

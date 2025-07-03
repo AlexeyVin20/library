@@ -44,3 +44,34 @@ export const bookSchema = z.object({
 
 export type BookFormData = z.infer<typeof bookSchema>;
 
+export const bookInstanceCreateSchema = z.object({
+  bookId: z.string().min(1, { message: "ID книги обязателен" }),
+  instanceCode: z.string().min(1, { message: "Код экземпляра обязателен" }).max(100),
+  status: z.string().min(1, { message: "Статус обязателен" }),
+  condition: z.string().min(1, { message: "Состояние обязательно" }),
+  purchasePrice: z.number().min(0, { message: "Цена не может быть отрицательной" }).optional(),
+  dateAcquired: z.string().min(1, { message: "Дата поступления обязательна" }),
+  notes: z.string().max(1000, { message: "Примечания не должны превышать 1000 символов" }).optional(),
+  shelfId: z.number().optional(),
+  position: z.number().min(0, { message: "Позиция не может быть отрицательной" }).optional(),
+  location: z.string().max(200, { message: "Местоположение не должно превышать 200 символов" }).optional(),
+  isActive: z.boolean().default(true)
+});
+
+export const bookInstanceUpdateSchema = z.object({
+  instanceCode: z.string().min(1, { message: "Код экземпляра обязателен" }).max(100),
+  status: z.string().min(1, { message: "Статус обязателен" }),
+  condition: z.string().min(1, { message: "Состояние обязательно" }),
+  purchasePrice: z.number().min(0, { message: "Цена не может быть отрицательной" }).optional(),
+  dateAcquired: z.string().min(1, { message: "Дата поступления обязательна" }),
+  dateLastChecked: z.string().optional(),
+  notes: z.string().max(1000, { message: "Примечания не должны превышать 1000 символов" }).optional(),
+  shelfId: z.number().optional(),
+  position: z.number().min(0, { message: "Позиция не может быть отрицательной" }).optional(),
+  location: z.string().max(200, { message: "Местоположение не должно превышать 200 символов" }).optional(),
+  isActive: z.boolean().default(true)
+});
+
+export type BookInstanceCreateData = z.infer<typeof bookInstanceCreateSchema>;
+export type BookInstanceUpdateData = z.infer<typeof bookInstanceUpdateSchema>;
+

@@ -6,11 +6,11 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
-import { CreditCard, Box, BookOpen, List, Plus, Search, ArrowUpDown, Edit, Trash2, BookMarked } from 'lucide-react';
+import { CreditCard, Box, BookOpen, List, Plus, Search, ArrowUpDown, Edit, Trash2, BookMarked, CheckSquare, Square, Printer, Brain } from 'lucide-react';
 import BookCover from "@/components/BookCover";
 import { Book } from "@/components/ui/book";
 import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
-import ColorThief from "colorthief";
+import AutoAssignGenres from "@/components/admin/AutoAssignGenres";
 
 /**
  * Interface for book item
@@ -22,6 +22,7 @@ interface Book {
   genre?: string;
   cover?: string;
   availableCopies?: number;
+  categorization?: string;
 }
 
 /**
@@ -35,6 +36,11 @@ interface BookImageProps {
 interface ViewProps {
   books: Book[];
   onDelete: (id: string) => void;
+  selectedBooks?: string[];
+  onSelectBook?: (id: string) => void;
+  onSelectAll?: () => void;
+  onClearSelection?: () => void;
+  onPrintFormulars?: (selectedBookIds: string[], allBooks: Book[]) => void;
 }
 interface ViewModeMenuProps {
   viewMode: string;
@@ -171,21 +177,11 @@ const ThreeDBookView = ({
         img.crossOrigin = "Anonymous";
         img.src = book.cover;
         img.onload = () => {
-          try {
-            const colorThief = new ColorThief();
-            const color = colorThief.getColor(img);
-            const rgb = `rgb(${color[0]},${color[1]},${color[2]})`;
-            setSpineColors(prev => ({
-              ...prev,
-              [book.id]: rgb
-            }));
-          } catch (e) {
-            // fallback
-            setSpineColors(prev => ({
-              ...prev,
-              [book.id]: ""
-            }));
-          }
+          // Используем fallback цвет
+          setSpineColors(prev => ({
+            ...prev,
+            [book.id]: "#3B82F6"
+          }));
         };
       }
     });
@@ -263,12 +259,91 @@ const ThreeDBookView = ({
  */
 const ListView = ({
   books,
-  onDelete
+  onDelete,
+  selectedBooks = [],
+  onSelectBook,
+  onSelectAll,
+  onClearSelection,
+  onPrintFormulars
 }: ViewProps) => {
+  const allSelected = books.length > 0 && selectedBooks.length === books.length;
+  const someSelected = selectedBooks.length > 0 && selectedBooks.length < books.length;
+
   return <div className="overflow-x-auto p-6">
+      {/* Selection controls */}
+      {books.length > 0 && (
+        <div className="mb-4 flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+          <button
+            onClick={allSelected ? onClearSelection : onSelectAll}
+            className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-500 transition-colors"
+          >
+            {allSelected ? (
+              <CheckSquare className="w-4 h-4" />
+            ) : someSelected ? (
+              <div className="w-4 h-4 border-2 border-blue-500 rounded bg-blue-100 flex items-center justify-center">
+                <div className="w-2 h-2 bg-blue-500 rounded"></div>
+              </div>
+            ) : (
+              <Square className="w-4 h-4" />
+            )}
+            {allSelected ? "Снять выделение" : "Выделить все"}
+          </button>
+          
+          {selectedBooks.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                Выбрано: {selectedBooks.length} из {books.length}
+              </span>
+              <motion.button 
+                onClick={() => onPrintFormulars?.(selectedBooks, books)}
+                className="px-3 py-1.5 shadow-md bg-green-500 hover:bg-green-700 text-white rounded-lg flex items-center gap-1"
+                whileHover={{
+                  y: -2,
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+                }}
+                whileTap={{
+                  scale: 0.98
+                }}
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span className="text-sm ml-1">Печать формуляров</span>
+              </motion.button>
+              <ButtonHoldAndRelease 
+                onAction={async () => {
+                  for (const bookId of selectedBooks) {
+                    await onDelete(bookId);
+                  }
+                  onClearSelection?.();
+                }}
+                className="px-3 py-1.5 shadow-md bg-red-500 hover:bg-red-700 text-white"
+                holdDuration={3000}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="text-sm ml-1">Удалить выбранные</span>
+              </ButtonHoldAndRelease>
+            </div>
+          )}
+        </div>
+      )}
       <table className="min-w-full divide-y divide-gray-100">
         <thead className="bg-gray-100 rounded-t-lg">
           <tr>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider w-12">
+              <button
+                onClick={allSelected ? onClearSelection : onSelectAll}
+                className="flex items-center"
+              >
+                {allSelected ? (
+                  <CheckSquare className="w-4 h-4 text-blue-500" />
+                ) : someSelected ? (
+                  <div className="w-4 h-4 border-2 border-blue-500 rounded bg-blue-100 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-blue-500 rounded"></div>
+                  </div>
+                ) : (
+                  <Square className="w-4 h-4 text-gray-400" />
+                )}
+              </button>
+            </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider w-12"></th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Название</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Автор</th>
@@ -278,19 +353,41 @@ const ListView = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {books.map((book, index) => <motion.tr key={book.id} initial={{
-          opacity: 0,
-          x: -20
-        }} animate={{
-          opacity: 1,
-          x: 0
-        }} transition={{
-          delay: 0.05 * index,
-          duration: 0.3
-        }} className={index % 2 === 0 ? "bg-white" : "bg-gray-100"} whileHover={{
-          backgroundColor: "#F3F4F6"
-        }}>
-              <td className="px-4 py-3">
+          {books.map((book, index) => {
+            const isSelected = selectedBooks.includes(book.id);
+            return (
+              <motion.tr 
+                key={book.id} 
+                initial={{
+                  opacity: 0,
+                  x: -20
+                }} 
+                animate={{
+                  opacity: 1,
+                  x: 0
+                }} 
+                transition={{
+                  delay: 0.05 * index,
+                  duration: 0.3
+                }} 
+                className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} ${isSelected ? "bg-blue-50 border-l-4 border-blue-500" : ""}`}
+                whileHover={{
+                  backgroundColor: isSelected ? "#EBF8FF" : "#F3F4F6"
+                }}
+              >
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => onSelectBook?.(book.id)}
+                    className="flex items-center"
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-4 h-4 text-blue-500" />
+                    ) : (
+                      <Square className="w-4 h-4 text-gray-400 hover:text-blue-500" />
+                    )}
+                  </button>
+                </td>
+                <td className="px-4 py-3">
                 <div className="w-10 h-14 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden shadow-md">
                   {book.cover ? <motion.img src={book.cover} alt={book.title} className="w-full h-full object-cover" loading="lazy" whileHover={{
                 scale: 1.1
@@ -341,7 +438,9 @@ const ListView = ({
                   </ButtonHoldAndRelease>
                 </div>
               </td>
-            </motion.tr>)}
+              </motion.tr>
+            );
+          })}
         </tbody>
       </table>
     </div>;
@@ -399,6 +498,22 @@ export default function BooksPage() {
   const [sortOrder, setSortOrder] = useState("asc");
   const [viewMode, setViewMode] = useState("cards");
   const [loading, setLoading] = useState(true);
+  const [selectedBooks, setSelectedBooks] = useState<string[]>([]);
+  const [showAutoAssignGenres, setShowAutoAssignGenres] = useState(false);
+
+  // Загружаем сохраненный режим отображения при инициализации
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem('booksViewMode');
+    if (savedViewMode && ['cards', '3d', 'list'].includes(savedViewMode)) {
+      setViewMode(savedViewMode);
+    }
+  }, []);
+
+  // Сохраняем режим отображения при его изменении
+  const handleViewModeChange = (mode: string) => {
+    setViewMode(mode);
+    localStorage.setItem('booksViewMode', mode);
+  };
   useEffect(() => {
     const fetchBooks = async () => {
       try {
@@ -420,7 +535,8 @@ export default function BooksPage() {
             authors: Array.isArray(book.authors) ? book.authors.join(', ') : book.authors,
             genre: book.genre,
             cover: coverUrl,
-            availableCopies: book.availableCopies
+            availableCopies: book.availableCopies,
+            categorization: book.categorization
           };
         }));
       } catch (error) {
@@ -434,7 +550,21 @@ export default function BooksPage() {
         setLoading(false);
       }
     };
+    
     fetchBooks();
+
+    // Слушаем обновления экземпляров книги для обновления счетчиков
+    const handleInstancesUpdate = (event: CustomEvent) => {
+      console.log("Получено обновление экземпляров на странице списка книг:", event.detail);
+      // Обновляем данные о книгах для актуализации счетчиков доступных копий
+      fetchBooks();
+    };
+
+    window.addEventListener('bookInstancesUpdated', handleInstancesUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('bookInstancesUpdated', handleInstancesUpdate as EventListener);
+    };
   }, []);
   const filteredBooks = books.filter(book => book.title.toLowerCase().includes(searchQuery.toLowerCase()) || book.authors && book.authors.toLowerCase().includes(searchQuery.toLowerCase()));
   const sortedBooks = filteredBooks.sort((a, b) => sortOrder === "asc" ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title));
@@ -448,6 +578,7 @@ export default function BooksPage() {
         throw new Error('Ошибка при удалении книги');
       }
       setBooks(books.filter(book => book.id !== id));
+      setSelectedBooks(selectedBooks.filter(bookId => bookId !== id));
       toast({
         title: "Успешно",
         description: "Книга успешно удалена"
@@ -460,6 +591,84 @@ export default function BooksPage() {
         variant: "destructive"
       });
     }
+  };
+
+  const handleSelectBook = (bookId: string) => {
+    setSelectedBooks(prev => 
+      prev.includes(bookId) 
+        ? prev.filter(id => id !== bookId)
+        : [...prev, bookId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    setSelectedBooks(sortedBooks.map(book => book.id));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedBooks([]);
+  };
+
+  const handlePrintFormulars = (selectedBookIds: string[], allBooks: Book[]) => {
+    // Получаем данные выбранных книг
+    const selectedBooksData = allBooks.filter(book => selectedBookIds.includes(book.id));
+    
+    if (selectedBooksData.length === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Нет выбранных книг для печати",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Создаем URL для страницы печати с данными книг
+    // Используем текущий protocol и hostname, но фиксируем порт 3000
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const baseUrl = `${protocol}//${hostname}:3000`;
+    const bookIds = selectedBookIds.join(',');
+    const printUrl = `${baseUrl}/admin/books/print-formulars?bookIds=${encodeURIComponent(bookIds)}`;
+    
+    // Открываем страницу печати в новой вкладке
+    const printWindow = window.open(printUrl, '_blank');
+    
+    if (!printWindow) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось открыть страницу печати. Проверьте настройки блокировки всплывающих окон.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleGenreAssignmentComplete = () => {
+    // Обновляем список книг после назначения жанров/категорий
+    const fetchBooks = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+        const response = await fetch(`${baseUrl}/api/books`);
+        if (!response.ok) {
+          throw new Error('Ошибка при получении книг');
+        }
+        const data = await response.json();
+        setBooks(data.map((book: any) => {
+          const coverUrl = book.cover || book.coverImage || book.coverImageUrl || book.image || book.coverUrl || book.imageUrl || "";
+          return {
+            id: book.id,
+            title: book.title,
+            authors: Array.isArray(book.authors) ? book.authors.join(', ') : book.authors,
+            genre: book.genre,
+            cover: coverUrl,
+            availableCopies: book.availableCopies,
+            categorization: book.categorization
+          };
+        }));
+      } catch (error) {
+        console.error("Ошибка обновления книг", error);
+      }
+    };
+    fetchBooks();
   };
   return <div className="min-h-screen bg-gray-200">
       <div className="container mx-auto p-6">
@@ -493,6 +702,21 @@ export default function BooksPage() {
                   </motion.button>
                 </Link>
                 
+                <motion.button 
+                  onClick={() => setShowAutoAssignGenres(true)}
+                  className="bg-purple-500 hover:bg-purple-700 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" 
+                  whileHover={{
+                    y: -3,
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+                  }} 
+                  whileTap={{
+                    scale: 0.98
+                  }}
+                >
+                  <Brain className="h-4 w-4" />
+                  ИИ Жанры/Категории
+                </motion.button>
+                
                 <motion.button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="bg-white text-blue-500 font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md border border-blue-500" whileHover={{
                 y: -3,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
@@ -508,7 +732,7 @@ export default function BooksPage() {
                   <input type="text" placeholder="Поиск книг..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-white border border-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pl-10 pr-4 py-2 text-gray-800 shadow-md" />
                 </div>
                 
-                <ViewModeMenu viewMode={viewMode} setViewMode={setViewMode} />
+                <ViewModeMenu viewMode={viewMode} setViewMode={handleViewModeChange} />
               </div>
             </div>
           </motion.div>
@@ -562,9 +786,27 @@ export default function BooksPage() {
         }}>
               {viewMode === "cards" && <CardsView books={sortedBooks} onDelete={handleDelete} />}
               {viewMode === "3d" && <ThreeDBookView books={sortedBooks} onDelete={handleDelete} />}
-              {viewMode === "list" && <ListView books={sortedBooks} onDelete={handleDelete} />}
+              {viewMode === "list" && (
+                <ListView 
+                  books={sortedBooks} 
+                  onDelete={handleDelete}
+                  selectedBooks={selectedBooks}
+                  onSelectBook={handleSelectBook}
+                  onSelectAll={handleSelectAll}
+                  onClearSelection={handleClearSelection}
+                  onPrintFormulars={handlePrintFormulars}
+                />
+              )}
             </motion.div>}
         </FadeInView>
+
+        {/* Модальное окно для автоматического назначения жанров и категорий */}
+        <AutoAssignGenres
+          open={showAutoAssignGenres}
+          onOpenChange={setShowAutoAssignGenres}
+          books={books}
+          onAssignment={handleGenreAssignmentComplete}
+        />
       </div>
     </div>;
 }
