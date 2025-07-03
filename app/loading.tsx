@@ -13,7 +13,7 @@ export default function Loading() {
         </div>
         
         {/* Skeleton книг */}
-        <LoadingSkeleton variant="book-list" count={8} />
+        <LoadingSkeleton />
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ export default function BooksLoading() {
         </div>
         
         {/* Skeleton книг */}
-        <LoadingSkeleton variant="book-list" count={12} />
+        <LoadingSkeleton/>
         
         {/* Skeleton для пагинации */}
         <div className="flex justify-center items-center gap-4 mt-10 animate-pulse">

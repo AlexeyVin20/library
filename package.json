@@ -6,7 +6,6 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
     "migrate:dev": "drizzle-kit migrate",
     "generate": "drizzle-kit generate"
   },
@@ -76,15 +75,12 @@
     "@babel/parser": "^7.27.3",
     "@babel/traverse": "^7.27.3",
     "@babel/types": "^7.27.3",
-    "@eslint/eslintrc": "^3",
     "@types/minio": "^7.1.1",
     "@types/node": "^20",
     "@types/pg": "^8.11.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.1",
-    "eslint": "^9",
-    "eslint-config-next": "15.1.7",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"

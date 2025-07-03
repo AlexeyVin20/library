@@ -172,8 +172,7 @@ export default function Calendar({
       opacity: 1,
       y: 0,
       transition: {
-        duration: 0.5,
-        ease: [0.22, 1, 0.36, 1]
+        duration: 0.5
       }
     }
   };
@@ -187,16 +186,14 @@ export default function Calendar({
       scale: 1,
       transition: {
         delay: custom * 0.01,
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1]
+        duration: 0.3
       }
     }),
     hover: {
       y: -4,
       boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
       transition: {
-        duration: 0.2,
-        ease: "easeOut"
+        duration: 0.2
       }
     },
     tap: {
@@ -217,8 +214,7 @@ export default function Calendar({
       x: 0,
       transition: {
         delay: 0.1 + custom * 0.05,
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1]
+        duration: 0.3
       }
     }),
     hover: {
