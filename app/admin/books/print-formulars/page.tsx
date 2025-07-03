@@ -62,7 +62,7 @@ function PrintFormularsContent() {
 
         // Получаем экземпляры для каждой книги
         const instancePromises = bookIdsArray.map(bookId => 
-          fetch(`${baseUrl}/api/bookinstances?bookId=${bookId.trim()}`, { headers })
+          fetch(`${baseUrl}/api/bookinstance/book/${bookId.trim()}`, { headers })
             .then(response => {
               if (!response.ok) {
                 console.warn(`Не удалось получить экземпляры для книги ${bookId}`);
@@ -210,6 +210,12 @@ function PrintFormularsContent() {
                     >
                       {/* Информация о книге */}
                       <div className="space-y-1 mb-2 flex-1">
+                        {/* Код экземпляра и местоположение */}
+                        {instanceInfo && (
+                          <div className="text-xs break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black font-medium">
+                            {instanceInfo}
+                          </div>
+                        )}
                         {/* Авторы */}
                         <div className="text-xs break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black">
                           {formular.authors}
@@ -224,13 +230,6 @@ function PrintFormularsContent() {
                         {extraParts.length > 0 && (
                           <div className="text-xs break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black">
                             {extraParts.join(', ')}
-                          </div>
-                        )}
-
-                        {/* Код экземпляра и местоположение */}
-                        {instanceInfo && (
-                          <div className="text-xs break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black font-medium">
-                            {instanceInfo}
                           </div>
                         )}
                       </div>
