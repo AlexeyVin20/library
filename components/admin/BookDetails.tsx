@@ -75,7 +75,7 @@ const InfoField = ({
   value: string;
   icon?: React.ReactNode;
 }) => {
-  return <motion.div className="backdrop-blur-xl bg-green/30 dark:bg-green-900/40 rounded-xl p-3 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm" whileHover={{
+  return <motion.div className="backdrop-blur-xl bg-blue/30 dark:bg-blue-900/40 rounded-xl p-3 border border-blue-500/20 dark:border-blue-700/30 shadow-sm" whileHover={{
     y: -3,
     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
   }} transition={{
@@ -105,7 +105,7 @@ const AnimatedTabsTrigger = ({
           {label}
         </span>
       </div>
-      {isActive && <motion.div layoutId="activeBookTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" initial={{
+      {isActive && <motion.div layoutId="activeBookTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" initial={{
       opacity: 0
     }} animate={{
       opacity: 1
@@ -120,9 +120,9 @@ export default function BookDetails({
   const [activeTab, setActiveTab] = useState("details");
   return <div className="min-h-screen relative">
       {/* Floating shapes */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-blue-300/20 rounded-full blur-3xl"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl"></div>
+      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-blue/10 rounded-full blur-3xl"></div>
       <div className="container mx-auto p-6 relative z-10">
         {/* Header */}
         <FadeInView>
@@ -159,7 +159,7 @@ export default function BookDetails({
 
         {/* Main Content */}
         <FadeInView delay={0.2}>
-          <motion.div className="backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-emerald-500/20 dark:border-emerald-700/30" whileHover={{
+          <motion.div className="backdrop-blur-xl bg-blue-500/10 dark:bg-blue-500/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-blue-500/20 dark:border-blue-700/30" whileHover={{
           y: -5,
           boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)"
         }}>
@@ -178,13 +178,13 @@ export default function BookDetails({
                 </Book>
                 {/* Book status indicators */}
                 <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2 text-white bg-emerald-400/20 dark:bg-emerald-800/30 p-2 rounded-lg">
+                  <div className="flex items-center gap-2 text-white bg-blue-400/20 dark:bg-blue-500/30 p-2 rounded-lg">
                     <BookCopy className="w-5 h-5" />
                     <span>
                       Доступно копий: <strong>{book.availableCopies}</strong>
                     </span>
                   </div>
-                  {book.isEbook && <div className="flex items-center gap-2 text-white bg-emerald-100/50 dark:bg-emerald-800/30 p-2 rounded-lg">
+                  {book.isEbook && <div className="flex items-center gap-2 text-white bg-blue-100/50 dark:bg-blue-500/30 p-2 rounded-lg">
                       <Bookmark className="w-5 h-5" />
                       <span>Электронная книга</span>
                     </div>}
@@ -203,7 +203,7 @@ export default function BookDetails({
                 </div>
 
                 {/* Description preview */}
-                <motion.div className="mt-4 backdrop-blur-xl bg-emerald-500/20 dark:bg-emerald-900/30 rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm" whileHover={{
+                <motion.div className="mt-4 backdrop-blur-xl bg-blue-500/20 dark:bg-blue-500/30 rounded-xl p-4 border border-blue-500/20 dark:border-blue-700/30 shadow-sm" whileHover={{
                 y: -3,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
               }} transition={{
@@ -223,7 +223,7 @@ export default function BookDetails({
             {/* Tabs */}
             <div className="mt-8">
               <Tabs defaultValue="details" onValueChange={setActiveTab}>
-                <TabsList className="border-b border-emerald-500/20 dark:border-emerald-700/30 p-0 rounded-none bg-transparent shadow-none">
+                <TabsList className="border-b border-blue-500/20 dark:border-blue-700/30 p-0 rounded-none bg-transparent shadow-none">
                   <AnimatedTabsTrigger value="details" label="Детальная информация" isActive={activeTab === "details"} />
                   <AnimatedTabsTrigger value="additional" label="Дополнительно" isActive={activeTab === "additional"} />
                 </TabsList>
@@ -239,7 +239,7 @@ export default function BookDetails({
                     <InfoField label="ББК" value={book.bbk || "Не указан"} />
                   </div>
 
-                  <motion.div className="mt-6 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm" whileHover={{
+                  <motion.div className="mt-6 backdrop-blur-xl bg-blue-500/10 dark:bg-blue-500/20 rounded-xl p-4 border border-blue-500/20 dark:border-blue-700/30 shadow-sm" whileHover={{
                   y: -3,
                   boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
                 }} transition={{
@@ -262,7 +262,7 @@ export default function BookDetails({
                     {book.dateModified && <InfoField label="Дата изменения" value={new Date(book.dateModified).toLocaleDateString()} icon={<Clock className="w-4 h-4" />} />}
                   </div>
 
-                  <motion.div className="mt-6 backdrop-blur-xl bg-emerald-500/10 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-700/30 shadow-sm" whileHover={{
+                  <motion.div className="mt-6 backdrop-blur-xl bg-blue-500/10 dark:bg-blue-500/20 rounded-xl p-4 border border-blue-500/20 dark:border-blue-700/30 shadow-sm" whileHover={{
                   y: -3,
                   boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
                 }} transition={{
@@ -281,7 +281,7 @@ export default function BookDetails({
             {/* Buttons */}
             <div className="flex gap-4 justify-end mt-8">
               <Link href={`/admin/books/${book.id}/update`}>
-                <motion.button className="bg-emerald-600/90 hover:bg-emerald-700/90 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md backdrop-blur-md" whileHover={{
+                <motion.button className="bg-blue-500/90 hover:bg-blue-500/90 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md backdrop-blur-md" whileHover={{
                 y: -3,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
               }} whileTap={{
@@ -292,7 +292,7 @@ export default function BookDetails({
                 </motion.button>
               </Link>
               <Link href="/admin/books">
-                <motion.button className="bg-green-500/90 hover:bg-green-600/90 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md backdrop-blur-md" whileHover={{
+                <motion.button className="bg-blue-500/90 hover:bg-blue-600/90 text-white font-medium rounded-lg px-6 py-2.5 flex items-center gap-2 shadow-md backdrop-blur-md" whileHover={{
                 y: -3,
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
               }} whileTap={{
