@@ -1,5 +1,5 @@
 // app/admin/layout.tsx
-"use client";
+'use client';
 
 import Sidebar from "@/components/admin/Sidebar";
 import TopNavigation from "@/components/admin/TopNavigation";

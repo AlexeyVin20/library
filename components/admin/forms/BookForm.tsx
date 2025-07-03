@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import type React from "react"
 
@@ -50,7 +50,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import type { Book, Journal } from "@/lib/types"
+import type { Book, Journal, Shelf } from "@/lib/types"
 import { Switch } from "@/components/ui/switch"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
@@ -169,9 +169,10 @@ interface BookFormProps {
   onSubmit: (data: BookInput) => Promise<void>
   isSubmitting: boolean
   mode: "create" | "update"
+  shelves?: Shelf[]
 }
 
-const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) => {
+const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFormProps) => {
   const router = useRouter()
   const [showManualCoverInput, setShowManualCoverInput] = useState(false)
   const [manualCoverUrl, setManualCoverUrl] = useState("")
@@ -735,105 +736,123 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
 
   // Функция для заполнения формы данными из API
   const fillFormWithApiData = (data: any, coverUrl: string | null) => {
-    if (data.title) setValue("title", data.title)
-    if (data.authors) setValue("authors", data.authors)
-    if (data.genre) setValue("genre", data.genre)
-    if (data.categorization) setValue("categorization", data.categorization)
-    if (data.udk) setValue("udk", data.udk)
-    if (data.bbk) setValue("bbk", data.bbk)
-    if (data.isbn) {
-      setValue("isbn", data.isbn)
-      setIsbn(data.isbn)
-    }
+    // Гарантируем, что обязательные поля всегда будут заполнены хотя бы пустой строкой
+    setValue("title", data.title || "");
+    setValue("authors", data.authors || "");
+    setValue("genre", data.genre || "");
+    setValue("categorization", data.categorization || "");
+    setValue("udk", data.udk || "");
+    setValue("bbk", data.bbk || "");
+    setValue("isbn", data.isbn || "");
     if (coverUrl) {
-      setValue("cover", coverUrl)
-      setPreviewUrl(coverUrl)
+      setValue("cover", coverUrl);
+      setPreviewUrl(coverUrl);
     }
-    if (data.description) setValue("description", data.description)
-    if (data.summary) setValue("summary", data.summary)
-    if (data.publicationYear) setValue("publicationYear", data.publicationYear)
-    if (data.publisher) setValue("publisher", data.publisher)
-    if (data.pageCount) setValue("pageCount", data.pageCount)
-    if (data.language) setValue("language", data.language)
-    if (data.availableCopies) setValue("availableCopies", data.availableCopies)
-    if (data.edition) setValue("edition", data.edition)
-    if (data.price) setValue("price", data.price)
-    if (data.format) setValue("format", data.format)
-    if (data.originalTitle) setValue("originalTitle", data.originalTitle)
-    if (data.originalLanguage) setValue("originalLanguage", data.originalLanguage)
-    if (data.isEbook !== undefined) setValue("isEbook", data.isEbook)
-    if (data.condition) setValue("condition", data.condition)
+    setValue("description", data.description || "");
+    setValue("summary", data.summary || "");
+    setValue("publicationYear", data.publicationYear || new Date().getFullYear());
+    setValue("publisher", data.publisher || "");
+    setValue("pageCount", data.pageCount || 0);
+    setValue("language", data.language || "");
+    setValue("availableCopies", data.availableCopies || 0);
+    setValue("edition", data.edition || "");
+    setValue("price", data.price || 0);
+    setValue("format", data.format || "");
+    setValue("originalTitle", data.originalTitle || "");
+    setValue("originalLanguage", data.originalLanguage || "");
+    setValue("isEbook", data.isEbook !== undefined ? data.isEbook : false);
+    setValue("condition", data.condition || "");
   }
 
   const fillFormFromJson = (data: any) => {
     try {
-      if (data.Title) setValue("title", data.Title)
-      if (data.Authors) setValue("authors", data.Authors)
-      if (data.Genre) setValue("genre", data.Genre)
-      if (data.Categorization) setValue("categorization", data.Categorization)
-      if (data.UDK) setValue("udk", data.UDK)
-      if (data.BBK) setValue("bbk", data.BBK)
-      if (data.ISBN) {
-        setValue("isbn", data.ISBN)
-        setIsbn(data.ISBN)
-      }
+      setValue("title", data.Title || "");
+      setValue("authors", data.Authors || "");
+      setValue("genre", data.Genre || "");
+      setValue("categorization", data.Categorization || "");
+      setValue("udk", data.UDK || "");
+      setValue("bbk", data.BBK || "");
+      setValue("isbn", data.ISBN || "");
       if (data.Cover) {
-        setValue("cover", data.Cover)
-        setPreviewUrl(data.Cover)
+        setValue("cover", data.Cover);
+        setPreviewUrl(data.Cover);
       }
-      if (data.Description) setValue("description", data.Description)
-      if (data.Summary) setValue("summary", data.Summary)
-      if (data.PublicationYear) setValue("publicationYear", data.PublicationYear)
-      if (data.Publisher) setValue("publisher", data.Publisher)
-      if (data.PageCount) setValue("pageCount", data.PageCount)
-      if (data.Language) setValue("language", data.Language)
-      if (data.AvailableCopies !== undefined) setValue("availableCopies", data.AvailableCopies)
-      if (data.Edition) setValue("edition", data.Edition)
-      if (data.Price !== undefined) setValue("price", data.Price)
-      if (data.Format) setValue("format", data.Format)
-      if (data.OriginalTitle) setValue("originalTitle", data.OriginalTitle)
-      if (data.OriginalLanguage) setValue("originalLanguage", data.OriginalLanguage)
-      if (data.IsEbook !== undefined) setValue("isEbook", data.IsEbook)
-      if (data.Condition) setValue("condition", data.Condition)
+      setValue("description", data.Description || "");
+      setValue("summary", data.Summary || "");
+      setValue("publicationYear", data.PublicationYear || new Date().getFullYear());
+      setValue("publisher", data.Publisher || "");
+      setValue("pageCount", data.PageCount || 0);
+      setValue("language", data.Language || "");
+      setValue("availableCopies", data.AvailableCopies !== undefined ? data.AvailableCopies : 0);
+      setValue("edition", data.Edition || "");
+      setValue("price", data.Price !== undefined ? data.Price : 0);
+      setValue("format", data.Format || "");
+      setValue("originalTitle", data.OriginalTitle || "");
+      setValue("originalLanguage", data.OriginalLanguage || "");
+      setValue("isEbook", data.IsEbook !== undefined ? data.IsEbook : false);
+      setValue("condition", data.Condition || "");
 
-      setFormSuccess("Информация из JSON успешно импортирована")
+      setFormSuccess("Информация из JSON успешно импортирована");
       toast({
         title: "Данные загружены",
         description: "Информация из JSON успешно импортирована",
-      })
+      });
 
       // Проверяем валидность полей после заполнения
-      trigger()
+      trigger();
     } catch (error) {
-      console.error("Ошибка при заполнении формы из JSON:", error)
-      setFormError("Ошибка при импорте данных из JSON")
+      console.error("Ошибка при заполнении формы из JSON:", error);
+      setFormError("Ошибка при импорте данных из JSON");
       toast({
         title: "Ошибка",
         description: "Не удалось импортировать данные из JSON",
         variant: "destructive",
-      })
+      });
     }
   }
 
   const onFormSubmit = async (values: z.infer<typeof bookSchema>) => {
-    setFormError(null)
+    setFormError(null);
     try {
-      await onSubmit(values)
-      setFormSuccess(mode === "create" ? "Книга успешно добавлена" : "Книга успешно обновлена")
-
+      // Приводим к BookInput с обязательными полями
+      const bookInput: BookInput = {
+        ...values,
+        title: values.title || "",
+        authors: values.authors || "",
+        genre: values.genre || "",
+        categorization: values.categorization || "",
+        udk: values.udk || "",
+        bbk: values.bbk || "",
+        isbn: values.isbn || "",
+        description: values.description || "",
+        publicationYear: values.publicationYear || new Date().getFullYear(),
+        publisher: values.publisher || "",
+        pageCount: values.pageCount || 0,
+        language: values.language || "",
+        availableCopies: values.availableCopies || 0,
+        edition: values.edition || "",
+        price: values.price || 0,
+        format: values.format || "",
+        originalTitle: values.originalTitle || "",
+        originalLanguage: values.originalLanguage || "",
+        isEbook: values.isEbook !== undefined ? values.isEbook : false,
+        condition: values.condition || "",
+      };
+      await onSubmit(bookInput);
+      setFormSuccess(mode === "create" ? "Книга успешно добавлена" : "Книга успешно обновлена");
       if (mode === "create") {
         // Сбрасываем форму после успешного создания
-        reset()
-        setPreviewUrl(null)
+        reset();
+        setPreviewUrl(null);
       }
     } catch (error) {
-      console.error("Ошибка при отправке формы:", error)
-      setFormError("Ошибка при сохранении книги. Пожалуйста, попробуйте еще раз.")
+      console.error("Ошибка при отправке формы:", error);
+      setFormError("Ошибка при сохранении книги. Пожалуйста, попробуйте еще раз.");
       toast({
         title: "Ошибка",
         description: "Не удалось сохранить книгу",
         variant: "destructive",
-      })
+      });
     }
   }
 
@@ -1252,6 +1271,27 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode }: BookFormProps) 
                                 +
                               </button>
                             </div>
+                          </FormField>
+                        )}
+
+                        {/* Добавляю выпадающий список для выбора полки, если есть shelves */}
+                        {shelves && shelves.length > 0 && (
+                          <FormField label="Полка" error={errors.shelfId?.message}>
+                            <Select
+                              onValueChange={value => setValue("shelfId", Number(value))}
+                              defaultValue={initialData?.shelfId ? String(initialData.shelfId) : undefined}
+                            >
+                              <SelectTrigger className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12">
+                                <SelectValue placeholder="Выберите полку" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border border-gray-200">
+                                {shelves.map(shelf => (
+                                  <SelectItem key={shelf.id} value={String(shelf.id)}>
+                                    {shelf.category} (№{shelf.shelfNumber})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormField>
                         )}
 

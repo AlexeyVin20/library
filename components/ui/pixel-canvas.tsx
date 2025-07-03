@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 // Сначала определяем класс Pixel
 class Pixel {

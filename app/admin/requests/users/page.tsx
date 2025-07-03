@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -22,7 +22,7 @@ interface UserRequest {
   };
 }
 
-export default function UserRequestsPage() {
+function UserRequestsPage() {
   const [requests, setRequests] = useState<UserRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -196,3 +196,5 @@ export default function UserRequestsPage() {
     </div>
   );
 }
+
+export default UserRequestsPage;

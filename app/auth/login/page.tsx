@@ -1,6 +1,8 @@
-"use client";
+'use client';
 
 import { useState } from "react";
+
+export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -146,22 +148,20 @@ export default function LoginPage() {
                 )}
               />
               
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg h-11 mt-6" 
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Вход...
-                    </>
-                  ) : (
-                    "Войти"
-                  )}
-                </Button>
-              </motion.div>
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg h-11 mt-6 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Вход...
+                  </>
+                ) : (
+                  "Войти"
+                )}
+              </Button>
             </form>
           </Form>
         </CardContent>

@@ -1,4 +1,5 @@
 // Адаптировано из: https://ui.shadcn.com/
+'use client';
 import { useContext } from "react"
  
 import type {
