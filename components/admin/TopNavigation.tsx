@@ -349,16 +349,13 @@ const TopNavigation = ({
       y: 0,
       transition: {
         delay: i * 0.05,
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1]
+        duration: 0.3
       }
     }),
     hover: {
       y: -2,
       transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 10
+        duration: 0.2
       }
     }
   };
@@ -377,8 +374,7 @@ const TopNavigation = ({
       scale: 1,
       transformOrigin: "center",
       transition: {
-        duration: 0.2,
-        ease: [0.22, 1, 0.36, 1]
+        duration: 0.2
       }
     },
     exit: {
@@ -445,17 +441,14 @@ const TopNavigation = ({
       rotate: 0,
       opacity: 1,
       transition: {
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1]
+        duration: 0.6
       }
     },
     hover: {
       scale: 1.05,
       rotate: 5,
       transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 10
+        duration: 0.2
       }
     }
   };
@@ -468,8 +461,7 @@ const TopNavigation = ({
     animate: {
       scale: 1,
       transition: {
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1]
+        duration: 0.3
       }
     },
     pulse: {

@@ -1,6 +1,8 @@
-"use client";
+'use client';
 
 import type React from "react";
+import useSWR from 'swr'
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,6 +23,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Book } from "@/components/ui/book";
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = new Error("Произошла ошибка при загрузке данных");
+    try {
+      const errorInfo = await res.json();
+      (error as any).info = errorInfo;
+    } catch (e) {
+      // The response might not be a json
+      (error as any).info = await res.text();
+    }
+    (error as any).status = res.status;
+    throw error;
+  }
+  return res.json();
+};
 
 interface User {
   id: string;
@@ -413,126 +432,122 @@ const LoadingSpinner = () => (
 );
 
 export default function QuickOverviewPage() {
-  const [usersWithBooks, setUsersWithBooks] = useState<UserWithBooks[]>([]);
-  const [usersWithFines, setUsersWithFines] = useState<UserWithFines[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<'books' | 'fines'>('books');
-  const [totalStats, setTotalStats] = useState({
-    totalUsers: 0,
-    totalBorrowedBooks: 0,
-    totalUsersWithFines: 0,
-    totalFineAmount: 0,
-    totalOverdueBooks: 0
-  });
-
+  
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { 
+    data: booksData, 
+    error: booksError, 
+    isLoading: booksIsLoading,
+    mutate: mutateBooks
+  } = useSWR<UsersWithBooksResponse>(`${baseUrl}/api/User/with-books`, fetcher);
+  
+  const { 
+    data: finesData, 
+    error: finesError, 
+    isLoading: finesIsLoading,
+    mutate: mutateFines
+  } = useSWR<UsersWithFinesResponse>(`${baseUrl}/api/User/with-fines`, fetcher);
 
-      // Получаем данные с новых эндпоинтов
-      const [booksResponse, finesResponse] = await Promise.all([
-        fetch(`${baseUrl}/api/User/with-books`),
-        fetch(`${baseUrl}/api/User/with-fines`)
-      ]);
+  const loading = booksIsLoading || finesIsLoading;
+  const error = booksError || finesError;
 
-      if (!booksResponse.ok) throw new Error("Ошибка при загрузке пользователей с книгами");
-      if (!finesResponse.ok) throw new Error("Ошибка при загрузке пользователей со штрафами");
+  const handleRefetch = () => {
+    mutateBooks();
+    mutateFines();
+  };
 
-      const booksData: UsersWithBooksResponse = await booksResponse.json();
-      const finesData: UsersWithFinesResponse = await finesResponse.json();
-
-      // Проверяем, что данные корректны
-      if (!booksData || !finesData) {
-        throw new Error("Получены некорректные данные от сервера");
-      }
-
-      // Создаем карту пользователей со штрафами для быстрого поиска
-      const finesUsersMap = new Map();
-      (finesData.users || []).forEach((user: ApiUserWithFines) => {
-        finesUsersMap.set(user.id, {
-          overdueBooks: (user.overdueBooks || []).map((book: any) => ({
-            id: book.reservationId || book.bookId || '',
-            title: book.bookTitle || 'Неизвестная книга',
-            author: book.bookAuthors || 'Автор не указан',
-            returnDate: book.dueDate || null,
-            cover: book.cover || '',
-            isOverdue: true
-          }))
-        });
+  const { usersWithBooks, usersWithFines, totalStats } = useMemo(() => {
+    if (!booksData || !finesData) {
+      return {
+        usersWithBooks: [],
+        usersWithFines: [],
+        totalStats: {
+          totalUsers: 0,
+          totalBorrowedBooks: 0,
+          totalUsersWithFines: 0,
+          totalFineAmount: 0,
+          totalOverdueBooks: 0
+        }
+      };
+    }
+    // Создаем карту пользователей со штрафами для быстрого поиска
+    const finesUsersMap = new Map();
+    (finesData.users || []).forEach((user: ApiUserWithFines) => {
+      finesUsersMap.set(user.id, {
+        overdueBooks: (user.overdueBooks || []).map((book: any) => ({
+          id: book.reservationId || book.bookId || '',
+          title: book.bookTitle || 'Неизвестная книга',
+          author: book.bookAuthors || 'Автор не указан',
+          returnDate: book.dueDate || null,
+          cover: book.cover || '',
+          isOverdue: true
+        }))
       });
+    });
 
-      // Обрабатываем данные о книгах и добавляем просроченные книги
-      const processedUsersWithBooks = booksData.users?.map(user => {
-        const finesData = finesUsersMap.get(user.id);
-        return {
-          ...user,
-          activeReservations: (user.activeReservations || []).map(book => ({
-            id: book.id,
-            title: book.bookTitle,
-            author: book.bookAuthors,
-            returnDate: book.dueDate,
-            cover: book.cover,
-            isOverdue: book.isOverdue
-          })),
-          overdueBooks: finesData?.overdueBooks || []
-        };
-      }) || [];
+    // Обрабатываем данные о книгах и добавляем просроченные книги
+    const processedUsersWithBooks = booksData.users?.map(user => {
+      const userFinesData = finesUsersMap.get(user.id);
+      return {
+        ...user,
+        activeReservations: (user.activeReservations || []).map(book => ({
+          id: book.id,
+          title: book.bookTitle,
+          author: book.bookAuthors,
+          returnDate: book.dueDate,
+          cover: book.cover,
+          isOverdue: book.isOverdue
+        })),
+        overdueBooks: userFinesData?.overdueBooks || []
+      };
+    }) || [];
 
-      // Обрабатываем данные о штрафах
-      const processedUsersWithFines: UserWithFines[] = (finesData.users || []).map((user: ApiUserWithFines) => {
-        return {
-          id: user.id || '',
-          fullName: user.fullName || '',
-          email: user.email || '',
-          phone: user.phone || '',
-          borrowedBooksCount: user.borrowedBooksCount || 0,
-          fineAmount: user.fineAmount || 0,
-          username: user.username || '',
-          // Маппим overdueBooks и преобразуем структуру
-          overdueBooks: (user.overdueBooks || []).map((book: any) => ({
-            id: book.reservationId || book.bookId || '',
-            title: book.bookTitle || 'Неизвестная книга',
-            author: book.bookAuthors || 'Автор не указан',
-            returnDate: book.dueDate || null,
-            cover: book.cover || '',
-            isOverdue: true
-          })),
-          // Маппим allReservations в allBorrowedBooks
-          allBorrowedBooks: (user.allReservations || []).map((book: any) => ({
-            id: book.reservationId || '',
-            title: book.bookTitle || 'Неизвестная книга',
-            author: book.bookAuthors || 'Автор не указан',
-            returnDate: book.dueDate || null,
-            cover: book.cover || '',
-            isOverdue: book.isOverdue || false
-          }))
-        };
-      });
+    // Обрабатываем данные о штрафах
+    const processedUsersWithFines: UserWithFines[] = (finesData.users || []).map((user: ApiUserWithFines) => {
+      return {
+        id: user.id || '',
+        fullName: user.fullName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        borrowedBooksCount: user.borrowedBooksCount || 0,
+        fineAmount: user.fineAmount || 0,
+        username: user.username || '',
+        // Маппим overdueBooks и преобразуем структуру
+        overdueBooks: (user.overdueBooks || []).map((book: any) => ({
+          id: book.reservationId || book.bookId || '',
+          title: book.bookTitle || 'Неизвестная книга',
+          author: book.bookAuthors || 'Автор не указан',
+          returnDate: book.dueDate || null,
+          cover: book.cover || '',
+          isOverdue: true
+        })),
+        // Маппим allReservations в allBorrowedBooks
+        allBorrowedBooks: (user.allReservations || []).map((book: any) => ({
+          id: book.reservationId || '',
+          title: book.bookTitle || 'Неизвестная книга',
+          author: book.bookAuthors || 'Автор не указан',
+          returnDate: book.dueDate || null,
+          cover: book.cover || '',
+          isOverdue: book.isOverdue || false
+        }))
+      };
+    });
 
-      setUsersWithBooks(processedUsersWithBooks);
-      setUsersWithFines(processedUsersWithFines);
-      setTotalStats({
+    return {
+      usersWithBooks: processedUsersWithBooks,
+      usersWithFines: processedUsersWithFines,
+      totalStats: {
         totalUsers: booksData.totalUsers || 0,
         totalBorrowedBooks: booksData.totalBorrowedBooks || 0,
         totalUsersWithFines: finesData.totalUsersWithFines || 0,
         totalFineAmount: finesData.totalFineAmount || 0,
         totalOverdueBooks: finesData.totalOverdueBooks || 0
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке данных");
-    } finally {
-      setLoading(false);
-    }
-  }, [baseUrl]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+      }
+    };
+  }, [booksData, finesData]);
 
   // Фильтрация по поиску
   const filteredUsersWithBooks = useMemo(() => 
@@ -576,8 +591,8 @@ export default function QuickOverviewPage() {
               <AlertTriangle className="w-5 h-5" />
               <p className="font-medium">Ошибка загрузки данных</p>
             </div>
-            <p className="text-red-600 mt-1">{error}</p>
-            <Button onClick={fetchData} className="mt-3" size="sm">
+            <p className="text-red-600 mt-1">{error.message}</p>
+            <Button onClick={handleRefetch} className="mt-3" size="sm">
               Повторить попытку
             </Button>
           </div>

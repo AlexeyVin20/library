@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import * as React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";

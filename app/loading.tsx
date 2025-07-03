@@ -1,3 +1,4 @@
+'use client';
 import LoadingSkeleton from "@/components/ui/loading-skeleton";
 
 export default function Loading() {
@@ -13,7 +14,7 @@ export default function Loading() {
         </div>
         
         {/* Skeleton книг */}
-        <LoadingSkeleton variant="book-list" count={8} />
+        <LoadingSkeleton />
       </div>
     </div>
   );

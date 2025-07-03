@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
+import useSWR from 'swr';
 import type React from "react";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { 
@@ -23,6 +24,44 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateFineDialog } from "@/components/ui/fine-creation-modal";
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = new Error("Произошла ошибка при загрузке данных");
+    try {
+      const errorInfo = await res.json();
+      (error as any).info = errorInfo;
+    } catch (e) {
+      (error as any).info = await res.text();
+    }
+    (error as any).status = res.status;
+    throw error;
+  }
+  return res.json();
+};
+
+const fetcherWithToken = async (url: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Токен аутентификации не найден.");
+  }
+  const res = await fetch(url, {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const error = new Error("Произошла ошибка при загрузке данных с токеном.");
+    try {
+        const errorInfo = await res.json();
+        (error as any).info = errorInfo;
+    } catch(e) {
+        (error as any).info = await res.text();
+    }
+    (error as any).status = res.status;
+    throw error;
+  }
+  return res.json();
+};
 
 // Интерфейс для отдельного штрафа
 interface FineRecord {
@@ -145,40 +184,19 @@ const UserFineCard = ({
   onViewDetails: (userId: string) => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const [userFineDetails, setUserFineDetails] = useState<UserFineData | null>(null);
-  const [loading, setLoading] = useState(false);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
-  const fetchUserFineDetails = async () => {
-    if (userFineDetails) return;
-    
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const response = await fetch(`${baseUrl}/api/User/${user.id}/fines`, {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserFineDetails(data);
-      }
-    } catch (err) {
-      console.error("Ошибка при загрузке деталей штрафов:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { 
+    data: userFineDetails, 
+    error, 
+    isLoading: loading 
+  } = useSWR<UserFineData>(
+    expanded ? `${baseUrl}/api/User/${user.id}/fines` : null, 
+    fetcherWithToken
+  );
 
   const handleToggleExpand = () => {
     setExpanded(!expanded);
-    if (!expanded) {
-      fetchUserFineDetails();
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -294,6 +312,11 @@ const UserFineCard = ({
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full"
               />
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-gray-500">
+              <AlertTriangle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>Не удалось загрузить детали штрафов</p>
             </div>
           ) : userFineDetails ? (
             <div className="space-y-6">
@@ -416,43 +439,23 @@ const LoadingSpinner = () => (
 );
 
 export default function FinesPage() {
-  const [usersWithFines, setUsersWithFines] = useState<UserWithFines[]>([]);
-  const [stats, setStats] = useState<FineStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
-  const fetchUsersWithFines = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { 
+    data, 
+    error, 
+    isLoading: loading, 
+    mutate 
+  } = useSWR<UsersWithFinesResponse>(`${baseUrl}/api/User/with-fines`, fetcher);
 
-      const response = await fetch(`${baseUrl}/api/User/with-fines`);
-
-      if (!response.ok) {
-        throw new Error("Ошибка при загрузке пользователей со штрафами");
-      }
-
-      const data: UsersWithFinesResponse = await response.json();
-      setUsersWithFines(data.users || []);
-      
-      setStats({
-        totalUsers: data.totalUsersWithFines,
-        totalFineAmount: data.totalFineAmount
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка");
-    } finally {
-      setLoading(false);
-    }
-  }, [baseUrl]);
-
-  useEffect(() => {
-    fetchUsersWithFines();
-  }, [fetchUsersWithFines]);
+  const usersWithFines = data?.users || [];
+  const stats = data ? {
+    totalUsers: data.totalUsersWithFines,
+    totalFineAmount: data.totalFineAmount
+  } : null;
 
   const handleCloseModal = (open: boolean) => {
     setShowCreateModal(open);
@@ -505,7 +508,7 @@ export default function FinesPage() {
       }
       
       // Обновляем список пользователей со штрафами после успешного создания
-      await fetchUsersWithFines();
+      await mutate();
       
       // Сбрасываем состояние модального окна
       setShowCreateModal(false);
@@ -535,8 +538,8 @@ export default function FinesPage() {
               <AlertTriangle className="w-5 h-5" />
               <p className="font-medium">Ошибка загрузки данных</p>
             </div>
-            <p className="text-red-600 mt-1">{error}</p>
-            <Button onClick={fetchUsersWithFines} className="mt-3" size="sm">
+            <p className="text-red-600 mt-1">{error.message}</p>
+            <Button onClick={() => mutate()} className="mt-3" size="sm">
               Повторить попытку
             </Button>
           </div>

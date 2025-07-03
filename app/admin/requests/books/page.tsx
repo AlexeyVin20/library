@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
+import useSWR from 'swr';
 import Link from "next/link";
 
 interface BookRequest {
@@ -20,29 +20,17 @@ interface BookRequest {
   };
 }
 
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Ошибка при загрузке запросов');
+  return res.json();
+};
+
 export default function BookRequestsPage() {
-  const [requests, setRequests] = useState<BookRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+  const { data, error, isLoading, mutate } = useSWR<BookRequest[]>(baseUrl ? `${baseUrl}/api/Reservation` : null, fetcher);
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
-
-  const fetchRequests = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${baseUrl}/api/Reservation`);
-      if (!response.ok) throw new Error("Ошибка при загрузке запросов");
-      const data = await response.json();
-      setRequests(data.filter((r: BookRequest) => r.status === "Обрабатывается"));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка при загрузке запросов");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const requests = (data || []).filter((r) => r.status === "Обрабатывается");
 
   const handleApproveRequest = async (id: string) => {
     try {
@@ -51,9 +39,8 @@ export default function BookRequestsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Выполнена" }),
       });
-
       if (!response.ok) throw new Error("Ошибка при обновлении запроса");
-      setRequests(requests.filter(r => r.id !== id));
+      await mutate();
     } catch (err) {
       console.error("Ошибка при одобрении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при одобрении запроса");
@@ -67,9 +54,8 @@ export default function BookRequestsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Отменена" }),
       });
-
       if (!response.ok) throw new Error("Ошибка при обновлении запроса");
-      setRequests(requests.filter(r => r.id !== id));
+      await mutate();
     } catch (err) {
       console.error("Ошибка при отклонении:", err);
       alert(err instanceof Error ? err.message : "Ошибка при отклонении запроса");
@@ -86,7 +72,7 @@ export default function BookRequestsPage() {
     });
   };
 
-  if (loading) return (
+  if (isLoading) return (
     <div className="flex justify-center items-center h-screen text-neutral-700 dark:text-neutral-200">
       Загрузка...
     </div>
@@ -94,7 +80,7 @@ export default function BookRequestsPage() {
 
   if (error) return (
     <div className="p-4 bg-red-100/80 dark:bg-red-900/80 backdrop-blur-xl border border-red-400 text-red-700 dark:text-red-200 rounded-lg">
-      {error}
+      {error.message}
     </div>
   );
 

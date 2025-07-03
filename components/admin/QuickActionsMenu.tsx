@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import * as React from "react";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
@@ -185,12 +185,18 @@ export function QuickActionsMenuContent({
           }} transition={{
             delay: index * 0.05
           }}>
-                  <Link href={action.href} onClick={closeMenu} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-gray-800 hover:bg-gray-100 transition-all duration-200 group">
-                    <div className={`p-2 rounded-lg ${action.color === "blue" ? "bg-blue-500 text-white" : "bg-blue-300 text-gray-800"} group-hover:scale-110 transition-transform duration-200`}>
+                  <Link href={action.href} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-gray-800 hover:bg-gray-100 transition-all duration-200 group">
+                    <div 
+                      onClick={closeMenu}
+                      className={`p-2 rounded-lg ${action.color === "blue" ? "bg-blue-500 text-white" : "bg-blue-300 text-gray-800"} group-hover:scale-110 transition-transform duration-200`}
+                    >
                       {action.icon}
                     </div>
-                    <span className="font-medium flex-1">{action.label}</span>
-                    <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-800 group-hover:translate-x-1 transition-all duration-200" />
+                    <span className="font-medium flex-1" onClick={closeMenu}>{action.label}</span>
+                    <ChevronRight 
+                      onClick={closeMenu}
+                      className="w-4 h-4 text-gray-500 group-hover:text-gray-800 group-hover:translate-x-1 transition-all duration-200" 
+                    />
                   </Link>
                 </motion.div>)}
             </div>

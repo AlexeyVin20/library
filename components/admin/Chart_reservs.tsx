@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import { TrendingUp, Calendar, BarChart3, Activity, PieChart, LineChart } from "lucide-react"
 import {

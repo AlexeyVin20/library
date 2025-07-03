@@ -1,14 +1,13 @@
-"use client";
+'use client';
 
 import type React from "react";
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Users, UserPlus, ChevronRight, ArrowRight, ChevronLeft, Shield, BookOpen } from "lucide-react";
-import { UsersPieChart } from "@/components/admin/UsersPieChart";
-import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
-import { FinesChart } from "@/components/admin/FinesChart";
-import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
+
 import { CreateUserDialog } from "@/components/ui/user-creation-modal";
 import { USER_ROLES } from "@/lib/types";
 
@@ -446,11 +445,18 @@ export default function AllUsersPage() {
                             Подробнее
                           </motion.button>
                         </Link>
-                        <ButtonHoldAndRelease 
-                          onAction={() => handleDeleteUser(user.id)}
-                          className="px-3 py-1 shadow-md"
-                          holdDuration={2000}
-                        />
+                        <motion.button 
+                          onClick={() => {
+                            if (confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+                              handleDeleteUser(user.id);
+                            }
+                          }}
+                          className="bg-red-100 hover:bg-red-200 text-red-600 border border-red-200 px-3 py-1 shadow-md rounded font-medium"
+                          whileHover={{ y: -2 }} 
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Удалить
+                        </motion.button>
                       </td>
                     </tr>)}
                 </tbody>

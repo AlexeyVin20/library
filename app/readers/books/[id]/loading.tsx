@@ -1,3 +1,4 @@
+'use client';
 import LoadingSkeleton from "@/components/ui/loading-skeleton";
 
 export default function BookDetailsLoading() {
@@ -5,7 +6,7 @@ export default function BookDetailsLoading() {
     <div className="min-h-screen bg-gray-100">
       <div className="root-container">
         {/* Skeleton для детальной страницы книги */}
-        <LoadingSkeleton variant="book-overview" />
+        <LoadingSkeleton/>
         
         {/* Skeleton для дополнительной информации */}
         <div className="mt-16 animate-pulse">
