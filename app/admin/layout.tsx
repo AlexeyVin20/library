@@ -20,12 +20,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   
   useEffect(() => {
     // Перенаправляем на страницу входа, если пользователь не аутентифицирован
-    // или не имеет роли администратора
+    // или не имеет роли администратора или библиотекаря
     if (!isLoading) {
       if (!isAuthenticated) {
         router.push('/auth/login');
-      } else if (!user?.roles.includes("Администратор")) {
-        // Если у пользователя нет роли "Администратор"
+      } else if (!(
+        user?.roles.includes("Администратор") || user?.roles.includes("Библиотекарь")
+      )) {
+        // Если у пользователя нет роли "Администратор" или "Библиотекарь"
         router.push('/');
       }
     }
@@ -36,17 +38,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return <div className="min-h-screen flex bg-gray-200 bg-cover bg-center bg-fixed bg-no-repeat text-white" />;
   }
   
-  // Если пользователь не аутентифицирован или не имеет роли администратора, не рендерим контент
-  if (!isAuthenticated || !user?.roles.includes("Администратор")) {
+  // Если пользователь не аутентифицирован или не имеет роли администратора или библиотекаря, не рендерим контент
+  if (!isAuthenticated || !(
+    user?.roles.includes("Администратор") || user?.roles.includes("Библиотекарь")
+  )) {
     return null;
   }
 
   return (
     <div className="min-h-screen flex bg-gray-200 bg-cover bg-center bg-fixed bg-no-repeat text-white print:bg-white print:text-black">
       {/* Добавляем плавающие фигуры как на странице admin/page.tsx */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl print:hidden"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl print:hidden"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl print:hidden"></div>
+      <div className="fixed top-1/4 right-10 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl print:hidden pointer-events-none"></div>
+      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl print:hidden pointer-events-none"></div>
+      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl print:hidden pointer-events-none"></div>
       
       <div className="flex flex-col flex-1">
         <div className="print:hidden">

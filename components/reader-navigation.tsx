@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { Search, Menu, Moon, Sun, Book, BookOpen, Home, Heart, Clock, LogIn, Settings, UserIcon, ChevronDown, LogOut, ExternalLink, X, FileText, Zap, Bell } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -355,7 +355,7 @@ const ReaderNavigation = () => {
   }
 
   // Animation variants for nav items
-  const navItemVariants = {
+  const navItemVariants: Variants = {
     hidden: {
       opacity: 0,
       y: -5
@@ -366,7 +366,7 @@ const ReaderNavigation = () => {
       transition: {
         delay: i * 0.05,
         duration: 0.3,
-        ease: [0.22, 1, 0.36, 1]
+        ease: "easeOut"
       }
     }),
     hover: {
@@ -380,7 +380,7 @@ const ReaderNavigation = () => {
   };
 
   // Logo animation variants
-  const logoVariants = {
+  const logoVariants: Variants = {
     initial: {
       rotate: -90,
       opacity: 0
@@ -390,7 +390,7 @@ const ReaderNavigation = () => {
       opacity: 1,
       transition: {
         duration: 0.6,
-        ease: [0.22, 1, 0.36, 1]
+        ease: "easeOut"
       }
     },
     hover: {
@@ -405,25 +405,25 @@ const ReaderNavigation = () => {
   };
 
   // Search variants
-  const searchVariants = {
+  const searchVariants: Variants = {
     closed: {
       width: "40px",
       transition: {
         duration: 0.3,
-        ease: [0.22, 1, 0.36, 1],
+        ease: "easeOut",
       },
     },
     open: {
       width: "320px",
       transition: {
         duration: 0.4,
-        ease: [0.22, 1, 0.36, 1],
+        ease: "easeOut",
       },
     },
   }
 
   // Mobile menu animation variants
-  const mobileMenuVariants = {
+  const mobileMenuVariants: Variants = {
     hidden: {
       opacity: 0,
       height: 0
@@ -433,7 +433,7 @@ const ReaderNavigation = () => {
       height: "auto",
       transition: {
         duration: 0.3,
-        ease: [0.22, 1, 0.36, 1],
+        ease: "easeOut",
         staggerChildren: 0.05,
         delayChildren: 0.1
       }
@@ -443,12 +443,12 @@ const ReaderNavigation = () => {
       height: 0,
       transition: {
         duration: 0.2,
-        ease: [0.22, 1, 0.36, 1]
+        ease: "easeIn"
       }
     }
   };
 
-  const mobileMenuItemVariants = {
+  const mobileMenuItemVariants: Variants = {
     hidden: {
       opacity: 0,
       x: -10
@@ -1054,18 +1054,22 @@ const ReaderNavigation = () => {
                         </DropdownMenuItem>
                       </motion.div>
                     </Link>
-                    <motion.div whileHover={{ x: 2 }}>
-                      <DropdownMenuItem className="py-2 px-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/20 cursor-pointer text-sm">
-                        <Settings className="h-4 w-4 mr-2 text-blue-500" />
-                        Настройки
-                      </DropdownMenuItem>
-                    </motion.div>
-                    <motion.div whileHover={{ x: 2 }}>
-                      <DropdownMenuItem className="py-2 px-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/20 cursor-pointer text-sm">
-                        <BookOpen className="h-4 w-4 mr-2 text-blue-500" />
-                        Мои книги
-                      </DropdownMenuItem>
-                    </motion.div>
+                    <Link href="/settings" className="w-full">
+                      <motion.div whileHover={{ x: 2 }}>
+                        <DropdownMenuItem className="py-2 px-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/20 cursor-pointer text-sm">
+                          <Settings className="h-4 w-4 mr-2 text-blue-500" />
+                          Настройки
+                        </DropdownMenuItem>
+                      </motion.div>
+                    </Link>
+                    <Link href="/profile/mybooks" className="w-full">
+                      <motion.div whileHover={{ x: 2 }}>
+                        <DropdownMenuItem className="py-2 px-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/20 cursor-pointer text-sm">
+                          <BookOpen className="h-4 w-4 mr-2 text-blue-500" />
+                          Мои книги
+                        </DropdownMenuItem>
+                      </motion.div>
+                    </Link>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator className="bg-gray-300 dark:bg-gray-600" />
                   <motion.div whileHover={{ x: 2 }}>

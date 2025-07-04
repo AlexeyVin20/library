@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { LibraryFeaturesSectionWithHoverEffects } from "@/components/feature-section-with-hover-effects"
+import { useRouter } from "next/navigation"
 
 const PixelCanvas = dynamic(() => import("@/components/ui/pixel-canvas").then((mod) => mod.PixelCanvas), {
   ssr: false,
@@ -102,7 +103,7 @@ const FloatingParticles = () => {
 }
 
 // Предположим, что у вас есть тип для роли пользователя
-type UserRole = "Администратор" | "Пользователь" | null
+type UserRole = "Администратор" | "Пользователь" | "Библиотекарь" | null
 
 // Интерфейс для статистики
 interface StatCard {
@@ -124,6 +125,7 @@ export default function Home() {
   const opacity = useTransform(scrollY, [0, 300], [1, 0.8])
 
   const { user, isLoading } = useAuth()
+  const router = useRouter()
   const { stats: libraryStats, loading: statsLoading, error: statsError } = useLibraryStats()
 
   // Эффект для предотвращения гидратационных ошибок
@@ -151,6 +153,8 @@ export default function Home() {
     if (!isLoading && user) {
       if (user.roles && user.roles.includes("Администратор")) {
         setUserRole("Администратор")
+      } else if (user.roles && user.roles.includes("Библиотекарь")) {
+        setUserRole("Библиотекарь")
       } else {
         setUserRole("Пользователь")
       }
@@ -158,6 +162,20 @@ export default function Home() {
       setUserRole(null)
     }
   }, [user, isLoading])
+
+  // Редиректим пользователей по ролям
+  useEffect(() => {
+    if (!mounted) return
+    if (userRole === "Администратор" || userRole === "Библиотекарь") {
+      if (typeof window !== "undefined" && window.location.pathname !== "/admin") {
+        router.push("/admin")
+      }
+    } else if (userRole === "Пользователь") {
+      if (typeof window !== "undefined" && window.location.pathname !== "/readers") {
+        router.push("/readers")
+      }
+    }
+  }, [userRole, mounted, router])
 
   // Формируем карточки статистики из реальных данных
   const getStatCards = (): StatCard[] => {
@@ -353,7 +371,7 @@ export default function Home() {
               </Button>
             </motion.div>
 
-            {userRole === "Администратор" && (
+            {(userRole === "Администратор" || userRole === "Библиотекарь") && (
               <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
                 <Button
                   variant="outline"
@@ -518,7 +536,7 @@ export default function Home() {
           </div>
 
           {/* Раздел для администраторов */}
-          {userRole === "Администратор" && (
+          {(userRole === "Администратор" || userRole === "Библиотекарь") && (
             <div>
               <PinContainer title="Панель управления" href="/admin" className="h-full">
                 <Card className="h-full border-0 shadow-none bg-transparent">

@@ -106,14 +106,87 @@ const BookImage = ({
  */
 const CardsView = ({
   books,
-  onDelete
+  onDelete,
+  selectedBooks = [],
+  onSelectBook,
+  onSelectAll,
+  onClearSelection,
+  onPrintFormulars
 }: ViewProps) => {
-  return <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6">
-      {books.map((book, index) => <FadeInView key={book.id} delay={0.05 * index}>
-          <motion.div className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 flex overflow-hidden" whileHover={{
-        y: -5,
-        boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)"
-      }}>
+  const allSelected = books.length > 0 && selectedBooks.length === books.length;
+  const someSelected = selectedBooks.length > 0 && selectedBooks.length < books.length;
+  return <div className="relative">
+    {/* Панель действий при выборе */}
+    {books.length > 0 && (
+      <div className="mb-4 flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+        <button
+          onClick={allSelected ? onClearSelection : onSelectAll}
+          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-500 transition-colors"
+        >
+          {allSelected ? (
+            <CheckSquare className="w-4 h-4" />
+          ) : someSelected ? (
+            <div className="w-4 h-4 border-2 border-blue-500 rounded bg-blue-100 flex items-center justify-center">
+              <div className="w-2 h-2 bg-blue-500 rounded"></div>
+            </div>
+          ) : (
+            <Square className="w-4 h-4" />
+          )}
+          {allSelected ? "Снять выделение" : "Выделить все"}
+        </button>
+        {selectedBooks.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              Выбрано: {selectedBooks.length} из {books.length}
+            </span>
+            <motion.button
+              onClick={() => onPrintFormulars?.(selectedBooks, books)}
+              className="px-3 py-1.5 shadow-md bg-green-500 hover:bg-green-700 text-white rounded-lg flex items-center gap-1"
+              whileHover={{ y: -2, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span className="text-sm ml-1">Печать формуляров</span>
+            </motion.button>
+            <ButtonHoldAndRelease
+              onAction={async () => {
+                for (const bookId of selectedBooks) {
+                  await onDelete(bookId);
+                }
+                onClearSelection?.();
+              }}
+              className="px-3 py-1.5 shadow-md bg-red-500 hover:bg-red-700 text-white"
+              holdDuration={3000}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="text-sm ml-1">Удалить выбранные</span>
+            </ButtonHoldAndRelease>
+          </div>
+        )}
+      </div>
+    )}
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6">
+      {books.map((book, index) => {
+        const isSelected = selectedBooks.includes(book.id);
+        return <FadeInView key={book.id} delay={0.05 * index}>
+          <motion.div
+            className={`bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-all duration-300 border flex overflow-hidden relative cursor-pointer ${isSelected ? 'border-4 border-blue-500 ring-2 ring-blue-300' : 'border-gray-100'}`}
+            whileHover={{ y: -5, boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)" }}
+            onClick={e => {
+              if (onSelectBook) {
+                e.stopPropagation();
+                onSelectBook(book.id);
+              }
+            }}
+          >
+            {/* Чекбокс выбора */}
+            <button
+              onClick={e => { e.stopPropagation(); onSelectBook && onSelectBook(book.id); }}
+              className="absolute top-2 left-2 z-10 bg-white rounded-full shadow p-1 border border-gray-200 hover:border-blue-500"
+              title="Выбрать книгу"
+            >
+              {isSelected ? <CheckSquare className="w-5 h-5 text-blue-500" /> : <Square className="w-5 h-5 text-gray-400" />}
+            </button>
             <div className="w-1/3">
               <BookImage src={book.cover} alt={book.title} bookId={book.id} />
             </div>
@@ -132,17 +205,12 @@ const CardsView = ({
               </div>
               <div className="flex justify-end gap-2 mt-2">
                 <Link href={`/admin/books/${book.id}/update`}>
-                  <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-1.5 flex items-center gap-1 shadow-md" whileHover={{
-                y: -2,
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-              }} whileTap={{
-                scale: 0.98
-              }}>
+                  <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-1.5 flex items-center gap-1 shadow-md" whileHover={{ y: -2, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }} whileTap={{ scale: 0.98 }}>
                     <Edit className="w-3.5 h-3.5" />
                     <span className="text-sm">Редактировать</span>
                   </motion.button>
                 </Link>
-                <ButtonHoldAndRelease 
+                <ButtonHoldAndRelease
                   onAction={() => onDelete(book.id)}
                   className="px-3 py-1.5 shadow-md"
                   holdDuration={2000}
@@ -153,8 +221,10 @@ const CardsView = ({
               </div>
             </div>
           </motion.div>
-        </FadeInView>)}
-    </div>;
+        </FadeInView>;
+      })}
+    </div>
+  </div>;
 };
 
 /**
@@ -162,14 +232,15 @@ const CardsView = ({
  */
 const ThreeDBookView = ({
   books,
-  onDelete
+  onDelete,
+  selectedBooks = [],
+  onSelectBook,
+  onSelectAll,
+  onClearSelection,
+  onPrintFormulars
 }: ViewProps) => {
-  const [spineColors, setSpineColors] = useState<{
-    [id: string]: string;
-  }>({});
-  const imgRefs = useRef<{
-    [id: string]: HTMLImageElement | null;
-  }>({});
+  const [spineColors, setSpineColors] = useState<{ [id: string]: string }>({});
+  const imgRefs = useRef<{ [id: string]: HTMLImageElement | null }>({});
   useEffect(() => {
     books.forEach(book => {
       if (book.cover && !spineColors[book.id]) {
@@ -177,30 +248,90 @@ const ThreeDBookView = ({
         img.crossOrigin = "Anonymous";
         img.src = book.cover;
         img.onload = () => {
-          // Используем fallback цвет
-          setSpineColors(prev => ({
-            ...prev,
-            [book.id]: "#3B82F6"
-          }));
+          setSpineColors(prev => ({ ...prev, [book.id]: "#3B82F6" }));
         };
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [books]);
-  return <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-6 p-6">
-      {books.map((book, index) => <FadeInView key={book.id} delay={0.05 * index}>
-          <div className="group text-gray-800">
-            <div className="relative w-full overflow-visible flex items-center justify-center" style={{
-          height: "240px"
-        }}>
-              <motion.div className="transform-gpu transition-all duration-500" initial={{
-            rotateY: 0
-          }} whileHover={{
-            scale: 1.05
-          }}>
+  const allSelected = books.length > 0 && selectedBooks.length === books.length;
+  const someSelected = selectedBooks.length > 0 && selectedBooks.length < books.length;
+  return <div className="relative">
+    {/* Панель действий при выборе */}
+    {books.length > 0 && (
+      <div className="mb-4 flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+        <button
+          onClick={allSelected ? onClearSelection : onSelectAll}
+          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-500 transition-colors"
+        >
+          {allSelected ? (
+            <CheckSquare className="w-4 h-4" />
+          ) : someSelected ? (
+            <div className="w-4 h-4 border-2 border-blue-500 rounded bg-blue-100 flex items-center justify-center">
+              <div className="w-2 h-2 bg-blue-500 rounded"></div>
+            </div>
+          ) : (
+            <Square className="w-4 h-4" />
+          )}
+          {allSelected ? "Снять выделение" : "Выделить все"}
+        </button>
+        {selectedBooks.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              Выбрано: {selectedBooks.length} из {books.length}
+            </span>
+            <motion.button
+              onClick={() => onPrintFormulars?.(selectedBooks, books)}
+              className="px-3 py-1.5 shadow-md bg-green-500 hover:bg-green-700 text-white rounded-lg flex items-center gap-1"
+              whileHover={{ y: -2, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span className="text-sm ml-1">Печать формуляров</span>
+            </motion.button>
+            <ButtonHoldAndRelease
+              onAction={async () => {
+                for (const bookId of selectedBooks) {
+                  await onDelete(bookId);
+                }
+                onClearSelection?.();
+              }}
+              className="px-3 py-1.5 shadow-md bg-red-500 hover:bg-red-700 text-white"
+              holdDuration={3000}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="text-sm ml-1">Удалить выбранные</span>
+            </ButtonHoldAndRelease>
+          </div>
+        )}
+      </div>
+    )}
+    <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-6 p-6">
+      {books.map((book, index) => {
+        const isSelected = selectedBooks.includes(book.id);
+        return <FadeInView key={book.id} delay={0.05 * index}>
+          <div
+            className={`group text-gray-800 relative cursor-pointer ${isSelected ? 'ring-4 ring-blue-400 border-blue-500 border-2 bg-blue-50' : ''}`}
+            onClick={e => {
+              if (onSelectBook) {
+                e.stopPropagation();
+                onSelectBook(book.id);
+              }
+            }}
+          >
+            {/* Чекбокс выбора */}
+            <button
+              onClick={e => { e.stopPropagation(); onSelectBook && onSelectBook(book.id); }}
+              className="absolute top-2 left-2 z-10 bg-white rounded-full shadow p-1 border border-gray-200 hover:border-blue-500"
+              title="Выбрать книгу"
+            >
+              {isSelected ? <CheckSquare className="w-5 h-5 text-blue-500" /> : <Square className="w-5 h-5 text-gray-400" />}
+            </button>
+            <div className="relative w-full overflow-visible flex items-center justify-center" style={{ height: "240px" }}>
+              <motion.div className="transform-gpu transition-all duration-500" initial={{ rotateY: 0 }} whileHover={{ scale: 1.05 }}>
                 <Link href={`/admin/books/${book.id}`}>
-                  <Book 
-                    color={book.cover ? "#3B82F6" : "#6B7280"} 
+                  <Book
+                    color={book.cover ? "#3B82F6" : "#6B7280"}
                     width={180}
                     depth={3}
                     variant="default"
@@ -211,14 +342,9 @@ const ThreeDBookView = ({
                 </Link>
               </motion.div>
             </div>
-            <motion.div className="mt-2 bg-white rounded-lg p-3 shadow-md border border-gray-100 text-center" whileHover={{
-          y: -3,
-          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-        }}>
+            <motion.div className="mt-2 bg-white rounded-lg p-3 shadow-md border border-gray-100 text-center" whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}>
               <Link href={`/admin/books/${book.id}`}>
-                <p className="font-semibold line-clamp-1 hover:text-blue-500 transition-colors">
-                  {book.title}
-                </p>
+                <p className="font-semibold line-clamp-1 hover:text-blue-500 transition-colors">{book.title}</p>
               </Link>
               <p className="text-sm text-gray-500 line-clamp-1">{book.authors}</p>
               {book.genre && <p className="text-xs text-gray-500">{book.genre}</p>}
@@ -230,17 +356,12 @@ const ThreeDBookView = ({
             </motion.div>
             <div className="mt-2 flex justify-center gap-2">
               <Link href={`/admin/books/${book.id}/update`}>
-                <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-1.5 flex items-center gap-1 shadow-md" whileHover={{
-              y: -2,
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-            }} whileTap={{
-              scale: 0.98
-            }}>
+                <motion.button className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-1.5 flex items-center gap-1 shadow-md" whileHover={{ y: -2, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }} whileTap={{ scale: 0.98 }}>
                   <Edit className="w-3.5 h-3.5" />
                   <span className="text-sm">Ред.</span>
                 </motion.button>
               </Link>
-              <ButtonHoldAndRelease 
+              <ButtonHoldAndRelease
                 onAction={() => onDelete(book.id)}
                 className="px-3 py-1.5 shadow-md"
                 holdDuration={2000}
@@ -250,8 +371,10 @@ const ThreeDBookView = ({
               </ButtonHoldAndRelease>
             </div>
           </div>
-        </FadeInView>)}
-    </div>;
+        </FadeInView>;
+      })}
+    </div>
+  </div>;
 };
 
 /**
@@ -624,9 +747,7 @@ export default function BooksPage() {
 
     // Создаем URL для страницы печати с данными книг
     // Используем текущий protocol и hostname, но фиксируем порт 3000
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    const baseUrl = `${protocol}//${hostname}:3000`;
+    const baseUrl = window.location.origin;
     const bookIds = selectedBookIds.join(',');
     const printUrl = `${baseUrl}/admin/books/print-formulars?bookIds=${encodeURIComponent(bookIds)}`;
     
@@ -784,8 +905,8 @@ export default function BooksPage() {
           duration: 0.5,
           delay: 0.3
         }}>
-              {viewMode === "cards" && <CardsView books={sortedBooks} onDelete={handleDelete} />}
-              {viewMode === "3d" && <ThreeDBookView books={sortedBooks} onDelete={handleDelete} />}
+              {viewMode === "cards" && <CardsView books={sortedBooks} onDelete={handleDelete} selectedBooks={selectedBooks} onSelectBook={handleSelectBook} onSelectAll={handleSelectAll} onClearSelection={handleClearSelection} onPrintFormulars={handlePrintFormulars} />}
+              {viewMode === "3d" && <ThreeDBookView books={sortedBooks} onDelete={handleDelete} selectedBooks={selectedBooks} onSelectBook={handleSelectBook} onSelectAll={handleSelectAll} onClearSelection={handleClearSelection} onPrintFormulars={handlePrintFormulars} />}
               {viewMode === "list" && (
                 <ListView 
                   books={sortedBooks} 

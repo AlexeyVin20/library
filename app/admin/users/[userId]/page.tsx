@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Edit, Trash2, User, Calendar, Book, CheckCircle, XCircle, Mail, Phone, Shield, Plus, UserMinus, ShieldCheck, Key, X } from "lucide-react";
 import { UserBorrowingChart } from "@/components/admin/UserBorrowingChart";
 import Image from "next/image";
+import { USER_ROLES } from "@/lib/types";
+
 interface UserDetail {
   id: string;
   fullName: string;
@@ -165,40 +167,43 @@ export default function UserDetailPage() {
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
-      const [userResponse, borrowedBooksResponse, reservationsResponse, userRolesResponse, rolesResponse] = await Promise.all([fetch(`${baseUrl}/api/User/${userId}`), fetch(`${baseUrl}/api/Books/user/${userId}`), fetch(`${baseUrl}/api/Reservation?userId=${userId}`), fetch(`${baseUrl}/api/User/${userId}/roles`), fetch(`${baseUrl}/api/User/roles`)]);
+      const [userResponse, borrowedBooksResponse, reservationsResponse, userRolesResponse, rolesResponse] = await Promise.all([fetch(`${baseUrl}/api/User/${userId}`), fetch(`${baseUrl}/api/User/${userId}`), fetch(`${baseUrl}/api/Reservation?userId=${userId}`), fetch(`${baseUrl}/api/User/${userId}/roles`), fetch(`${baseUrl}/api/User/roles`)]);
       if (!userResponse.ok) throw new Error("Ошибка при загрузке пользователя");
       const userData = await userResponse.json();
       setUser(userData);
       let currentBorrowedBooks: Book[] = [];
       if (borrowedBooksResponse.ok) {
-        const initiallyBorrowedBooks: Book[] = await borrowedBooksResponse.json();
-        currentBorrowedBooks = await Promise.all(initiallyBorrowedBooks.filter(book => book.userId === userId).map(async (book: Book) => {
-          let bookToUpdate = {
-            ...book,
-            isFromReservation: false
-          };
-          if (bookToUpdate.id) {
-            try {
-              const bookDetailsRes = await fetch(`${baseUrl}/api/books/${bookToUpdate.id}`);
-              if (bookDetailsRes.ok) {
-                const detailedBookData = await bookDetailsRes.json();
-                const coverUrl = detailedBookData.cover || detailedBookData.coverImage || detailedBookData.coverImageUrl || detailedBookData.image || detailedBookData.coverUrl || detailedBookData.imageUrl || bookToUpdate.cover || "";
-                bookToUpdate.cover = coverUrl;
-                bookToUpdate.title = detailedBookData.title || bookToUpdate.title;
-                if (detailedBookData.authors) {
-                  bookToUpdate.author = Array.isArray(detailedBookData.authors) ? detailedBookData.authors.join(', ') : detailedBookData.authors;
+        const booksJson = await borrowedBooksResponse.json();
+        const initiallyBorrowedBooks: Book[] = Array.isArray(booksJson) ? booksJson : (booksJson.books || []);
+        currentBorrowedBooks = await Promise.all(
+          initiallyBorrowedBooks.filter(book => book.userId === userId).map(async (book: Book) => {
+            let bookToUpdate = {
+              ...book,
+              isFromReservation: false
+            };
+            if (bookToUpdate.id) {
+              try {
+                const bookDetailsRes = await fetch(`${baseUrl}/api/books/${bookToUpdate.id}`);
+                if (bookDetailsRes.ok) {
+                  const detailedBookData = await bookDetailsRes.json();
+                  const coverUrl = detailedBookData.cover || detailedBookData.coverImage || detailedBookData.coverImageUrl || detailedBookData.image || detailedBookData.coverUrl || detailedBookData.imageUrl || bookToUpdate.cover || "";
+                  bookToUpdate.cover = coverUrl;
+                  bookToUpdate.title = detailedBookData.title || bookToUpdate.title;
+                  if (detailedBookData.authors) {
+                    bookToUpdate.author = Array.isArray(detailedBookData.authors) ? detailedBookData.authors.join(', ') : detailedBookData.authors;
+                  }
+                  if (detailedBookData.isbn) bookToUpdate.isbn = detailedBookData.isbn;
+                  if (detailedBookData.genre) bookToUpdate.genre = detailedBookData.genre;
+                  if (detailedBookData.publicationYear) bookToUpdate.publicationYear = detailedBookData.publicationYear;
+                  if (detailedBookData.publisher) bookToUpdate.publisher = detailedBookData.publisher;
                 }
-                if (detailedBookData.isbn) bookToUpdate.isbn = detailedBookData.isbn;
-                if (detailedBookData.genre) bookToUpdate.genre = detailedBookData.genre;
-                if (detailedBookData.publicationYear) bookToUpdate.publicationYear = detailedBookData.publicationYear;
-                if (detailedBookData.publisher) bookToUpdate.publisher = detailedBookData.publisher;
+              } catch (bookErr) {
+                console.warn(`Не удалось загрузить полные детали для книги ${bookToUpdate.id}`);
               }
-            } catch (bookErr) {
-              console.warn(`Не удалось загрузить полные детали для книги ${bookToUpdate.id}`);
             }
-          }
-          return bookToUpdate;
-        }));
+            return bookToUpdate;
+          })
+        );
       }
       let userReservations: Reservation[] = [];
       if (reservationsResponse.ok) {
@@ -318,6 +323,29 @@ export default function UserDetailPage() {
         })
       });
       if (!response.ok) throw new Error("Ошибка при назначении роли");
+      // Получаем свежие данные пользователя
+      const userRes = await fetch(`${baseUrl}/api/User/${userId}`);
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        // Найти лимиты для выбранной роли
+        const roleObj = Object.values(USER_ROLES).find((r: any) => r.id === Number(selectedRoleId));
+        if (roleObj && typeof roleObj.maxBooksAllowed !== 'undefined' && typeof roleObj.loanPeriodDays !== 'undefined') {
+          // Формируем DTO для полного обновления
+          const updateDto = {
+            ...userData,
+            maxBooksAllowed: roleObj.maxBooksAllowed,
+            loanPeriodDays: roleObj.loanPeriodDays,
+            // Преобразуем дату регистрации в ISO
+            dateRegistered: userData.dateRegistered ? new Date(userData.dateRegistered).toISOString() : new Date().toISOString(),
+            // Оставляем userRoles как есть
+          };
+          await fetch(`${baseUrl}/api/User/${userId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updateDto),
+          });
+        }
+      }
       fetchUserData();
       setSelectedRoleId("");
       setIsAssigningRole(false);

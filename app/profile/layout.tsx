@@ -26,7 +26,6 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
       <div className="flex flex-col flex-1">
         <ReaderNavigation/>
         <main className="p-6">{children}</main>
-        <Footer />
       </div>
     </div>
   );

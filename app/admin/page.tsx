@@ -579,8 +579,8 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto space-y-8 relative z-10 p-6">
         {/* Статистические карточки */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-stretch">
-          <PinContainer title="Книги" href="/admin/statistics" containerClassName="h-full w-full" className="h-full w-full">
-            <div className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500">
+          <PinContainer title="Книги" href="/admin/books" containerClassName="h-full w-full" className="h-full w-full">
+            <Link href="/admin/books" className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500 hover:shadow-xl transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                   <BookOpen className="text-blue-500 w-7 h-7" />
@@ -600,14 +600,16 @@ export default function DashboardPage() {
                   {recentBorrowed} <span className="ml-1">за последний месяц</span>
                 </div>
               </div>
-              <span className="mt-4 text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
+            </Link>
+            <Link href="/admin/statistics" className="mt-4 block">
+              <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
                 Подробная статистика
                 <ArrowRight className="w-4 h-4 ml-1" />
               </span>
-            </div>
+            </Link>
           </PinContainer>
-          <PinContainer title="Пользователи" href="/admin/statistics" containerClassName="h-full w-full" className="h-full w-full">
-            <div className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500">
+          <PinContainer title="Пользователи" href="/admin/users" containerClassName="h-full w-full" className="h-full w-full">
+            <Link href="/admin/users" className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500 hover:shadow-xl transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                   <Users className="text-blue-500 w-7 h-7" />
@@ -626,14 +628,16 @@ export default function DashboardPage() {
                   {totalUsersCount ? Math.round(activeUsersCount / totalUsersCount * 100) : 0}% от общего числа
                 </div>
               </div>
-              <span className="mt-4 text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
+            </Link>
+            <Link href="/admin/statistics" className="mt-4 block">
+              <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
                 Подробная статистика
                 <ArrowRight className="w-4 h-4 ml-1" />
               </span>
-            </div>
+            </Link>
           </PinContainer>
-          <PinContainer title="Резервирования" href="/admin/statistics" containerClassName="h-full w-full" className="h-full w-full">
-            <div className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500">
+          <PinContainer title="Резервирования" href="/admin/reservations" containerClassName="h-full w-full" className="h-full w-full">
+            <Link href="/admin/reservations" className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500 hover:shadow-xl transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                   <CalendarIcon className="text-blue-500 w-7 h-7" />
@@ -655,11 +659,13 @@ export default function DashboardPage() {
                   <span className="ml-2">в обработке</span>
                 </div>
               </div>
-              <span className="mt-4 text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
+            </Link>
+            <Link href="/admin/statistics" className="mt-4 block">
+              <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
                 Подробная статистика
                 <ArrowRight className="w-4 h-4 ml-1" />
               </span>
-            </div>
+            </Link>
           </PinContainer>
         </div>
 
