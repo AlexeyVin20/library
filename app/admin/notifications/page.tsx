@@ -55,6 +55,27 @@ interface UserType {
   phone?: string
 }
 
+interface BookType {
+  id: string;
+  title: string;
+  authorName: string;
+  publicationYear: number;
+  coverImageUrl?: string;
+  actualReturnDate?: string;
+}
+
+interface ReservationType {
+  id: string;
+  bookId: string;
+  bookTitle: string;
+  authorName: string;
+  reservationDate: string;
+  expirationDate: string;
+  status: string;
+  book: BookType;
+  actualReturnDate?: string;
+}
+
 const FadeInView = ({ 
   children, 
   delay = 0 
@@ -135,12 +156,12 @@ const LoadingSpinner = () => (
 // Вспомогательная функция для отображения типов уведомлений
 function getNotificationTypeDisplayName(type: string): string {
   const typeMap: Record<string, string> = {
-    'GeneralInfo': 'Общая информация',
-    'BookDueSoon': 'Скоро возврат книги',
+    'GeneralEmail': 'Общая информация',
+    'ReturnSoon': 'Скоро возврат книги',
     'BookOverdue': 'Просроченная книга',
     'FineAdded': 'Штраф начислен',
     'BookReturned': 'Книга возвращена',
-    'BookReserved': 'Книга зарезервирована'
+    'ReservationReady': 'Книга зарезервирована'
   }
   return typeMap[type] || type
 }
@@ -148,12 +169,12 @@ function getNotificationTypeDisplayName(type: string): string {
 // Вспомогательная функция для получения иконки типа уведомления
 function getNotificationTypeIcon(type: string) {
   const iconMap: Record<string, React.ReactNode> = {
-    'GeneralInfo': <Info className="w-4 h-4" />,
-    'BookDueSoon': <Timer className="w-4 h-4" />,
+    'GeneralEmail': <Info className="w-4 h-4" />,
+    'ReturnSoon': <Timer className="w-4 h-4" />,
     'BookOverdue': <AlertCircle className="w-4 h-4" />,
     'FineAdded': <DollarSign className="w-4 h-4" />,
     'BookReturned': <BookOpen className="w-4 h-4" />,
-    'BookReserved': <Calendar className="w-4 h-4" />
+    'ReservationReady': <Calendar className="w-4 h-4" />
   }
   return iconMap[type] || <Info className="w-4 h-4" />
 }
@@ -161,12 +182,12 @@ function getNotificationTypeIcon(type: string) {
 // Вспомогательная функция для получения цвета типа уведомления
 function getNotificationTypeColor(type: string) {
   const colorMap: Record<string, string> = {
-    'GeneralInfo': 'blue',
-    'BookDueSoon': 'orange',
+    'GeneralEmail': 'blue',
+    'ReturnSoon': 'orange',
     'BookOverdue': 'red',
     'FineAdded': 'purple',
     'BookReturned': 'green',
-    'BookReserved': 'indigo'
+    'ReservationReady': 'indigo'
   }
   return colorMap[type] || 'blue'
 }
@@ -195,14 +216,14 @@ function getPriorityColor(priority: string) {
 
 const notificationTypeToNumber = (type: string): number => {
   const map: Record<string, number> = {
-    'GeneralInfo': 0,
-    'BookDueSoon': 1,
+    'GeneralEmail': 0,
+    'ReturnSoon': 1,
     'BookOverdue': 2,
     'FineAdded': 3,
     'BookReturned': 4,
-    'BookReserved': 5,
+    'ReservationReady': 5,
   };
-  return map[type] ?? 0; // Default to GeneralInfo
+  return map[type] ?? 0; // Default to GeneralEmail
 };
 
 const priorityToNumber = (priority: string): number => {
@@ -245,7 +266,7 @@ function UserPickerModal({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[400px] p-0 bg-white rounded-xl shadow-2xl border border-gray-200">
+      <DialogContent className="w-[600px] p-0 bg-white rounded-xl shadow-2xl border border-gray-200">
         <DialogHeader className="border-b border-gray-100 px-6 py-4 pt-5">
           <DialogTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <User className="w-5 h-5 text-blue-500" />
@@ -439,6 +460,160 @@ function BulkUserPickerModal({
   )
 }
 
+// Компонент модального окна выбора книги
+function BookPickerModal({
+  open,
+  onOpenChange,
+  books,
+  onSelect,
+  selectedBook
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  books: BookType[]
+  onSelect: (book: BookType) => void
+  selectedBook: BookType | null
+}) {
+  const [search, setSearch] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (open && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [open])
+
+  const filteredBooks = books.filter(book =>
+    book.title.toLowerCase().includes(search.toLowerCase()) ||
+    book.authorName.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[600px] p-0 bg-white rounded-xl shadow-2xl border border-gray-200">
+        <DialogHeader className="border-b border-gray-100 px-6 py-4 pt-5">
+          <DialogTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-indigo-500" />
+            Выберите книгу
+          </DialogTitle>
+        </DialogHeader>
+        <div className="p-3">
+          <div className="flex items-center border-2 border-gray-100 rounded-lg px-3">
+            <Search className="mr-2 h-4 w-4 text-gray-500" />
+            <Input
+              ref={inputRef}
+              placeholder="Поиск по названию или автору..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-800"
+            />
+          </div>
+        </div>
+        <div className="max-h-60 overflow-y-auto">
+          {filteredBooks.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              <div>Книги не найдены</div>
+              <div className="text-xs mt-2">
+                Всего книг: {books.length}, Поиск: "{search}"
+              </div>
+            </div>
+          ) : (
+            filteredBooks.map((book) => (
+              <motion.div
+                key={book.id}
+                className="flex cursor-pointer items-center p-3 hover:bg-indigo-50 border-b border-gray-100 last:border-b-0 transition-all duration-200"
+                onClick={() => onSelect(book)}
+                whileHover={{ x: 5 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <BookOpen className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-800">{book.title}</div>
+                    <div className="text-sm text-gray-500">{book.authorName}, {book.publicationYear}</div>
+                  </div>
+                </div>
+                {selectedBook && selectedBook.id === book.id && (
+                  <CheckCircle className="h-5 w-5 text-indigo-500" />
+                )}
+              </motion.div>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Компонент модального окна выбора резервирования
+function ReservationPickerModal({
+  open,
+  onOpenChange,
+  reservations,
+  onSelect
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  reservations: ReservationType[]
+  onSelect: (reservation: ReservationType) => void
+}) {
+  const [search, setSearch] = useState("")
+
+  const filteredReservations = reservations.filter(r =>
+    r.bookTitle.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[600px] p-0 bg-white rounded-xl shadow-2xl border border-gray-200">
+        <DialogHeader className="border-b border-gray-100 px-6 py-4 pt-5">
+          <DialogTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-green-500" />
+            Выберите резервирование
+          </DialogTitle>
+        </DialogHeader>
+        <div className="p-3">
+           <Input
+              placeholder="Поиск по названию книги..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+        </div>
+        <div className="max-h-60 overflow-y-auto">
+          {filteredReservations.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              Резервирования не найдены.
+            </div>
+          ) : (
+            filteredReservations.map((reservation) => (
+              <motion.div
+                key={reservation.id}
+                className="flex cursor-pointer items-center p-3 hover:bg-green-50 border-b last:border-b-0"
+                onClick={() => onSelect(reservation)}
+                whileHover={{ x: 5 }}
+              >
+                <div className="flex items-center gap-3 flex-1">
+                   <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-800">{reservation.bookTitle}</div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(reservation.reservationDate).toLocaleDateString()} - {reservation.status}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function AdminNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [stats, setStats] = useState<NotificationStats | null>(null)
@@ -452,37 +627,42 @@ export default function AdminNotificationsPage() {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   
-  const [notificationForm, setNotificationForm] = useState({
+  // Состояние для книг
+  const [books, setBooks] = useState<BookType[]>([]);
+  const [loadingBooks, setLoadingBooks] = useState(true);
+  const [showBookPicker, setShowBookPicker] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<BookType | null>(null);
+
+  // Состояние для резервирований
+  const [reservations, setReservations] = useState<ReservationType[]>([]);
+  const [loadingReservations, setLoadingReservations] = useState(false);
+  const [showReservationPicker, setShowReservationPicker] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<ReservationType | null>(null);
+
+  const [singleNotificationForm, setSingleNotificationForm] = useState({
     title: '',
     message: '',
-    type: 'GeneralInfo',
+    type: 'GeneralEmail',
     priority: 'Normal',
-    userId: ''
-  })
+    userId: '',
+    fineAmount: '',
+    reason: '',
+    dueDate: '',
+    pickupUntilDate: '',
+  });
   
   const [bulkForm, setBulkForm] = useState({
     title: '',
     message: '',
-    type: 'GeneralInfo',
+    type: 'GeneralEmail',
     priority: 'Normal'
   })
-
-  // Состояние для email уведомлений
-  const [emailTestForm, setEmailTestForm] = useState({
-    title: '',
-    message: '',
-    type: 'GeneralInfo',
-    priority: 'Normal',
-    userId: ''
-  })
-
-  const [selectedTestUser, setSelectedTestUser] = useState<UserType | null>(null)
-  const [showTestUserPicker, setShowTestUserPicker] = useState(false)
 
   useEffect(() => {
     checkConnection()
     loadUsers()
     loadStats()
+    // loadBooks() - убираем отсюда, книги будут грузиться по выбору пользователя
   }, [])
   
   useEffect(() => {
@@ -670,54 +850,151 @@ export default function AdminNotificationsPage() {
     }
   }
 
-  const handleUserSelect = (user: UserType) => {
-    setSelectedUser(user)
-    setNotificationForm({...notificationForm, userId: user.id})
-    setShowUserPicker(false)
-  }
+  const loadReservationsForUser = async (userId: string) => {
+    try {
+      setLoadingReservations(true);
+      setLoadingBooks(true);
+      setReservations([]);
+      setBooks([]);
+      setSelectedBook(null);
+      setSelectedReservation(null);
 
-  const handleRemoveSelectedUser = () => {
-    setSelectedUser(null)
-    setNotificationForm({...notificationForm, userId: ''})
-  }
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Reservation/user/${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-  const handleTestUserSelect = (user: UserType) => {
-    setSelectedTestUser(user)
-    setEmailTestForm({...emailTestForm, userId: user.id})
-    setShowTestUserPicker(false)
-  }
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Форматируем резервирования
+        const formattedReservations = data.map((res: any) => ({
+          id: res.id,
+          bookId: res.book.id,
+          bookTitle: res.book.title,
+          authorName: res.book.author?.name || 'Неизвестный автор',
+          reservationDate: res.reservationDate,
+          expirationDate: res.expirationDate,
+          status: res.status,
+          book: {
+            id: res.book.id,
+            title: res.book.title,
+            authorName: res.book.author?.name || 'Неизвестный автор',
+            publicationYear: res.book.publicationYear,
+            coverImageUrl: res.book.coverImageUrl,
+          },
+          actualReturnDate: res.actualReturnDate || undefined,
+        }));
+        setReservations(formattedReservations);
 
-  const handleRemoveTestUser = () => {
-    setSelectedTestUser(null)
-    setEmailTestForm({...emailTestForm, userId: ''})
-  }
+        // Извлекаем уникальные книги из резервирований
+        const uniqueBooks = Array.from(new Map(formattedReservations.map((res: ReservationType) => [res.book.id, res.book])).values()) as BookType[];
+        setBooks(uniqueBooks);
+
+      } else {
+        toast({ title: "Ошибка", description: "Не удалось загрузить резервирования пользователя", variant: "destructive" });
+      }
+    } catch (error) {
+       toast({ title: "Ошибка", description: "Произошла ошибка при загрузке резервирований", variant: "destructive" });
+    } finally {
+       setLoadingReservations(false);
+       setLoadingBooks(false);
+    }
+  };
+
+  const handleSingleFormUserSelect = (user: UserType) => {
+    setSelectedUser(user);
+    setSingleNotificationForm({ ...singleNotificationForm, userId: user.id });
+    setShowUserPicker(false);
+    loadReservationsForUser(user.id);
+  };
+
+  const handleRemoveSingleFormUser = () => {
+    setSelectedUser(null);
+    setSingleNotificationForm({ ...singleNotificationForm, userId: '' });
+    setReservations([]);
+    setBooks([]);
+    setSelectedBook(null);
+    setSelectedReservation(null);
+  };
+
+  const handleBookSelect = (book: BookType) => {
+    setSelectedBook(book);
+    setShowBookPicker(false);
+  };
+
+  const handleRemoveSelectedBook = () => {
+    setSelectedBook(null);
+  };
+
+  const handleReservationSelect = async (reservation: ReservationType) => {
+    setShowReservationPicker(false);
+    // Делаем дополнительный запрос для получения всех полей, включая actualReturnDate
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Reservation/${reservation.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Обновляем выбранное резервирование всеми полями
+        const updatedReservation: ReservationType = {
+          ...reservation,
+          actualReturnDate: data.actualReturnDate || undefined,
+          expirationDate: data.expirationDate || reservation.expirationDate,
+        };
+        setSelectedReservation(updatedReservation);
+        setSelectedBook(updatedReservation.book); // Автоматически выбрать связанную книгу
+      } else {
+        setSelectedReservation(reservation);
+        setSelectedBook(reservation.book);
+      }
+    } catch {
+      setSelectedReservation(reservation);
+      setSelectedBook(reservation.book);
+    }
+  };
+
+  const handleRemoveSelectedReservation = () => {
+    setSelectedReservation(null);
+    setSelectedBook(null); // Сбрасываем и книгу тоже
+  };
 
   const sendNotification = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/send-push`, {
+      const { userId, type, title, message, priority } = singleNotificationForm
+      if (!userId) {
+        toast({
+          title: "Ошибка",
+          description: "Не выбран пользователь",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      const body = {
+        userId: userId,
+        title: title,
+        message: message,
+        type: notificationTypeToNumber(type),
+        priority: priorityToNumber(priority)
+      };
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/send-custom-push`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(notificationForm)
+        body: JSON.stringify(body)
       })
 
       if (response.ok) {
-        const result = await response.json()
         toast({
           title: "Успешно",
           description: "Push уведомление отправлено"
         })
-        setNotificationForm({
-          title: '',
-          message: '',
-          type: 'GeneralInfo',
-          priority: 'Normal',
-          userId: ''
-        })
-        setSelectedUser(null)
         loadNotifications()
         loadStats()
       } else {
@@ -741,14 +1018,17 @@ export default function AdminNotificationsPage() {
   const sendBulkNotifications = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/send-bulk-push`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/send-bulk-custom-push`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...bulkForm,
+          title: bulkForm.title,
+          message: bulkForm.message,
+          type: notificationTypeToNumber(bulkForm.type),
+          priority: priorityToNumber(bulkForm.priority),
           userIds: selectedUsers
         })
       })
@@ -762,7 +1042,7 @@ export default function AdminNotificationsPage() {
         setBulkForm({
           title: '',
           message: '',
-          type: 'GeneralInfo',
+          type: 'GeneralEmail',
           priority: 'Normal'
         })
         setSelectedUsers([])
@@ -817,10 +1097,40 @@ export default function AdminNotificationsPage() {
 
       if (response.ok) {
         const result = await response.json()
-        toast({
-          title: "Успешно",
-          description: `${successMessage}. Отправлено: ${result.sentCount || 0} уведомлений`
-        })
+        // Если сервер возвращает массив id (например, result.sentIds), получаем подробности
+        if (result.sentIds && Array.isArray(result.sentIds)) {
+          const details = await Promise.all(result.sentIds.map(async (id: string) => {
+            // Пробуем получить подробности о резервировании/уведомлении
+            try {
+              const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Reservation/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+              if (res.ok) {
+                const data = await res.json();
+                return {
+                  UserName: data.user?.fullName || 'N/A',
+                  BookTitle: data.book?.title || 'N/A',
+                  DueDate: data.expirationDate ? new Date(data.expirationDate).toLocaleDateString() : 'N/A',
+                  ActualReturnDate: data.actualReturnDate ? new Date(data.actualReturnDate).toLocaleDateString() : 'N/A',
+                  FineAmount: data.fineAmount || 'N/A',
+                  Reason: data.reason || 'N/A',
+                  ReservationStatus: data.status || 'N/A',
+                };
+              }
+            } catch {}
+            return { UserName: 'N/A', BookTitle: 'N/A', DueDate: 'N/A', ActualReturnDate: 'N/A', FineAmount: 'N/A', Reason: 'N/A', ReservationStatus: 'N/A' };
+          }));
+          toast({
+            title: 'Результаты автоотправки',
+            description: details.map(d => `Пользователь: ${d.UserName}, Книга: ${d.BookTitle}, Дата возврата: ${d.DueDate}, Возврат: ${d.ActualReturnDate}, Штраф: ${d.FineAmount}, Причина: ${d.Reason}, Статус: ${d.ReservationStatus}`).join('\n'),
+            variant: 'default',
+            duration: 12000
+          });
+        } else {
+          toast({
+            title: "Успешно",
+            description: `${successMessage}. Отправлено: ${result.sentCount || 0} уведомлений` || result.message,
+            variant: 'default'
+          })
+        }
         loadStats()
         loadNotifications() // Обновляем список уведомлений
       } else {
@@ -908,15 +1218,54 @@ export default function AdminNotificationsPage() {
   const sendEmailNotification = async () => {
     try {
       const token = localStorage.getItem('token')
-      const payload = {
-        userId: emailTestForm.userId,
-        title: emailTestForm.title,
-        type: emailTestForm.type,
-        message: emailTestForm.message,
-        templateData: {
-          Message: emailTestForm.message,
-          Title: emailTestForm.title,
+
+      const templateData: Record<string, any> = {
+          Message: singleNotificationForm.message,
+          Title: singleNotificationForm.title,
+      };
+
+      if (selectedBook) {
+        templateData['BookTitle'] = selectedBook.title;
+        templateData['Author'] = selectedBook.authorName;
+        templateData['PublicationYear'] = selectedBook.publicationYear;
+      }
+      if (selectedReservation) {
+        templateData['ReservationDate'] = new Date(selectedReservation.reservationDate).toLocaleDateString();
+        templateData['ExpirationDate'] = selectedReservation.expirationDate ? new Date(selectedReservation.expirationDate).toLocaleDateString() : 'N/A';
+        templateData['ReservationStatus'] = selectedReservation.status;
+        // Для BookOverdue — ExpirationDate
+        if (singleNotificationForm.type === 'BookOverdue' && selectedReservation.expirationDate) {
+          templateData['ExpirationDate'] = new Date(selectedReservation.expirationDate).toLocaleDateString();
         }
+        // Для BookReturned — ActualReturnDate
+        if (singleNotificationForm.type === 'BookReturned' && selectedReservation.actualReturnDate) {
+          templateData['ActualReturnDate'] = new Date(selectedReservation.actualReturnDate).toLocaleDateString();
+        }
+      }
+      if (selectedUser) {
+        templateData['UserName'] = selectedUser.fullName;
+      }
+      // Если выбран тип FineAdded, добавляем поля FineAmount, Reason, DateIssued
+      if (singleNotificationForm.type === 'FineAdded') {
+        templateData['FineAmount'] = singleNotificationForm.fineAmount || '';
+        templateData['Reason'] = singleNotificationForm.reason || '';
+        templateData['DateIssued'] = new Date().toLocaleDateString();
+      }
+      // Если выбран тип ReturnSoon, добавляем DueDate
+      if (singleNotificationForm.type === 'ReturnSoon') {
+        templateData['DueDate'] = singleNotificationForm.dueDate || '';
+      }
+      // Если выбран тип ReservationReady, добавляем PickupUntilDate
+      if (singleNotificationForm.type === 'ReservationReady') {
+        templateData['PickupUntilDate'] = singleNotificationForm.pickupUntilDate || '';
+      }
+
+      const payload = {
+        userId: singleNotificationForm.userId,
+        title: singleNotificationForm.title,
+        type: singleNotificationForm.type,
+        message: singleNotificationForm.message,
+        templateData: templateData
       }
       const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/send-custom-email`, {
         method: 'POST',
@@ -933,14 +1282,6 @@ export default function AdminNotificationsPage() {
           title: "Успешно",
           description: "Email уведомление отправлено"
         })
-        setEmailTestForm({
-          title: '',
-          message: '',
-          type: 'GeneralInfo',
-          priority: 'Normal',
-          userId: ''
-        })
-        setSelectedTestUser(null)
         loadNotifications()
         loadStats()
       } else {
@@ -964,15 +1305,15 @@ export default function AdminNotificationsPage() {
   const sendTestEmail = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/test-email/${emailTestForm.userId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Notification/test-email/${singleNotificationForm.userId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          title: emailTestForm.title,
-          message: emailTestForm.message
+          title: singleNotificationForm.title,
+          message: singleNotificationForm.message
         })
       })
 
@@ -982,14 +1323,18 @@ export default function AdminNotificationsPage() {
           title: "Успешно",
           description: "Тестовое email уведомление отправлено"
         })
-        setEmailTestForm({
+        setSingleNotificationForm({
+          ...singleNotificationForm,
           title: '',
           message: '',
-          type: 'GeneralInfo',
+          type: 'GeneralEmail',
           priority: 'Normal',
-          userId: ''
-        })
-        setSelectedTestUser(null)
+          userId: '',
+          fineAmount: '',
+          reason: '',
+          dueDate: '',
+          pickupUntilDate: '',
+        });
       } else {
         const errorData = await response.json().catch(() => ({}))
         toast({
@@ -1038,7 +1383,7 @@ export default function AdminNotificationsPage() {
         setBulkForm({
           title: '',
           message: '',
-          type: 'GeneralInfo',
+          type: 'GeneralEmail',
           priority: 'Normal'
         })
         setSelectedUsers([])
@@ -1162,27 +1507,6 @@ export default function AdminNotificationsPage() {
                 <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
                 Обновить
               </Button>
-              <Button 
-                onClick={() => window.open('/admin/notifications/templates', '_blank')}
-                variant="outline"
-                className="bg-white text-blue-500 border-2 border-blue-500 hover:bg-gray-100"
-              >
-                Шаблоны
-              </Button>
-              <Button 
-                onClick={() => window.open('/admin/notifications/analytics', '_blank')}
-                variant="outline"
-                className="bg-white text-blue-500 border-2 border-blue-500 hover:bg-gray-100"
-              >
-                Аналитика
-              </Button>
-              <Button 
-                onClick={() => window.open('/admin/notifications/settings', '_blank')}
-                variant="outline"
-                className="bg-white text-blue-500 border-2 border-blue-500 hover:bg-gray-100"
-              >
-                Настройки
-              </Button>
             </div>
           </div>
         </div>
@@ -1251,9 +1575,8 @@ export default function AdminNotificationsPage() {
       <FadeInView delay={0.8}>
         <Tabs defaultValue="send" className="space-y-6">
           <TabsList className="bg-white p-1 rounded-xl shadow-lg border border-gray-200">
-            <TabsTrigger value="send" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Push уведомления</TabsTrigger>
+            <TabsTrigger value="send" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Индивидуальная отправка</TabsTrigger>
             <TabsTrigger value="bulk" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Массовая отправка</TabsTrigger>
-            <TabsTrigger value="email" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Email уведомления</TabsTrigger>
             <TabsTrigger value="auto" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Автоматические</TabsTrigger>
             <TabsTrigger value="manage" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Управление</TabsTrigger>
           </TabsList>
@@ -1263,385 +1586,25 @@ export default function AdminNotificationsPage() {
           <NotificationManager notifications={notifications as Notification[]} onRefresh={loadNotifications} />
         </TabsContent>
 
-        {/* Push уведомления */}
+        {/* Индивидуальная отправка */}
         <TabsContent value="send">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Индивидуальное уведомление */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Card className="bg-white rounded-xl shadow-lg border border-gray-200 h-full">
-                <CardHeader className="border-b border-gray-100">
-                  <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <Send className="w-5 h-5 text-blue-500" />
-                    Push уведомление
-                  </CardTitle>
-                  <CardDescription className="text-gray-500">
-                    Отправка индивидуального уведомления пользователю
-                  </CardDescription>
-                </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="user">Пользователь</Label>
-                  {selectedUser ? (
-                    <div className="flex items-center justify-between p-3 border-2 border-blue-300 rounded-lg bg-blue-50">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-blue-500" />
-                        <div>
-                          <div className="font-medium text-gray-800">{selectedUser.fullName}</div>
-                          <div className="text-sm text-gray-500">{selectedUser.email}</div>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleRemoveSelectedUser}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowUserPicker(true)}
-                      className="w-full justify-start bg-white text-blue-500 border-2 border-blue-500 hover:bg-gray-100"
-                      disabled={loadingUsers}
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      {loadingUsers ? 'Загрузка пользователей...' : 'Выберите пользователя'}
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="type">Тип уведомления</Label>
-                  <Select 
-                    value={notificationForm.type} 
-                    onValueChange={(value) => setNotificationForm({...notificationForm, type: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="GeneralInfo">Общая информация</SelectItem>
-                      <SelectItem value="BookDueSoon">Скоро возврат книги</SelectItem>
-                      <SelectItem value="BookOverdue">Просроченная книга</SelectItem>
-                      <SelectItem value="FineAdded">Штраф начислен</SelectItem>
-                      <SelectItem value="BookReturned">Книга возвращена</SelectItem>
-                      <SelectItem value="BookReserved">Книга зарезервирована</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Заголовок</Label>
-                  <Input
-                    id="title"
-                    value={notificationForm.title}
-                    onChange={(e) => setNotificationForm({...notificationForm, title: e.target.value})}
-                    placeholder="Введите заголовок"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Приоритет</Label>
-                  <Select 
-                    value={notificationForm.priority} 
-                    onValueChange={(value) => setNotificationForm({...notificationForm, priority: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Low">Низкий</SelectItem>
-                      <SelectItem value="Normal">Обычный</SelectItem>
-                      <SelectItem value="High">Высокий</SelectItem>
-                      <SelectItem value="Critical">Критический</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-                            <div className="space-y-2">
-                <Label htmlFor="message">Сообщение</Label>
-                <Textarea
-                  id="message"
-                  value={notificationForm.message}
-                  onChange={(e) => setNotificationForm({...notificationForm, message: e.target.value})}
-                  placeholder="Введите текст уведомления"
-                  rows={4}
-                />
-              </div>
-              
-              <Button 
-                onClick={sendNotification}
-                disabled={!notificationForm.title || !notificationForm.message || !notificationForm.userId}
-                className="w-full md:w-auto bg-blue-500 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Отправить уведомление
-              </Button>
-            </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Автоматические уведомления для конкретного пользователя */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <Card className="bg-white rounded-xl shadow-lg border border-gray-200 h-full">
-                <CardHeader className="border-b border-gray-100">
-                  <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-orange-500" />
-                    Автоматические уведомления
-                  </CardTitle>
-                  <CardDescription className="text-gray-500">
-                    Отправка автоматических уведомлений конкретному пользователю
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Выберите пользователя</Label>
-                    {selectedUser ? (
-                      <div className="flex items-center justify-between p-3 border-2 border-orange-300 rounded-lg bg-orange-50">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-orange-500" />
-                          <div>
-                            <div className="font-medium text-gray-800">{selectedUser.fullName}</div>
-                            <div className="text-sm text-gray-500">{selectedUser.email}</div>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRemoveSelectedUser}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowUserPicker(true)}
-                        className="w-full justify-start bg-white text-orange-500 border-2 border-orange-500 hover:bg-orange-50"
-                        disabled={loadingUsers}
-                      >
-                        <User className="mr-2 h-4 w-4" />
-                        {loadingUsers ? 'Загрузка пользователей...' : 'Выберите пользователя'}
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="space-y-3">
-                    <Button 
-                      onClick={() => sendUserSpecificNotification('due-reminder')}
-                      disabled={!selectedUser}
-                      className="w-full bg-blue-500 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                    >
-                      <Clock className="mr-2 h-4 w-4" />
-                      Напоминание о возврате
-                    </Button>
-                    
-                    <Button 
-                      onClick={() => sendUserSpecificNotification('overdue-notification')}
-                      disabled={!selectedUser}
-                      className="w-full bg-orange-500 hover:bg-orange-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                    >
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      Уведомление о просрочке
-                    </Button>
-                    
-                    <Button 
-                      onClick={() => sendUserSpecificNotification('fine-notification')}
-                      disabled={!selectedUser}
-                      className="w-full bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                    >
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      Уведомление о штрафе
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-        </TabsContent>
-
-        {/* Массовая отправка */}
-        <TabsContent value="bulk">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="bg-white rounded-xl shadow-lg border border-gray-200">
-              <CardHeader className="border-b border-gray-100">
-                <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-500" />
-                  Массовая отправка
-                </CardTitle>
-                <CardDescription className="text-gray-500">
-                  Отправка уведомления нескольким пользователям одновременно
-                </CardDescription>
-              </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Выберите пользователей</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowBulkUserPicker(true)}
-                      disabled={loadingUsers}
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      {loadingUsers ? 'Загрузка...' : 'Выбрать пользователей'}
-                    </Button>
-                    {selectedUsers.length > 0 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedUsers([])}
-                      >
-                        Очистить все
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                
-                {selectedUsers.length > 0 && (
-                  <div className="border-2 border-blue-300 rounded-lg p-3 bg-blue-50">
-                    <div className="text-sm font-medium mb-2 text-gray-800">
-                      Выбранные пользователи ({selectedUsers.length}):
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUsers.map((userId) => {
-                        const user = users.find(u => u.id === userId)
-                        if (!user) return null
-                        return (
-                          <Badge key={userId} variant="secondary" className="flex items-center gap-1">
-                            {user.fullName}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-4 w-4 p-0 hover:bg-transparent"
-                              onClick={() => setSelectedUsers(selectedUsers.filter(id => id !== userId))}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="bulk-title">Заголовок</Label>
-                  <Input
-                    id="bulk-title"
-                    value={bulkForm.title}
-                    onChange={(e) => setBulkForm({...bulkForm, title: e.target.value})}
-                    placeholder="Введите заголовок"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="bulk-type">Тип уведомления</Label>
-                  <Select 
-                    value={bulkForm.type} 
-                    onValueChange={(value) => setBulkForm({...bulkForm, type: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="GeneralInfo">Общая информация</SelectItem>
-                      <SelectItem value="BookDueSoon">Скоро возврат книги</SelectItem>
-                      <SelectItem value="BookOverdue">Просроченная книга</SelectItem>
-                      <SelectItem value="FineAdded">Штраф начислен</SelectItem>
-                      <SelectItem value="BookReturned">Книга возвращена</SelectItem>
-                      <SelectItem value="BookReserved">Книга зарезервирована</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-                            <div className="space-y-2">
-                <Label htmlFor="bulk-message">Сообщение</Label>
-                <Textarea
-                  id="bulk-message"
-                  value={bulkForm.message}
-                  onChange={(e) => setBulkForm({...bulkForm, message: e.target.value})}
-                  placeholder="Введите текст уведомления"
-                  rows={4}
-                />
-              </div>
-              
-              <div className="flex flex-col md:flex-row gap-3">
-                <Button 
-                  onClick={sendBulkNotifications}
-                  disabled={!bulkForm.title || !bulkForm.message || selectedUsers.length === 0}
-                  className="bg-blue-500 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  Push уведомления ({selectedUsers.length})
-                </Button>
-                
-                <Button 
-                  onClick={sendBulkEmailNotifications}
-                  disabled={!bulkForm.title || !bulkForm.message || selectedUsers.length === 0}
-                  variant="outline"
-                  className="bg-white text-green-600 border-2 border-green-600 hover:bg-green-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  <MailCheck className="mr-2 h-4 w-4" />
-                  Email уведомления ({selectedUsers.length})
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          </motion.div>
-        </TabsContent>
-
-        {/* Email уведомления */}
-        <TabsContent value="email">
-          <div className="flex justify-center">
-            {/* Вариант 3: Элитный дизайн с анимациями */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="w-full max-w-lg"
+              className="w-full max-w-4xl mx-auto"
             >
               <div className="relative">
-                {/* Анимированный фон */}
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl opacity-70"></div>
                 
                 <Card className="relative bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border-0 overflow-hidden">
-                  {/* Динамическая верхняя полоса */}
                   <div className={`h-1 w-full bg-gradient-to-r ${
-                    emailTestForm.type === 'GeneralInfo' ? 'from-blue-400 via-blue-500 to-blue-600' :
-                    emailTestForm.type === 'BookDueSoon' ? 'from-orange-400 via-orange-500 to-orange-600' :
-                    emailTestForm.type === 'BookOverdue' ? 'from-red-400 via-red-500 to-red-600' :
-                    emailTestForm.type === 'FineAdded' ? 'from-purple-400 via-purple-500 to-purple-600' :
-                    emailTestForm.type === 'BookReturned' ? 'from-green-400 via-green-500 to-green-600' :
-                    emailTestForm.type === 'BookReserved' ? 'from-indigo-400 via-indigo-500 to-indigo-600' :
+                    singleNotificationForm.type === 'GeneralEmail' ? 'from-blue-400 via-blue-500 to-blue-600' :
+                    singleNotificationForm.type === 'ReturnSoon' ? 'from-orange-400 via-orange-500 to-orange-600' :
+                    singleNotificationForm.type === 'BookOverdue' ? 'from-red-400 via-red-500 to-red-600' :
+                    singleNotificationForm.type === 'FineAdded' ? 'from-purple-400 via-purple-500 to-purple-600' :
+                    singleNotificationForm.type === 'BookReturned' ? 'from-green-400 via-green-500 to-green-600' :
+                    singleNotificationForm.type === 'ReservationReady' ? 'from-indigo-400 via-indigo-500 to-indigo-600' :
                     'from-blue-400 via-blue-500 to-blue-600'
                   } shadow-lg`}></div>
                   
@@ -1649,22 +1612,22 @@ export default function AdminNotificationsPage() {
                     <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-3">
                       <motion.div 
                         className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${
-                          emailTestForm.type === 'GeneralInfo' ? 'bg-gradient-to-br from-blue-500 to-blue-700' :
-                          emailTestForm.type === 'BookDueSoon' ? 'bg-gradient-to-br from-orange-500 to-orange-700' :
-                          emailTestForm.type === 'BookOverdue' ? 'bg-gradient-to-br from-red-500 to-red-700' :
-                          emailTestForm.type === 'FineAdded' ? 'bg-gradient-to-br from-purple-500 to-purple-700' :
-                          emailTestForm.type === 'BookReturned' ? 'bg-gradient-to-br from-green-500 to-green-700' :
-                          emailTestForm.type === 'BookReserved' ? 'bg-gradient-to-br from-indigo-500 to-indigo-700' :
+                          singleNotificationForm.type === 'GeneralEmail' ? 'bg-gradient-to-br from-blue-500 to-blue-700' :
+                          singleNotificationForm.type === 'ReturnSoon' ? 'bg-gradient-to-br from-orange-500 to-orange-700' :
+                          singleNotificationForm.type === 'BookOverdue' ? 'bg-gradient-to-br from-red-500 to-red-700' :
+                          singleNotificationForm.type === 'FineAdded' ? 'bg-gradient-to-br from-purple-500 to-purple-700' :
+                          singleNotificationForm.type === 'BookReturned' ? 'bg-gradient-to-br from-green-500 to-green-700' :
+                          singleNotificationForm.type === 'ReservationReady' ? 'bg-gradient-to-br from-indigo-500 to-indigo-700' :
                           'bg-gradient-to-br from-blue-500 to-blue-700'
                         }`}
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         transition={{ duration: 0.3 }}
                       >
-                        <MailCheck className="w-6 h-6 text-white" />
+                        <Send className="w-6 h-6 text-white" />
                       </motion.div>
                       <div>
                         <div className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                          Отправка Email
+                          Индивидуальная отправка
                         </div>
                       </div>
                     </CardTitle>
@@ -1678,7 +1641,7 @@ export default function AdminNotificationsPage() {
                         Получатель
                       </Label>
                       
-                      {selectedTestUser ? (
+                      {selectedUser ? (
                         <motion.div 
                           initial={{ scale: 0.9, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
@@ -1690,11 +1653,11 @@ export default function AdminNotificationsPage() {
                                 <User className="w-5 h-5 text-white" />
                               </div>
                               <div>
-                                <div className="font-semibold text-gray-800">{selectedTestUser.fullName}</div>
-                                <div className="text-green-600 text-sm">{selectedTestUser.email}</div>
+                                <div className="font-semibold text-gray-800">{selectedUser.fullName}</div>
+                                <div className="text-green-600 text-sm">{selectedUser.email}</div>
                               </div>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={handleRemoveTestUser}>
+                            <Button variant="ghost" size="sm" onClick={handleRemoveSingleFormUser}>
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
@@ -1702,7 +1665,7 @@ export default function AdminNotificationsPage() {
                       ) : (
                         <Button
                           variant="outline"
-                          onClick={() => setShowTestUserPicker(true)}
+                          onClick={() => setShowUserPicker(true)}
                           className="w-full h-16 border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-xl"
                           disabled={loadingUsers}
                         >
@@ -1716,35 +1679,82 @@ export default function AdminNotificationsPage() {
                       )}
                     </div>
 
+                    {/* Выбор резервирования */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-green-500" />
+                        Контекст (Резервирование)
+                      </Label>
+
+                      {selectedReservation ? (
+                         <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                                <Calendar className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <div className="font-semibold text-gray-800">{selectedReservation.bookTitle}</div>
+                                <div className="text-green-600 text-sm">
+                                  {new Date(selectedReservation.reservationDate).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={handleRemoveSelectedReservation}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowReservationPicker(true)}
+                          className="w-full h-16 border-2 border-dashed border-gray-300 hover:border-green-400 rounded-xl"
+                          disabled={!selectedUser || loadingReservations}
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <Calendar className="w-5 h-5 text-gray-500" />
+                            <div className="text-sm font-medium">
+                              {loadingReservations ? 'Загрузка...' : 'Выбрать резервирование'}
+                            </div>
+                          </div>
+                        </Button>
+                      )}
+                    </div>
+                      
                     {/* Настройки */}
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
                           <div className={`w-3 h-3 rounded-full ${
-                            emailTestForm.type === 'GeneralInfo' ? 'bg-blue-500' :
-                            emailTestForm.type === 'BookDueSoon' ? 'bg-orange-500' :
-                            emailTestForm.type === 'BookOverdue' ? 'bg-red-500' :
-                            emailTestForm.type === 'FineAdded' ? 'bg-purple-500' :
-                            emailTestForm.type === 'BookReturned' ? 'bg-green-500' :
-                            emailTestForm.type === 'BookReserved' ? 'bg-indigo-500' :
+                            singleNotificationForm.type === 'GeneralEmail' ? 'bg-blue-500' :
+                            singleNotificationForm.type === 'ReturnSoon' ? 'bg-orange-500' :
+                            singleNotificationForm.type === 'BookOverdue' ? 'bg-red-500' :
+                            singleNotificationForm.type === 'FineAdded' ? 'bg-purple-500' :
+                            singleNotificationForm.type === 'BookReturned' ? 'bg-green-500' :
+                            singleNotificationForm.type === 'ReservationReady' ? 'bg-indigo-500' :
                             'bg-blue-500'
                           }`}></div>
                           Категория
                         </Label>
                         <Select 
-                          value={emailTestForm.type || 'GeneralInfo'} 
-                          onValueChange={(value) => setEmailTestForm({...emailTestForm, type: value})}
+                          value={singleNotificationForm.type || 'GeneralEmail'} 
+                          onValueChange={(value) => setSingleNotificationForm({...singleNotificationForm, type: value})}
                         >
                           <SelectTrigger className="h-12 border-2 rounded-xl">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="GeneralInfo">📢 Общая информация</SelectItem>
-                            <SelectItem value="BookDueSoon">⏰ Скоро возврат</SelectItem>
+                            <SelectItem value="GeneralEmail">📢 Общая информация</SelectItem>
+                            <SelectItem value="ReturnSoon">⏰ Скоро возврат</SelectItem>
                             <SelectItem value="BookOverdue">🚨 Просрочка</SelectItem>
                             <SelectItem value="FineAdded">💰 Штраф</SelectItem>
                             <SelectItem value="BookReturned">✅ Возврат</SelectItem>
-                            <SelectItem value="BookReserved">📅 Резерв</SelectItem>
+                            <SelectItem value="ReservationReady">📅 Резерв</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1752,17 +1762,294 @@ export default function AdminNotificationsPage() {
                       <div className="space-y-2">
                         <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
                           <div className={`w-3 h-3 rounded-full ${
-                            emailTestForm.priority === 'Low' ? 'bg-gray-500' :
-                            emailTestForm.priority === 'Normal' ? 'bg-blue-500' :
-                            emailTestForm.priority === 'High' ? 'bg-yellow-500' :
-                            emailTestForm.priority === 'Critical' ? 'bg-red-500' :
+                            singleNotificationForm.priority === 'Low' ? 'bg-gray-500' :
+                            singleNotificationForm.priority === 'Normal' ? 'bg-blue-500' :
+                            singleNotificationForm.priority === 'High' ? 'bg-yellow-500' :
+                            singleNotificationForm.priority === 'Critical' ? 'bg-red-500' :
                             'bg-blue-500'
                           }`}></div>
                           Важность
                         </Label>
                         <Select 
-                          value={emailTestForm.priority || 'Normal'} 
-                          onValueChange={(value) => setEmailTestForm({...emailTestForm, priority: value})}
+                          value={singleNotificationForm.priority || 'Normal'} 
+                          onValueChange={(value) => setSingleNotificationForm({...singleNotificationForm, priority: value})}
+                        >
+                          <SelectTrigger className="h-12 border-2 rounded-xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Low">🔵 Низкий</SelectItem>
+                            <SelectItem value="Normal">🟡 Обычный</SelectItem>
+                            <SelectItem value="High">🟠 Высокий</SelectItem>
+                            <SelectItem value="Critical">🔴 Критический</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    {/* Содержание */}
+                    <div className="space-y-4">
+                      {/* Для штрафа: сумма и причина */}
+                      {singleNotificationForm.type === 'FineAdded' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                              <DollarSign className="w-3 h-3 text-purple-500" />
+                              Сумма штрафа
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={singleNotificationForm.fineAmount}
+                              onChange={e => setSingleNotificationForm({...singleNotificationForm, fineAmount: e.target.value})}
+                              placeholder="Введите сумму..."
+                              className="h-12 border-2 rounded-xl"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                              <Info className="w-3 h-3 text-purple-500" />
+                              Причина
+                            </Label>
+                            <Input
+                              value={singleNotificationForm.reason}
+                              onChange={e => setSingleNotificationForm({...singleNotificationForm, reason: e.target.value})}
+                              placeholder="Причина штрафа..."
+                              className="h-12 border-2 rounded-xl"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {/* Для ReturnSoon: DueDate */}
+                      {singleNotificationForm.type === 'ReturnSoon' && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                            <Calendar className="w-3 h-3 text-orange-500" />
+                            Дата возврата
+                          </Label>
+                          <Input
+                            type="date"
+                            value={singleNotificationForm.dueDate}
+                            onChange={e => setSingleNotificationForm({...singleNotificationForm, dueDate: e.target.value})}
+                            className="h-12 border-2 rounded-xl"
+                          />
+                        </div>
+                      )}
+                      {/* Для ReservationReady: PickupUntilDate */}
+                      {singleNotificationForm.type === 'ReservationReady' && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                            <Calendar className="w-3 h-3 text-indigo-500" />
+                            Дата окончания хранения (PickupUntilDate)
+                          </Label>
+                          <Input
+                            type="date"
+                            value={singleNotificationForm.pickupUntilDate}
+                            onChange={e => setSingleNotificationForm({...singleNotificationForm, pickupUntilDate: e.target.value})}
+                            className="h-12 border-2 rounded-xl"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                          <Star className="w-3 h-3 text-yellow-500" />
+                          Заголовок
+                        </Label>
+                        <Input
+                          value={singleNotificationForm.title}
+                          onChange={(e) => setSingleNotificationForm({...singleNotificationForm, title: e.target.value})}
+                          placeholder="Введите заголовок..."
+                          className="h-12 border-2 rounded-xl"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                          <Mail className="w-3 h-3 text-blue-500" />
+                          Сообщение
+                        </Label>
+                        <Textarea
+                          value={singleNotificationForm.message}
+                          onChange={(e) => setSingleNotificationForm({...singleNotificationForm, message: e.target.value})}
+                          placeholder="Введите текст..."
+                          rows={3}
+                          className="border-2 rounded-xl resize-none"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Кнопки отправки */}
+                    <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-gray-200">
+                      <Button 
+                        onClick={sendNotification}
+                        disabled={!singleNotificationForm.title || !singleNotificationForm.message || !singleNotificationForm.userId}
+                        className="flex-1 h-12 bg-blue-500 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        Отправить Push
+                      </Button>
+                      
+                      <Button 
+                        onClick={sendEmailNotification}
+                        disabled={!singleNotificationForm.title || !singleNotificationForm.message || !singleNotificationForm.userId}
+                        className="flex-1 h-12 bg-green-500 hover:bg-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        <MailCheck className="mr-2 h-4 w-4" />
+                        Отправить Email
+                      </Button>
+                    </div>
+
+                    {/* Автоматические для пользователя */}
+                    <div className="pt-4 border-t border-gray-200">
+                       <Label className="text-sm font-bold text-gray-700 flex items-center gap-2 mb-3">
+                        <Clock className="w-4 h-4 text-orange-500" />
+                        Авто-уведомления для выбранного пользователя
+                      </Label>
+                      <div className="space-y-3">
+                        <Button 
+                          onClick={() => sendUserSpecificNotification('due-reminder')}
+                          disabled={!selectedUser}
+                          className="w-full bg-blue-500 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          <Clock className="mr-2 h-4 w-4" />
+                          Напоминание о возврате
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => sendUserSpecificNotification('overdue-notification')}
+                          disabled={!selectedUser}
+                          className="w-full bg-orange-500 hover:bg-orange-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          <AlertCircle className="mr-2 h-4 w-4" />
+                          Уведомление о просрочке
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => sendUserSpecificNotification('fine-notification')}
+                          disabled={!selectedUser}
+                          className="w-full bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          <AlertCircle className="mr-2 h-4 w-4" />
+                          Уведомление о штрафе
+                        </Button>
+                      </div>
+                    </div>
+
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.div>
+        </TabsContent>
+
+        {/* Массовая отправка */}
+        <TabsContent value="bulk">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="w-full max-w-4xl mx-auto"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 rounded-xl opacity-70"></div>
+                
+                <Card className="relative bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border-0 overflow-hidden">
+                  <div className={`h-1 w-full bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-600 shadow-lg`}></div>
+                  
+                  <CardHeader className="p-6 pb-4">
+                    <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-3">
+                      <motion.div 
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-500 to-cyan-700`}
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Users className="w-6 h-6 text-white" />
+                      </motion.div>
+                      <div>
+                        <div className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                          Массовая отправка
+                        </div>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  
+                  <CardContent className="px-6 pb-6 space-y-5">
+                    {/* Выбор пользователей */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <Users className="w-4 h-4 text-blue-500" />
+                        Получатели
+                      </Label>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowBulkUserPicker(true)}
+                        className="w-full h-16 border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-xl"
+                        disabled={loadingUsers}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <Users className="w-5 h-5 text-gray-500" />
+                          <div className="text-sm font-medium">
+                            {loadingUsers ? 'Загрузка...' : 'Выбрать получателей'} ({selectedUsers.length} выбрано)
+                          </div>
+                        </div>
+                      </Button>
+
+                      {selectedUsers.length > 0 && (
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border-2 border-blue-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-semibold text-gray-800">
+                              Выбранные пользователи ({selectedUsers.length}):
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedUsers([])}
+                            >
+                              Очистить
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
+                            {selectedUsers.map((userId) => {
+                              const user = users.find(u => u.id === userId)
+                              if (!user) return null
+                              return (
+                                <Badge key={userId} variant="secondary" className="bg-white border-blue-300 text-blue-800">
+                                  {user.fullName}
+                                </Badge>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Настройки */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Категория</Label>
+                        <Select 
+                          value={bulkForm.type || 'GeneralEmail'} 
+                          onValueChange={(value) => setBulkForm({...bulkForm, type: value})}
+                        >
+                          <SelectTrigger className="h-12 border-2 rounded-xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="GeneralEmail">📢 Общая информация</SelectItem>
+                            <SelectItem value="ReturnSoon">⏰ Скоро возврат</SelectItem>
+                            <SelectItem value="BookOverdue">🚨 Просрочка</SelectItem>
+                            <SelectItem value="FineAdded">💰 Штраф</SelectItem>
+                            <SelectItem value="BookReturned">✅ Возврат</SelectItem>
+                            <SelectItem value="ReservationReady">📅 Резерв</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Важность</Label>
+                        <Select 
+                          value={bulkForm.priority || 'Normal'} 
+                          onValueChange={(value) => setBulkForm({...bulkForm, priority: value})}
                         >
                           <SelectTrigger className="h-12 border-2 rounded-xl">
                             <SelectValue />
@@ -1785,8 +2072,8 @@ export default function AdminNotificationsPage() {
                           Заголовок
                         </Label>
                         <Input
-                          value={emailTestForm.title}
-                          onChange={(e) => setEmailTestForm({...emailTestForm, title: e.target.value})}
+                          value={bulkForm.title}
+                          onChange={(e) => setBulkForm({...bulkForm, title: e.target.value})}
                           placeholder="Введите заголовок..."
                           className="h-12 border-2 rounded-xl"
                         />
@@ -1798,8 +2085,8 @@ export default function AdminNotificationsPage() {
                           Сообщение
                         </Label>
                         <Textarea
-                          value={emailTestForm.message}
-                          onChange={(e) => setEmailTestForm({...emailTestForm, message: e.target.value})}
+                          value={bulkForm.message}
+                          onChange={(e) => setBulkForm({...bulkForm, message: e.target.value})}
                           placeholder="Введите текст..."
                           rows={3}
                           className="border-2 rounded-xl resize-none"
@@ -1807,34 +2094,30 @@ export default function AdminNotificationsPage() {
                       </div>
                     </div>
                     
-                    {/* Кнопка отправки */}
-                    <Button 
-                      onClick={sendEmailNotification}
-                      disabled={!emailTestForm.title || !emailTestForm.message || !emailTestForm.userId}
-                      className={`w-full h-14 text-white rounded-xl font-bold ${
-                        emailTestForm.type === 'GeneralInfo' ? 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800' :
-                        emailTestForm.type === 'BookDueSoon' ? 'bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800' :
-                        emailTestForm.type === 'BookOverdue' ? 'bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800' :
-                        emailTestForm.type === 'FineAdded' ? 'bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800' :
-                        emailTestForm.type === 'BookReturned' ? 'bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800' :
-                        emailTestForm.type === 'BookReserved' ? 'bg-gradient-to-r from-indigo-500 to-indigo-700 hover:from-indigo-600 hover:to-indigo-800' :
-                        'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800'
-                      }`}
-                    >
-                      <motion.div
-                        whileHover={{ rotate: 360 }}
-                        transition={{ duration: 0.5 }}
-                        className="mr-2"
+                    {/* Кнопки отправки */}
+                    <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-gray-200">
+                      <Button 
+                        onClick={sendBulkNotifications}
+                        disabled={!bulkForm.title || !bulkForm.message || selectedUsers.length === 0}
+                        className="flex-1 h-12 bg-blue-500 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                       >
-                        <MailCheck className="w-5 h-5" />
-                      </motion.div>
-                      Отправить
-                    </Button>
+                        <Send className="mr-2 h-4 w-4" />
+                        Отправить Push ({selectedUsers.length})
+                      </Button>
+                      
+                      <Button 
+                        onClick={sendBulkEmailNotifications}
+                        disabled={!bulkForm.title || !bulkForm.message || selectedUsers.length === 0}
+                        className="flex-1 h-12 bg-green-500 hover:bg-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        <MailCheck className="mr-2 h-4 w-4" />
+                        Отправить Email ({selectedUsers.length})
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
             </motion.div>
-          </div>
         </TabsContent>
 
         {/* Автоматические уведомления */}
@@ -1858,7 +2141,7 @@ export default function AdminNotificationsPage() {
                     Напоминания о возврате
                   </CardTitle>
                   <CardDescription className="text-gray-500">
-                    Отправить напоминания пользователям о скором сроке возврата книг
+                    Отправить напоминания пользователям о скором сроке возврата книг (может работать некорректно)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -1867,7 +2150,7 @@ export default function AdminNotificationsPage() {
                     className="w-full bg-blue-500 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     <Clock className="mr-2 h-4 w-4" />
-                    Отправить напоминания
+                    Отправить напоминания (бета версия)
                   </Button>
                 </CardContent>
               </Card>
@@ -1886,7 +2169,7 @@ export default function AdminNotificationsPage() {
                     Уведомления о просрочке
                   </CardTitle>
                   <CardDescription className="text-gray-500">
-                    Отправить уведомления о просроченных книгах
+                    Отправить уведомления о просроченных книгах (может работать некорректно)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -1895,7 +2178,7 @@ export default function AdminNotificationsPage() {
                     className="w-full bg-orange-500 hover:bg-orange-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     <AlertCircle className="mr-2 h-4 w-4" />
-                    Отправить уведомления
+                    Отправить уведомления (бета версия)
                   </Button>
                 </CardContent>
               </Card>
@@ -1914,7 +2197,7 @@ export default function AdminNotificationsPage() {
                     Уведомления о штрафах
                   </CardTitle>
                   <CardDescription className="text-gray-500">
-                    Отправить уведомления о начисленных штрафах
+                    Отправить уведомления о начисленных штрафах (может работать некорректно)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -1923,7 +2206,7 @@ export default function AdminNotificationsPage() {
                     className="w-full bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     <AlertCircle className="mr-2 h-4 w-4" />
-                    Отправить уведомления
+                    Отправить уведомления (бета версия)
                   </Button>
                 </CardContent>
               </Card>
@@ -1938,7 +2221,7 @@ export default function AdminNotificationsPage() {
         open={showUserPicker}
         onOpenChange={setShowUserPicker}
         users={users}
-        onSelect={handleUserSelect}
+        onSelect={handleSingleFormUserSelect}
         selectedUser={selectedUser}
       />
 
@@ -1953,11 +2236,28 @@ export default function AdminNotificationsPage() {
 
       {/* Модальное окно выбора тестового пользователя */}
       <UserPickerModal
-        open={showTestUserPicker}
-        onOpenChange={setShowTestUserPicker}
+        open={showUserPicker}
+        onOpenChange={setShowUserPicker}
         users={users}
-        onSelect={handleTestUserSelect}
-        selectedUser={selectedTestUser}
+        onSelect={handleSingleFormUserSelect}
+        selectedUser={selectedUser}
+      />
+
+      {/* Модальное окно выбора книги */}
+      <BookPickerModal
+        open={showBookPicker}
+        onOpenChange={setShowBookPicker}
+        books={books}
+        onSelect={handleBookSelect}
+        selectedBook={selectedBook}
+      />
+
+      {/* Модальное окно выбора резервирования */}
+      <ReservationPickerModal
+        open={showReservationPicker}
+        onOpenChange={setShowReservationPicker}
+        reservations={reservations}
+        onSelect={handleReservationSelect}
       />
     </div>
     </div>

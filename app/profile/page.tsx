@@ -29,7 +29,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Settings,
+  ArrowRight,
 } from "lucide-react"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -227,8 +229,8 @@ export default function ProfilePage() {
           throw new Error("Токен авторизации не найден")
         }
 
-        // Fetch user data and roles in parallel
-        const [userResponse, rolesResponse] = await Promise.all([
+        // Fetch user data, roles, and reservations in parallel
+        const [userResponse, rolesResponse, reservationsResponse] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User/${id}`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -238,7 +240,12 @@ export default function ProfilePage() {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          })
+          }),
+          fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Reservation?userId=${id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
         ])
 
         if (!userResponse.ok) {
@@ -259,6 +266,45 @@ export default function ProfilePage() {
         
         console.log("Обработанные роли:", userRoles) // Для отладки
         
+        let reservations: Reservation[] = []
+        if (reservationsResponse.ok) {
+          const rawReservations = await reservationsResponse.json()
+          reservations = await Promise.all(
+            rawReservations.map(async (res: Reservation) => {
+              let enrichedBookDetails = res.book;
+              if (res.bookId) {
+                try {
+                  const bookDetailsRes = await fetch(
+                    `${process.env.NEXT_PUBLIC_BASE_URL}/api/books/${res.bookId}`,
+                    {
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                      },
+                    }
+                  );
+                  if (bookDetailsRes.ok) {
+                    const detailedBookData = await bookDetailsRes.json();
+                    enrichedBookDetails = {
+                      id: detailedBookData.id,
+                      title: detailedBookData.title,
+                      authors: Array.isArray(detailedBookData.authors)
+                        ? detailedBookData.authors.join(", ")
+                        : detailedBookData.authors,
+                      cover: detailedBookData.cover || "",
+                      isbn: detailedBookData.isbn || "",
+                    };
+                  }
+                } catch (bookErr) {
+                  console.warn(
+                    `Не удалось загрузить детали для книги ${res.bookId} в резервации ${res.id}`
+                  );
+                }
+              }
+              return { ...res, book: enrichedBookDetails };
+            })
+          );
+        }
+
         // Убедимся, что у нас есть все необходимые поля, или установим значения по умолчанию
         const processedUser: UserType = {
           id: data.id || id,
@@ -275,7 +321,7 @@ export default function ProfilePage() {
           roles: userRoles,
           rolesData: rolesData,
           borrowedBooks: Array.isArray(data.borrowedBooks) ? data.borrowedBooks : [],
-          reservations: Array.isArray(data.reservations) ? data.reservations : [],
+          reservations: reservations,
         }
         
         setUser(processedUser)
@@ -451,10 +497,6 @@ export default function ProfilePage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 * index }}
               className="p-3 max-w-xs bg-white rounded-lg border border-gray-200 flex items-start gap-3 mx-auto shadow-md"
-              whileHover={{
-                y: -2,
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
-              }}
             >
               <div className="w-14 h-20 relative flex-shrink-0 rounded-md overflow-hidden shadow-lg">
                 {book.cover ? (
@@ -476,41 +518,12 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500 mb-1 line-clamp-1">
                   Автор: {book.author || book.authors || "Автор не указан"}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  {book.genre && (
-                    <span className="text-blue-500">{book.genre}</span>
-                  )}
-                  {book.publicationYear && (
-                    <span className="text-gray-500">
-                      {book.publicationYear} г.
-                    </span>
-                  )}
-                  {book.publisher && (
-                    <span className="text-gray-500">{book.publisher}</span>
-                  )}
-                </div>
-                <div className="mt-2">
-                  {book.borrowDate && (
-                    <div className="text-xs text-gray-500">
-                      Взята: {formatDate(book.borrowDate)}
-                    </div>
-                  )}
-                  {(book.dueDate || book.returnDate) && (
-                    <div
-                      className={cn(
-                        "text-xs font-medium mt-1",
-                        new Date(book.dueDate || book.returnDate || "") < new Date()
-                          ? "text-red-800"
-                          : "text-blue-500"
-                      )}
-                    >
-                      Вернуть до: {formatDate(book.dueDate || book.returnDate || "")}
-                    </div>
-                  )}
-                </div>
+                <p className="text-sm text-gray-500">
+                  Дата возврата: {formatDate(book.returnDate || book.dueDate || "")}
+                </p>
                 {book.isFromReservation && (
                   <span className="text-xs text-blue-500 mt-1 inline-block">
-                    Из резервации
+                    Из резервирования
                   </span>
                 )}
               </div>
@@ -520,10 +533,7 @@ export default function ProfilePage() {
       );
     } else {
       return (
-        <div className="text-center py-8">
-          <BookOpen className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-          <p className="text-gray-500">У вас нет книг на руках</p>
-        </div>
+        <p className="text-gray-500 text-center py-4">У вас нет книг на руках</p>
       );
     }
   };
@@ -905,7 +915,15 @@ export default function ProfilePage() {
                   </TabsContent>
 
                   <TabsContent value="books" className="p-6">
-                    <h3 className="text-lg font-medium text-gray-800 mb-4">Книги на руках</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium text-gray-800">Книги на руках</h3>
+                      <Button asChild variant="outline">
+                        <Link href="/profile/mybooks">
+                          Подробнее
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
                     {renderBooks()}
                   </TabsContent>
 

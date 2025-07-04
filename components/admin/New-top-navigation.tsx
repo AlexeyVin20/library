@@ -280,6 +280,12 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           description: "Аналитика и отчеты системы",
           icon: <PieChart className="h-5 w-5" />,
         },
+        {
+          title: "Уведомления",
+          href: "/admin/notifications",
+          description: "Просмотр и управление уведомлениями",
+          icon: <Bell className="h-5 w-5" />,
+        },
       ],
     },
     {
@@ -1561,20 +1567,22 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                       </DropdownMenuItem>
                     </motion.div>
                   </Link>
-                  <motion.div whileHover={{ x: 4 }}>
                   <Link href="/settings" className="w-full">
-                    <DropdownMenuItem className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200">
-                      <Settings className="h-4 w-4 mr-3 text-blue-500" />
-                      Настройки
-                    </DropdownMenuItem>
-                    </Link>
-                  </motion.div>
-                  <motion.div whileHover={{ x: 4 }}>
-                    <DropdownMenuItem className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200">
-                      <BookOpen className="h-4 w-4 mr-3 text-blue-500" />
-                      Мои книги
-                    </DropdownMenuItem>
-                  </motion.div>
+                    <motion.div whileHover={{ x: 4 }}>
+                      <DropdownMenuItem className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200">
+                        <Settings className="h-4 w-4 mr-3 text-blue-500" />
+                        Настройки
+                      </DropdownMenuItem>
+                    </motion.div>
+                  </Link>
+                  <Link href="/profile/mybooks" className="w-full">
+                    <motion.div whileHover={{ x: 4 }}>
+                      <DropdownMenuItem className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200">
+                        <BookOpen className="h-4 w-4 mr-3 text-blue-500" />
+                        Мои книги
+                      </DropdownMenuItem>
+                    </motion.div>
+                  </Link>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator className="bg-gray-200" />
                 <motion.div whileHover={{ x: 4 }}>

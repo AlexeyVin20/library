@@ -176,7 +176,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
   const router = useRouter()
   const [showManualCoverInput, setShowManualCoverInput] = useState(false)
   const [manualCoverUrl, setManualCoverUrl] = useState("")
-  const [isbn, setIsbn] = useState(initialData?.isbn || "")
   const [isSearchLoading, setIsSearchLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("basic-info")
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.cover || null)
@@ -263,11 +262,8 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
   const formValues = watch()
 
   useEffect(() => {
-    if (initialData) {
-      setIsbn(initialData.isbn || "")
-      if (initialData?.cover) {
-        setPreviewUrl(initialData.cover)
-      }
+    if (initialData?.cover) {
+      setPreviewUrl(initialData.cover)
     }
   }, [initialData])
 
@@ -302,6 +298,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
   }, [isAdvancedMode, activeTab])
 
   const handleFetchByISBN = async () => {
+    const isbn = formValues.isbn;
     if (!isbn) {
       setFormError("Введите ISBN для поиска")
       toast({ title: "Ошибка", description: "Введите ISBN для поиска", variant: "destructive" })
@@ -374,7 +371,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       const bookId = initialData?.id
-      const currentIsbn = formValues.isbn || isbn
+      const currentIsbn = formValues.isbn || initialData?.isbn
       
       await uploadFile(file, bookId, currentIsbn)
     }
@@ -1189,13 +1186,9 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
                                 "bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pr-16 px-4 text-gray-800 shadow-sm w-full h-12 placeholder:text-gray-500",
                                 errors.isbn && "focus-visible:ring-red-500",
                               )}
-                              value={isbn}
-                              {...register("isbn", {
-                                onChange: (e) => {
-                                  setIsbn(e.target.value)
-                                },
-                                value: isbn,
-                              })}
+                              {...register("isbn")}
+                              value={formValues.isbn}
+                              onChange={e => setValue("isbn", e.target.value)}
                             />
                             <motion.button
                               type="button"

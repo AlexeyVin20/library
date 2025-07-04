@@ -35,6 +35,8 @@ interface User {
   isActive: boolean;
   phone: string;
   role: string;
+  rolesData?: { roleId: number; roleName: string }[];
+  userRoles?: { roleId: number; roleName: string }[];
 }
 interface Reservation {
   id: string;
@@ -168,6 +170,8 @@ export default function AllUsersPage() {
   const [sortField, setSortField] = useState<keyof User>("fullName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState("");
+  const [isAssigningRole, setIsAssigningRole] = useState(false);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   // Вставка CSS анимации в DOM
@@ -297,6 +301,42 @@ export default function AllUsersPage() {
     setSortField(field);
     setSortDirection(sortField === field && sortDirection === "asc" ? "desc" : "asc");
   };
+  const handleAssignRole = async (user) => {
+    if (!selectedRoleId) {
+      setError("Выберите роль для назначения");
+      return;
+    }
+    try {
+      const response = await fetch(`${baseUrl}/api/User/assign-role`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          roleId: selectedRoleId
+        })
+      });
+      if (!response.ok) throw new Error("Ошибка при назначении роли");
+      // Найти лимиты для выбранной роли
+      const roleObj = Object.values(USER_ROLES).find(r => r.id === Number(selectedRoleId));
+      if (roleObj) {
+        await fetch(`${baseUrl}/api/User/${user.id}/update-limits`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            maxBooksAllowed: roleObj.maxBooksAllowed,
+            loanPeriodDays: roleObj.loanPeriodDays
+          })
+        });
+      }
+      fetchData();
+      setSelectedRoleId("");
+      setIsAssigningRole(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Произошла ошибка при назначении роли");
+    }
+  };
   if (loading) return <LoadingSpinner />;
   if (error) return <motion.div initial={{
     opacity: 0
@@ -408,57 +448,60 @@ export default function AllUsersPage() {
             height: 400
           }}>
               <table className="min-w-full" cellPadding={0} cellSpacing={0}>
-                <thead className="sticky top-0 bg-gray-100">
+                <thead className="sticky top-0 bg-gray-100 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider cursor-pointer" onClick={() => handleSort("fullName")}>
-                      Имя {sortField === "fullName" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider cursor-pointer" onClick={() => handleSort("email")}>
-                      Email {sortField === "email" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider cursor-pointer" onClick={() => handleSort("borrowedBooksCount")}>
-                      Книги {sortField === "borrowedBooksCount" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">
-                      Действия
-                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider cursor-pointer min-w-[140px]" onClick={() => handleSort("fullName")}>Имя {sortField === "fullName" && (sortDirection === "asc" ? "↑" : "↓")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider cursor-pointer min-w-[140px]" onClick={() => handleSort("email")}>Email {sortField === "email" && (sortDirection === "asc" ? "↑" : "↓")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider cursor-pointer min-w-[80px]" onClick={() => handleSort("borrowedBooksCount")}>Книги {sortField === "borrowedBooksCount" && (sortDirection === "asc" ? "↑" : "↓")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider min-w-[100px]">Роль</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider min-w-[120px]">Действия</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedUsers.slice(0, 50).map((user, index) => <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-100" style={{
-                  opacity: 0,
-                  transform: "translateX(-20px)",
-                  animation: `fadeIn 0.5s ease-out ${0.1 * index}s forwards`
-                }}>
-                      <td className="px-6 py-4 text-gray-800">{user.fullName}</td>
-                      <td className="px-6 py-4 text-gray-800">{user.email}</td>
-                      <td className="px-6 py-4 text-gray-800">
-                        {user.borrowedBooksCount}/{user.maxBooksAllowed}
-                      </td>
-                      <td className="px-6 py-4 flex gap-2">
-                        <Link href={`/admin/users/${user.id}`}>
-                          <motion.button whileHover={{
-                        y: -2
-                      }} whileTap={{
-                        scale: 0.95
-                      }} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-1 shadow-md">
-                            Подробнее
+                  {sortedUsers.slice(0, 50).map((user, index) => {
+                    let mainRole = user.role || "Гость";
+                    let badgeClass = "bg-gray-100 text-gray-700 border border-gray-300";
+                    if (Array.isArray(user.userRoles) && user.userRoles.length > 0) {
+                      const sortedRoles = [...user.userRoles].sort((a, b) => a.roleId - b.roleId);
+                      mainRole = sortedRoles[0].roleName;
+                    }
+                    if (mainRole === "Администратор") badgeClass = "bg-blue-100 text-blue-700 border border-blue-300";
+                    else if (mainRole === "Сотрудник") badgeClass = "bg-green-100 text-green-700 border border-green-300";
+                    else if (mainRole === "Читатель") badgeClass = "bg-yellow-100 text-yellow-700 border border-yellow-300";
+                    else if (mainRole === "Гость") badgeClass = "bg-gray-100 text-gray-700 border border-gray-300";
+                    return (
+                      <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-100" style={{
+                        opacity: 0,
+                        transform: "translateX(-20px)",
+                        animation: `fadeIn 0.5s ease-out ${0.1 * index}s forwards`,
+                        height: 56 // фиксированная высота строки
+                      }}>
+                        <td className="px-6 py-4 text-gray-800 align-middle">{user.fullName}</td>
+                        <td className="px-6 py-4 text-gray-800 align-middle">{user.email}</td>
+                        <td className="px-6 py-4 text-gray-800 align-middle">{user.borrowedBooksCount}/{user.maxBooksAllowed}</td>
+                        <td className="px-6 py-4 text-gray-800 align-middle">
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${badgeClass}`}>{mainRole}</span>
+                        </td>
+                        <td className="px-6 py-4 flex gap-2 align-middle">
+                          <Link href={`/admin/users/${user.id}`}>
+                            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-1 shadow-md">Подробнее</motion.button>
+                          </Link>
+                          <motion.button 
+                            onClick={() => {
+                              if (confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+                                handleDeleteUser(user.id);
+                              }
+                            }}
+                            className="bg-red-100 hover:bg-red-200 text-red-600 border border-red-200 px-3 py-1 shadow-md rounded font-medium"
+                            whileHover={{ y: -2 }} 
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            Удалить
                           </motion.button>
-                        </Link>
-                        <motion.button 
-                          onClick={() => {
-                            if (confirm('Вы уверены, что хотите удалить этого пользователя?')) {
-                              handleDeleteUser(user.id);
-                            }
-                          }}
-                          className="bg-red-100 hover:bg-red-200 text-red-600 border border-red-200 px-3 py-1 shadow-md rounded font-medium"
-                          whileHover={{ y: -2 }} 
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          Удалить
-                        </motion.button>
-                      </td>
-                    </tr>)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
