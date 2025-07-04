@@ -11,6 +11,7 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { v4 as uuidv4 } from 'uuid';
 
 import { USER_ROLES } from "@/lib/types";
 
@@ -397,7 +398,7 @@ export function CreateUserDialog({ open, onOpenChange, onCreateUser }: CreateUse
     try {
       const userData = {
         ...formData,
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         phone: formData.phone || null,
         borrowedBooksCount: formData.borrowedBooksCount || 0,
         fineAmount: 0, // Штраф всегда 0 при создании

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, User } from "lucide-react";
 import { USER_ROLES } from "@/lib/types";
+import { v4 as uuidv4 } from 'uuid';
 
 interface UserRole {
   roleId: number;
@@ -42,7 +43,7 @@ export default function CreateUserPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<UserCreateDto>({
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     fullName: "",
     email: "",
     phone: "",
