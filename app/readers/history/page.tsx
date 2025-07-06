@@ -954,10 +954,6 @@ export default function ReservationHistoryPage() {
   )
 
   useEffect(() => {
-    if (user === undefined) {
-      return
-    }
-
     if (!user) {
       toast({
         title: "Требуется авторизация",
@@ -965,7 +961,6 @@ export default function ReservationHistoryPage() {
         variant: "default",
       })
       router.push("/auth/login")
-      setLoading(false)
       return
     }
 
@@ -1103,10 +1098,6 @@ export default function ReservationHistoryPage() {
 
     setFilteredReservations(filtered)
   }, [nonOverdueReservations, searchQuery, statusFilter])
-
-  if (user === undefined) {
-    return <EnhancedLoading />
-  }
 
   if (loading) {
     return <EnhancedLoading />
