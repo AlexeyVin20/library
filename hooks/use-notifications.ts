@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import * as signalR from '@microsoft/signalr'
 import type { Notification, NotificationStats } from '@/lib/types'
+import { v4 as uuidv4 } from 'uuid';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 
@@ -259,7 +260,7 @@ export const useNotifications = (): UseNotificationsReturn => {
         
         // Добавляем новое уведомление в список
         const newNotification: Notification = {
-          id: crypto.randomUUID(), // Временный ID до обновления списка
+          id: uuidv4(), // Временный ID до обновления списка
           userId: '',
           title: notification.Title || notification.title,
           message: notification.Message || notification.message,

@@ -150,16 +150,16 @@ const StatCard = ({
             {icon}
           </div>
         </div>
-        <div>
-          <p className={`text-4xl font-bold mb-2 text-gray-800`}>
-            <CountUp end={value} decimals={title === "Штрафы" ? 2 : 0} />
-            {title === "Штрафы" && " ₽"}
-          </p>
-          <p className="text-sm text-gray-500">{subtitle}</p>
-          {additionalInfo && <div className="mt-3 text-sm text-gray-500">
-              {additionalInfo}
-            </div>}
-        </div>
+          <div>
+            <p className={`text-4xl font-bold mb-2 text-gray-800`}>
+              <CountUp end={value} decimals={title === "Штрафы" ? 2 : 0} />
+              {title === "Штрафы" && " ₽"}
+            </p>
+            <p className="text-sm text-gray-500">{subtitle}</p>
+            {additionalInfo && <div className="mt-3 text-sm text-gray-500">
+                {additionalInfo}
+              </div>}
+          </div>
         {href && <Link href={href} className="mt-4">
             <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center">
               Подробнее
@@ -1109,7 +1109,6 @@ ${includeRecommendations ? `
             <AnimatedTabsTrigger value="books" icon={<BookMarked className="w-5 h-5 text-blue-500" />} label="Книги" isActive={activeTab === "books"} />
             <AnimatedTabsTrigger value="users" icon={<Users className="w-5 h-5 text-blue-500 " />} label="Пользователи" isActive={activeTab === "users"} />
             <AnimatedTabsTrigger value="reservations" icon={<CalendarClock className="w-5 h-5 text-blue-500" />} label="Резервирования" isActive={activeTab === "reservations"} />
-            <AnimatedTabsTrigger value="fines" icon={<CircleDollarSign className="w-5 h-5 text-blue-500" />} label="Штрафы" isActive={activeTab === "fines"} />
           </TabsList>
 
           {/* Обзор библиотеки */}
@@ -1127,9 +1126,6 @@ ${includeRecommendations ? `
                     </span>
                     <span className="ml-2">в обработке</span>
                   </div>} icon={<CalendarClock className="w-5 h-5 text-blue-400" />} color="bg-blue-400" delay={0.3} href="/admin/reservations" />
-              <StatCard title="Штрафы" value={totalFines} subtitle="общая сумма" additionalInfo={<p className="text-gray-500">
-                    За просроченные книги
-                  </p>} icon={<AlertTriangle className="w-5 h-5 text-gray-500" />} color="bg-gray-600" delay={0.4} href="/admin/users/fines" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

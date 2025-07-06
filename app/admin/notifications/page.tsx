@@ -1923,15 +1923,6 @@ export default function AdminNotificationsPage() {
                           <AlertCircle className="mr-2 h-4 w-4" />
                           Уведомление о просрочке
                         </Button>
-                        
-                        <Button 
-                          onClick={() => sendUserSpecificNotification('fine-notification')}
-                          disabled={!selectedUser}
-                          className="w-full bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                        >
-                          <AlertCircle className="mr-2 h-4 w-4" />
-                          Уведомление о штрафе
-                        </Button>
                       </div>
                     </div>
 
@@ -2190,26 +2181,6 @@ export default function AdminNotificationsPage() {
               transition={{ duration: 0.5, delay: 0.3 }}
               whileHover={{ y: -5 }}
             >
-              <Card className="bg-white rounded-xl shadow-lg border border-gray-200 h-full">
-                <CardHeader className="border-b border-gray-100">
-                  <CardTitle className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                    Уведомления о штрафах
-                  </CardTitle>
-                  <CardDescription className="text-gray-500">
-                    Отправить уведомления о начисленных штрафах (может работать некорректно)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <Button 
-                    onClick={() => sendAutomaticNotifications('fines')} 
-                    className="w-full bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                  >
-                    <AlertCircle className="mr-2 h-4 w-4" />
-                    Отправить уведомления (бета версия)
-                  </Button>
-                </CardContent>
-              </Card>
             </motion.div>
           </motion.div>
         </TabsContent>

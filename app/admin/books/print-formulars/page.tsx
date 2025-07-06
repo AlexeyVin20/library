@@ -18,6 +18,8 @@ interface BookFormularData {
   pageCount?: number;
   categorization?: string;
   instances: BookInstance[];
+  publisher?: string;
+  price?: number;
 }
 
 function PrintFormularsContent() {
@@ -85,7 +87,10 @@ function PrintFormularsContent() {
           publicationYear: book.publicationYear,
           pageCount: book.pageCount,
           categorization: book.categorization || book.genre,
-          instances: instancesData[index] || []
+          instances: instancesData[index] || [],
+          publisher: book.publisher,
+          city: book.city,
+          price: book.price
         }));
 
         setBooks(formattedBooks);
@@ -189,11 +194,13 @@ function PrintFormularsContent() {
                   const extraParts: string[] = [];
                   if (formular.publicationYear) extraParts.push(String(formular.publicationYear));
                   if (formular.pageCount) extraParts.push(`${formular.pageCount} стр.`);
+                  if (formular.publisher) extraParts.push(`Г. ${formular.publisher}`);
+                  if (formular.price) extraParts.push(`Цена: ${formular.price}`);
                   if (formular.categorization) extraParts.push(formular.categorization);
 
                   // Формируем строку с кодом экземпляра и местоположением
                   const instanceInfo = formular.instance.instanceCode 
-                    ? `${formular.instance.instanceCode}${formular.instance.location ? '-' + formular.instance.location : ''}`
+                    ? `${formular.instance.instanceCode}`
                     : '';
 
                   return (
@@ -201,34 +208,29 @@ function PrintFormularsContent() {
                       key={`${formular.id}-${formular.instance.id}-${index}`}
                       className="formular-card border-2 border-gray-600 p-2 text-xs leading-tight bg-white flex flex-col text-black"
                       style={{
-                        width: '7cm',
-                        height: '14cm',
+                        width: '6.5cm',
+                        height: '11.5cm',
                         pageBreakInside: 'avoid',
                         boxSizing: 'border-box',
-                        fontFamily: 'Arial, sans-serif'
+                        fontFamily: 'Times New Roman'
                       }}
                     >
                       {/* Информация о книге */}
                       <div className="space-y-1 mb-2 flex-1">
                         {/* Код экземпляра и местоположение */}
                         {instanceInfo && (
-                          <div className="text-xs break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black font-medium">
+                          <div className="text-lg break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black font-medium">
                             {instanceInfo}
                           </div>
                         )}
-                        {/* Авторы */}
-                        <div className="text-xs break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black">
-                          {formular.authors}
-                        </div>
-
-                        {/* Название */}
-                        <div className="text-xs break-words border-b border-gray-300 min-h-[2rem] pb-1 text-black">
-                          {formular.title}
+                        {/* Авторы и Название */}
+                        <div className="text-lg break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black">
+                          {`${formular.authors} : ${formular.title}`}
                         </div>
 
                         {/* Дополнительная строка */}
                         {extraParts.length > 0 && (
-                          <div className="text-xs break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black">
+                          <div className="text-md break-words border-b border-gray-300 min-h-[1.5rem] pb-1 text-black">
                             {extraParts.join(', ')}
                           </div>
                         )}

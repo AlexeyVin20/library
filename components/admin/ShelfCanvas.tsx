@@ -41,6 +41,8 @@ interface ShelfCanvasProps {
   onItemDrop?: (targetShelfId: number, targetPosition: number, e: React.DragEvent) => void
   onItemDragEnd?: () => void
   aiArrangedBooks?: string[]
+  onItemHoverStart?: (item: Book | Journal, isJournal: boolean, event: React.MouseEvent<HTMLDivElement>) => void
+  onItemHoverEnd?: () => void
 }
 
 const ShelfCanvas = ({
@@ -68,6 +70,8 @@ const ShelfCanvas = ({
   onItemDrop,
   onItemDragEnd,
   aiArrangedBooks = [],
+  onItemHoverStart,
+  onItemHoverEnd,
 }: ShelfCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -258,40 +262,16 @@ const ShelfCanvas = ({
             return "bg-gray-200 hover:bg-gray-300"
           }
 
+          const hasInstances = book && (book.instancesOnShelf ?? 0) > 1
+
           return (
             <div
               key={i}
-              data-book-id={book?.id || ""}
-              title={
-                item
-                  ? `${item.title} (${journal ? "Журнал" : "Книга"})${book?.authors ? ` - ${book.authors}` : ""}${book?.instancesOnShelf ? ` - Экземпляров на полке: ${book.instancesOnShelf}` : ""}`
-                  : "Пустое место"
-              }
-              className={`w-6 h-8 rounded transition-all duration-200 transform hover:scale-105 hover:-translate-y-0.5 active:scale-95 relative ${getBackground()}`}
-              style={{
-                cursor: item && !isEditMode ? (isDraggingItem ? 'grabbing' : 'grab') : 'pointer'
-              }}
-              draggable={item && !isEditMode}
-              onDragStart={(e) => {
-                if (item && !isEditMode && onItemDragStart) {
-                  onItemDragStart(item, !!journal, shelf.id, i, e)
-                  // Add visual feedback
-                  e.currentTarget.style.opacity = '0.5'
-                }
-              }}
-              onDragEnd={(e) => {
-                // Reset visual feedback
-                e.currentTarget.style.opacity = '1'
-                if (onItemDragEnd) {
-                  onItemDragEnd()
-                }
-              }}
-              onDragOver={(e) => {
-                e.preventDefault()
-                if (onSlotDragOver) {
-                  onSlotDragOver(shelf.id, i, e)
-                }
-              }}
+              className={`w-6 h-8 m-1 rounded-sm transition-all duration-200 cursor-pointer flex-shrink-0 relative ${getBackground()}`}
+              onClick={() => (item ? onItemClick(item, !!journal, shelf.id, i) : onEmptySlotClick(shelf.id, i))}
+              draggable={!!item && !isEditMode}
+              onDragStart={(e) => item && onItemDragStart?.(item, !!journal, shelf.id, i, e)}
+              onDragOver={(e) => onSlotDragOver?.(shelf.id, i, e)}
               onDragLeave={() => {
                 if (onSlotDragLeave) {
                   onSlotDragLeave()
@@ -303,20 +283,16 @@ const ShelfCanvas = ({
                   onItemDrop(shelf.id, i, e)
                 }
               }}
-              onClick={(e) => {
-                // Only handle click if not in middle of dragging
-                if (!isDraggingItem) {
-                  if (item) {
-                    onItemClick(item, !!journal, shelf.id, i)
-                  } else {
-                    onEmptySlotClick(shelf.id, i)
-                  }
+              onDragEnd={(e) => {
+                if (onItemDragEnd) {
+                  onItemDragEnd()
                 }
-                e.stopPropagation()
               }}
+              onMouseEnter={(e) => item && onItemHoverStart?.(item, !!journal, e)}
+              onMouseLeave={() => item && onItemHoverEnd?.()}
             >
               {/* Отображение количества экземпляров для книг */}
-              {book && book.instancesOnShelf !== undefined && (
+              {hasInstances && (
                 <div className="absolute -top-1 -right-1 bg-white text-black text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center border border-gray-300 shadow-md">
                   {book.instancesOnShelf}
                 </div>

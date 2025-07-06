@@ -10,7 +10,6 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  Loader2,
   BookOpen,
   Search,
   FileText,
@@ -24,9 +23,9 @@ import {
   Camera,
   AlertCircle,
   CheckCircle2,
+  Loader2,
 } from "lucide-react"
 
-import Loader from "@/components/ui/3d-box-loader-animation"
 import { useImageUpload } from "@/components/ui/use-image-upload"
 
 import { Input } from "@/components/ui/input"
@@ -53,6 +52,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { Book, Journal, Shelf } from "@/lib/types"
 import { Switch } from "@/components/ui/switch"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import RubricatorSelectorModal from "../RubricatorSelectorModal"
 
 interface Position {
   x: number
@@ -185,6 +185,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
   const [formSuccess, setFormSuccess] = useState<string | null>(null)
   // Переключатель простого/расширенного режима
   const [isAdvancedMode, setIsAdvancedMode] = useState(true)
+  const [isRubricatorModalOpen, setIsRubricatorModalOpen] = useState(false)
   
   // Хук для работы с MinIO
   const { uploadFile, isUploading } = useMinIOUpload({
@@ -296,6 +297,19 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
       setActiveTab("basic-info")
     }
   }, [isAdvancedMode, activeTab])
+
+  // Добавление записи в localStorage для переключателя модели ИИ
+  useEffect(() => {
+    localStorage.setItem('aiModel', aiModel);
+  }, [aiModel]);
+
+  // Чтение значения переключателя модели ИИ из localStorage при загрузке компонента
+  useEffect(() => {
+    const savedModel = localStorage.getItem('aiModel');
+    if (savedModel) {
+      setAiModel(savedModel as 'openrouter' | 'gemini');
+    }
+  }, []);
 
   const handleFetchByISBN = async () => {
     const isbn = formValues.isbn;
@@ -457,7 +471,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
             content: [
               {
                 type: "text",
-                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число) - shelfId всегда оставляй null. Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото.",
+                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число) - shelfId всегда оставляй null. Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото. Поле publisher включает название издательства и город в формате Город: 'Издательство' название издательства"
               },
               {
                 type: "image_url",
@@ -565,7 +579,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
           {
             parts: [
               {
-                text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число) - shelfId всегда оставляй null. Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото."
+                  text: "Отвечать пользователю по-русски. Отвечать в формате json без вступлений и заключений. Задача- заполнять поля у книг. Модель книги содержит следующие поля: id(Guid), title(строка 255), authors(строка 500), isbn(строка), genre(строка 100), categorization(строка 100), udk(строка), bbk(строка 20), cover всегда оставляй null, description(строка), publicationYear(число), publisher(строка 100), pageCount(число), language(строка 50), availableCopies(число), dateAdded(дата), dateModified(дата), edition(строка 50), price(decimal), format(строка 100), originalTitle(строка 255), originalLanguage(строка 50), isEbook(boolean), condition(строка 100), shelfId(число) - shelfId всегда оставляй null. Если информации нет, оставь null, цену ставь = 0. Ищи в интернете жанры книги по названию и автору, и заполняй резюме книги(summary). Не путай резюме(summary) и описание(description), которое написано в фото. Поле publisher включает название издательства и город в формате Город: 'Издательство' название издательства"
               },
               {
                 inline_data: {
@@ -1101,7 +1115,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
                 <GeminiFileUpload />
                 {geminiLoading && (
                   <div className="flex items-center justify-center mt-4">
-                    <Loader />
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                   </div>
                 )}
                 {geminiImage && !geminiLoading && (
@@ -1227,66 +1241,13 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
                           />
                         </FormField>
 
-                        <FormField label="Издательство" error={errors.publisher?.message}>
+                        <FormField label="Издательство и город" error={errors.publisher?.message}>
                           <Input
-                            placeholder="Введите название издательства"
+                            placeholder="Введите название издательства и города"
                             {...register("publisher")}
                             className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
                           />
                         </FormField>
-
-                        {!isEbook && (
-                          <FormField label="Доступные экземпляры" error={errors.availableCopies?.message}>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                className="bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold border border-gray-300"
-                                onClick={() => setValue("availableCopies", Math.max(0, (formValues.availableCopies || 0) - 1))}
-                                tabIndex={-1}
-                              >
-                                -
-                              </button>
-                              <Input
-                                type="number"
-                                placeholder="Количество"
-                                min={0}
-                                {...register("availableCopies", { valueAsNumber: true })}
-                                value={formValues.availableCopies}
-                                className="w-20 text-center bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-2 text-gray-800 shadow-sm h-10 placeholder:text-gray-500"
-                                onChange={e => setValue("availableCopies", Math.max(0, Number(e.target.value)))}
-                              />
-                              <button
-                                type="button"
-                                className="bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold border border-gray-300"
-                                onClick={() => setValue("availableCopies", (formValues.availableCopies || 0) + 1)}
-                                tabIndex={-1}
-                              >
-                                +
-                              </button>
-                            </div>
-                          </FormField>
-                        )}
-
-                        {/* Добавляю выпадающий список для выбора полки, если есть shelves */}
-                        {shelves && shelves.length > 0 && (
-                          <FormField label="Полка" error={errors.shelfId?.message}>
-                            <Select
-                              onValueChange={value => setValue("shelfId", Number(value))}
-                              defaultValue={initialData?.shelfId ? String(initialData.shelfId) : undefined}
-                            >
-                              <SelectTrigger className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12">
-                                <SelectValue placeholder="Выберите полку" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white border border-gray-200">
-                                {shelves.map(shelf => (
-                                  <SelectItem key={shelf.id} value={String(shelf.id)}>
-                                    {shelf.category} (№{shelf.shelfNumber})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormField>
-                        )}
 
                         <div className="md:col-span-2">
                           <label className="block text-sm font-medium text-gray-800 mb-2 text-center">
@@ -1498,36 +1459,45 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
                           </FormField>
 
                           {/* Accordion для классификации */}
-                          <Accordion type="single" collapsible className="w-full">
-                            <AccordionItem value="classification">
-                              <AccordionTrigger className="text-base font-medium text-gray-800">Классификация</AccordionTrigger>
-                              <AccordionContent>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                                  <FormField label="УДК" error={errors.udk?.message}>
-                                    <Input
-                                      placeholder="Введите УДК"
-                                      {...register("udk")}
-                                      className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                                    />
-                                  </FormField>
-                                  <FormField label="ББК" error={errors.bbk?.message}>
-                                    <Input
-                                      placeholder="Введите ББК"
-                                      {...register("bbk")}
-                                      className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                                    />
-                                  </FormField>
-                                  <FormField label="Категоризация" error={errors.categorization?.message}>
-                                    <Input
-                                      placeholder="Введите категоризацию"
-                                      {...register("categorization")}
-                                      className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
-                                    />
-                                  </FormField>
+                          <div className="md:col-span-2">
+                            <h3 className="text-base font-medium text-gray-800 mb-4">Классификация</h3>
+                            <div className="space-y-4 rounded-lg border bg-gray-50 p-4">
+                              <FormField label="Категоризация" error={errors.categorization?.message}>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    placeholder="Введите или выберите категоризацию"
+                                    {...register("categorization")}
+                                    className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                                  />
+                                  <motion.button
+                                    type="button"
+                                    onClick={() => setIsRubricatorModalOpen(true)}
+                                    className="bg-blue-500 hover:bg-blue-700 text-white rounded-md p-3 flex items-center justify-center transition-all"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                  >
+                                    <LayoutGrid className="h-5 w-5" />
+                                  </motion.button>
                                 </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
+                              </FormField>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField label="УДК" error={errors.udk?.message}>
+                                  <Input
+                                    placeholder="Введите УДК"
+                                    {...register("udk")}
+                                    className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                                  />
+                                </FormField>
+                                <FormField label="ББК" error={errors.bbk?.message}>
+                                  <Input
+                                    placeholder="Введите ББК"
+                                    {...register("bbk")}
+                                    className="bg-white border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 text-gray-800 shadow-sm h-12 placeholder:text-gray-500"
+                                  />
+                                </FormField>
+                              </div>
+                            </div>
+                          </div>
 
                           {/* Состояние книги теперь в деталях */}
                           {!isEbook && (
@@ -1546,7 +1516,6 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
                                 </SelectContent>
                               </Select>
                             </FormField>
-                            
                           )}
                         </div>
                       </CardContent>
@@ -1635,7 +1604,14 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
           </motion.div>
         </FadeInView>
       </div>
-
+      <RubricatorSelectorModal
+        isOpen={isRubricatorModalOpen}
+        onClose={() => setIsRubricatorModalOpen(false)}
+        onSelect={(name) => {
+          setValue("categorization", name, { shouldValidate: true })
+          setIsRubricatorModalOpen(false)
+        }}
+      />
     </div>
   )
 }

@@ -368,12 +368,6 @@ const UserCard = ({
 
     {type === 'fines' && 'overdueBooks' in user && (
       <div className="space-y-2">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-sm text-red-600">
-            <CreditCard className="w-4 h-4" />
-            <span>Текущий штраф: {(user as UserWithFines).fineAmount.toFixed(2)} ₽</span>
-          </div>
-        </div>
         
         {(user as UserWithFines).overdueBooks && (user as UserWithFines).overdueBooks.length > 0 && (
           <div className="space-y-3">
@@ -633,18 +627,6 @@ export default function QuickOverviewPage() {
             delay={0.1}
           />
           <StatCard
-            title="Просрочили"
-            value={overdueUsersCount}
-            subtitle="пользователей с просрочкой"
-            icon={<AlertTriangle className="w-5 h-5" />}
-            color="bg-orange-500"
-            delay={0.2}
-            onClick={() => {
-              setActiveTab('books');
-              setSearchTerm('');
-            }}
-          />
-          <StatCard
             title="Просрочено"
             value={totalStats.totalOverdueBooks}
             subtitle="книг просрочено"
@@ -653,21 +635,13 @@ export default function QuickOverviewPage() {
             delay={0.3}
           />
           <StatCard
-            title="Со штрафами"
+            title="С задолженностью"
             value={totalStats.totalUsersWithFines}
-            subtitle="пользователей имеют штрафы"
+            subtitle="пользователей имеют задолженность"
             icon={<CreditCard className="w-5 h-5" />}
             color="bg-red-500"
             delay={0.4}
             onClick={() => setActiveTab('fines')}
-          />
-          <StatCard
-            title="Текущие штрафы"
-            value={Math.round(totalStats.totalFineAmount)}
-            subtitle="рублей начислено"
-            icon={<CreditCard className="w-5 h-5" />}
-            color="bg-gray-600"
-            delay={0.5}
           />
         </div>
 
@@ -726,14 +700,14 @@ export default function QuickOverviewPage() {
                     ) : (
                       <>
                         <CreditCard className="w-5 h-5 text-red-500" />
-                        Пользователи со штрафами
+                        Пользователи с задолженностями
                       </>
                     )}
                   </h2>
                   <p className="text-gray-500 mt-1">
                     {activeTab === 'books' 
                       ? `Найдено ${filteredUsersWithBooks.length} пользователей с книгами`
-                      : `Найдено ${filteredUsersWithFines.length} пользователей со штрафами`
+                      : `Найдено ${filteredUsersWithFines.length} пользователей с задолженностями`
                     }
                   </p>
                 </div>

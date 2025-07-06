@@ -1,15 +1,20 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Heart, Share2, Calendar, User, BookMarked, ArrowLeft, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarIcon, BookOpen, Heart, Share2, Calendar, User, BookMarked, ArrowLeft, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { getHighestPriorityRole } from "@/lib/types";
+import { Calendar as UiCalendar } from "@/components/ui/calendar";
+import { format, addDays } from "date-fns";
+import { ru } from 'date-fns/locale';
+
 interface Book {
   id: string;
   title: string;
@@ -73,7 +78,27 @@ export default function BookDetailsPage() {
   const [isBookEffectivelyReservedByCurrentUser, setIsBookEffectivelyReservedByCurrentUser] = useState(false);
   const [userActiveReservationId, setUserActiveReservationId] = useState<string | null>(null);
   const [showReservationModal, setShowReservationModal] = useState(false);
-  const [selectedReservationDate, setSelectedReservationDate] = useState(() => new Date().toISOString().split('T')[0]);
+  
+  // Состояния для дат начала и окончания
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>();
+
+  // Определяем максимальный срок резервирования
+  const maxReservationDays = React.useMemo(() => {
+    if (user && user.roles) {
+      const userRole = getHighestPriorityRole(user.roles);
+      return userRole?.loanPeriodDays || 7;
+    }
+    return 7;
+  }, [user]);
+
+  // При изменении startDate, устанавливаем endDate по умолчанию
+  useEffect(() => {
+    if (startDate) {
+        setEndDate(addDays(startDate, maxReservationDays-1));
+    }
+  }, [startDate, maxReservationDays]);
+
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   // Статусы, которые считаются неактивными (пользователь может забронировать снова)
@@ -261,23 +286,30 @@ export default function BookDetailsPage() {
       });
       return;
     }
-    setSelectedReservationDate(new Date().toISOString().split('T')[0]); // Сброс даты на сегодня
+    // Сбрасываем даты при открытии
+    setStartDate(new Date());
+    setEndDate(addDays(new Date(), maxReservationDays - 1));
     setShowReservationModal(true);
   };
   const handleConfirmReservation = async () => {
-    if (!currentUserId || !book) return;
-    const reservationDate = new Date(selectedReservationDate);
-    const expirationDate = new Date(selectedReservationDate);
-    expirationDate.setDate(reservationDate.getDate() + 3); // Бронь на 3 дня
+    if (!currentUserId || !book || !startDate || !endDate) {
+      toast({
+        title: "Ошибка",
+        description: "Необходимо выбрать начальную и конечную дату бронирования.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const reservationData = {
       userId: currentUserId,
       bookId: book.id,
-      reservationDate: reservationDate.toISOString(),
-      expirationDate: expirationDate.toISOString(),
+      reservationDate: startDate.toISOString(),
+      expirationDate: endDate.toISOString(),
       status: "Обрабатывается",
       notes: `Зарезервировано пользователем ${user?.username || currentUserId} через страницу книги.`
     };
+
     try {
       const response = await fetch(`${baseUrl}/api/Reservation`, {
         method: "POST",
@@ -354,8 +386,6 @@ export default function BookDetailsPage() {
         </div>
       </div>;
   }
-  const calculatedExpirationDate = new Date(selectedReservationDate);
-  calculatedExpirationDate.setDate(calculatedExpirationDate.getDate() + 3);
   return <div className="min-h-screen bg-gray-200 relative">
       {/* Floating shapes */}
       <div className="fixed top-1/4 right-10 w-64 h-64 bg-blue-300/20 rounded-full blur-3xl"></div>
@@ -478,11 +508,66 @@ export default function BookDetailsPage() {
               {book.authors && <p className="text-sm text-gray-500">{book.authors}</p>}
             </div>
 
-            <div className="mb-4">
-              <label htmlFor="reservationDate" className="block text-sm font-medium text-gray-800 mb-1">
-                Дата начала бронирования:
-              </label>
-              <input type="date" id="reservationDate" name="reservationDate" value={selectedReservationDate} onChange={e => setSelectedReservationDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full p-2 border border-gray-100 rounded-lg bg-white text-gray-800 focus:ring-blue-500 focus:border-blue-500" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+               <div>
+                 <label className="block text-sm font-medium text-gray-800 mb-1">
+                    Дата начала:
+                 </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, 'PPP', { locale: ru }) : <span>Выберите дату</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <UiCalendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        disabled={[{ before: new Date() }, { dayOfWeek: [0, 6] }]}
+                        initialFocus
+                        locale={ru}
+                        weekStartsOn={1}
+                      />
+                    </PopoverContent>
+                  </Popover>
+               </div>
+               <div>
+                  <label className="block text-sm font-medium text-gray-800 mb-1">
+                    Дата окончания:
+                  </label>
+                   <Popover>
+                    <PopoverTrigger asChild>
+                       <Button
+                        variant={"outline"}
+                        className="w-full justify-start text-left font-normal"
+                        disabled={!startDate}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? format(endDate, 'PPP', { locale: ru }) : <span>Выберите дату</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <UiCalendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={setEndDate}
+                        disabled={[
+                            { before: startDate || new Date() }, 
+                            { after: startDate ? addDays(startDate, maxReservationDays - 1) : new Date() },
+                            { dayOfWeek: [0, 6] }
+                        ]}
+                        initialFocus
+                        locale={ru}
+                        weekStartsOn={1}
+                      />
+                    </PopoverContent>
+                  </Popover>
+               </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">

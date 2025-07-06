@@ -41,6 +41,7 @@ import {
   getNotificationTypeLabel
 } from "@/lib/notification-utils"
 import { Variants } from "framer-motion"
+import { PreviewSwitcher, PreviewType } from "@/components/ui/preview-switcher"
 
 // Интерфейсы для результатов поиска
 interface SearchResult {
@@ -50,6 +51,7 @@ interface SearchResult {
   type: "user" | "book" | "journal" | "page"
   url: string
   icon: React.ReactElement
+  previewType: PreviewType
 }
 
 interface SearchResultCategory {
@@ -66,6 +68,7 @@ interface MegaMenuItem {
   href: string
   description: string
   icon: React.ReactElement
+  previewType: PreviewType
 }
 
 interface MegaMenuSection {
@@ -105,14 +108,15 @@ const generateBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     '/users/quick-overview': 'Быстрый обзор',
     '/notifications': 'Уведомления',
     '/fines': 'Штрафы',
+    '/books/print-formulars': 'Печать формуляров',
   }
 
   const segments = cleanPath.split('/').filter(Boolean)
   const breadcrumbs: BreadcrumbItem[] = []
 
-  // Всегда добавляем "Библиотека" как корневой элемент
+  // Всегда добавляем "СИНАПС" как корневой элемент
   breadcrumbs.push({
-    label: 'Библиотека',
+    label: 'СИНАПС',
     href: '/admin',
     isLast: cleanPath === '/'
   })
@@ -176,7 +180,9 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   const searchResultsRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLElement>(null)
   const [scrolled, setScrolled] = useState(false)
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+  const [activePreview, setActivePreview] = useState<{ href: string; type: PreviewType; top: number; left: number; } | null>(null);
+  const previewTimer = useRef<NodeJS.Timeout | null>(null);
+  const megaMenuContentRef = useRef<HTMLDivElement>(null);
   
   // Используем хук для работы с уведомлениями
   const {
@@ -214,6 +220,58 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     }
   }, [isConnected])
 
+  const handleShowPreview = (href: string, type: PreviewType) => {
+    if (previewTimer.current) {
+      clearTimeout(previewTimer.current);
+    }
+    previewTimer.current = setTimeout(() => {
+      if (megaMenuContentRef.current) {
+        const rect = megaMenuContentRef.current.getBoundingClientRect();
+        const previewWidth = 800; // Ширина PreviewSwitcher
+        const previewHeight = 750;
+        const gap = 16; // Отступ
+        let left = rect.left - previewWidth - gap;
+        // Если слева не помещается — показываем справа
+        if (left < gap) {
+          left = rect.right + gap;
+          // Если и справа выходим за экран — прижимаем к правому краю
+          if (left + previewWidth > window.innerWidth - gap) {
+            left = window.innerWidth - previewWidth - gap;
+          }
+        }
+        let top = rect.top;
+        // Если снизу не помещается — прижимаем выше
+        if (top + previewHeight > window.innerHeight - gap) {
+          top = window.innerHeight - previewHeight - gap;
+        }
+        if (top < gap) {
+          top = gap;
+        }
+        setActivePreview({
+          href,
+          type,
+          top,
+          left,
+        });
+      }
+    }, 700);
+  };
+
+  const handleHidePreview = () => {
+    if (previewTimer.current) {
+      clearTimeout(previewTimer.current);
+    }
+    previewTimer.current = setTimeout(() => {
+      setActivePreview(null);
+    }, 200);
+  };
+
+  const cancelHidePreview = () => {
+    if (previewTimer.current) {
+      clearTimeout(previewTimer.current);
+    }
+  };
+
   // Генерируем breadcrumbs на основе текущего пути
   const breadcrumbs = generateBreadcrumbs(pathname)
 
@@ -227,18 +285,21 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           href: "/admin/books",
           description: "Просмотр и управление каталогом книг",
           icon: <BookOpen className="h-5 w-5" />,
+          previewType: 'iframe',
         },
         {
           title: "Добавить книгу",
           href: "/admin/books/create",
           description: "Добавить новую книгу в каталог",
           icon: <PlusCircle className="h-5 w-5" />,
+          previewType: 'quick',
         },
         {
           title: "Полки",
           href: "/admin/shelfs",
           description: "Организация и управление полками",
           icon: <Bookmark className="h-5 w-5" />,
+          previewType: 'iframe',
         },
       ],
     },
@@ -250,18 +311,21 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           href: "/admin/users",
           description: "Управление пользователями системы",
           icon: <Users className="h-5 w-5" />,
+          previewType: 'iframe',
         },
         {
           title: "Быстрый просмотр",
           href: "/admin/users/quick-overview",
           description: "Быстрый обзор пользователей",
           icon: <Users className="h-5 w-5" />,
+          previewType: 'api',
         },
         {
           title: "Управление ролями",
           href: "/admin/roles",
           description: "Настройка ролей и разрешений",
           icon: <Shield className="h-5 w-5" />,
+          previewType: 'quick',
         },
       ],
     },
@@ -273,18 +337,21 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           href: "/admin/reservations",
           description: "Управление резервациями книг",
           icon: <Calendar className="h-5 w-5" />,
+          previewType: 'iframe',
         },
         {
           title: "Статистика",
           href: "/admin/statistics",
           description: "Аналитика и отчеты системы",
           icon: <PieChart className="h-5 w-5" />,
+          previewType: 'iframe',
         },
         {
           title: "Уведомления",
           href: "/admin/notifications",
           description: "Просмотр и управление уведомлениями",
           icon: <Bell className="h-5 w-5" />,
+          previewType: 'quick',
         },
       ],
     },
@@ -296,18 +363,21 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           href: "/admin/help",
           description: "Документация и руководства",
           icon: <HelpCircle className="h-5 w-5" />,
+          previewType: 'quick',
         },
         {
           title: "FAQ",
           href: "/admin/faq",
           description: "Часто задаваемые вопросы",
           icon: <FileQuestion className="h-5 w-5" />,
+          previewType: 'quick',
         },
         {
           title: "Связаться с нами",
           href: "/admin/contact",
           description: "Техническая поддержка",
           icon: <Mail className="h-5 w-5" />,
+          previewType: 'quick',
         },
       ],
     },
@@ -472,6 +542,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               type: "user" as const,
               url: `/admin/users/${user.id}`,
               icon: <UserIcon className="h-4 w-4 text-blue-500" />,
+              previewType: 'api',
             }))
 
             categorizedResults.push({
@@ -510,6 +581,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               type: "book" as const,
               url: `/admin/books/${book.id}`,
               icon: <Book className="h-4 w-4 text-blue-700" />,
+              previewType: 'api',
             }))
 
             categorizedResults.push({
@@ -531,6 +603,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           type: "page" as const,
           url: "/admin",
           icon: <FileText className="h-4 w-4 text-blue-300" />,
+          previewType: 'quick' as const,
         },
         {
           id: "users",
@@ -538,6 +611,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           type: "page" as const,
           url: "/admin/users",
           icon: <FileText className="h-4 w-4 text-blue-300" />,
+          previewType: 'iframe' as const,
         },
         {
           id: "books",
@@ -545,6 +619,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           type: "page" as const,
           url: "/admin/books",
           icon: <FileText className="h-4 w-4 text-blue-300" />,
+          previewType: 'api' as const,
         },
         {
           id: "journals",
@@ -552,6 +627,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           type: "page" as const,
           url: "/admin/journals",
           icon: <FileText className="h-4 w-4 text-blue-300" />,
+          previewType: 'quick' as const,
         },
         {
           id: "statistics",
@@ -559,6 +635,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           type: "page" as const,
           url: "/admin/statistics",
           icon: <FileText className="h-4 w-4 text-blue-300" />,
+          previewType: 'iframe' as const,
         },
         {
           id: "Shelfs",
@@ -566,6 +643,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           type: "page" as const,
           url: "/admin/shelfs",
           icon: <FileText className="h-4 w-4 text-blue-300" />,
+          previewType: 'iframe' as const,
         },
         {
           id: "Quick-overview",
@@ -573,6 +651,15 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           type: "page" as const,
           url: "/admin/users/quick-overview",
           icon: <FileText className="h-4 w-4 text-blue-300" />,
+          previewType: 'api' as const,
+        },
+        {
+          id: "Print-formulars",
+          title: "Печать формуляров",
+          type: "page" as const,
+          url: "/admin/books/print-formulars",
+          icon: <FileText className="h-4 w-4 text-blue-300" />,
+          previewType: 'quick' as const,
         },
       ].filter((page) => page.title.toLowerCase().includes(query.toLowerCase()))
 
@@ -757,15 +844,132 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               className="flex-shrink-0 cursor-pointer"
             >
               <Link href="/">
-                <div className="relative">
-                  <Image 
-                    src="/icons/admin/logo.png" 
-                    alt="logo" 
-                    height={40} 
-                    width={40} 
-                    className="object-contain drop-shadow-lg" 
-                  />
-                  <div className="absolute inset-0 bg-blue-400/30 rounded-full blur-xl" />
+                <div className="relative group">
+                  <motion.div
+                    className="relative"
+                    whileHover={{
+                      scale: 1.15,
+                      rotate: [0, -5, 5, -3, 3, 0],
+                      transition: { 
+                        duration: 0.6,
+                        ease: "easeInOut"
+                      }
+                    }}
+                    animate={{
+                      y: [0, -2, 0],
+                      transition: {
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }
+                    }}
+                  >
+                    <Image 
+                      src="/images/owl-svgrepo-com.svg" 
+                      alt="СИНАПС - Сова логотип" 
+                      height={44} 
+                      width={44} 
+                      className="object-contain drop-shadow-xl transition-all duration-300 group-hover:drop-shadow-2xl" 
+                    />
+                    
+                    {/* Магическое свечение вокруг совы */}
+                    <motion.div 
+                      className="absolute inset-0 bg-gradient-to-r from-blue-400/40 via-purple-400/40 to-blue-400/40 rounded-full blur-xl"
+                      animate={{
+                        opacity: [0.3, 0.6, 0.3],
+                        scale: [1, 1.2, 1],
+                        transition: {
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }
+                      }}
+                    />
+                    
+                    {/* Мерцающие звездочки вокруг совы */}
+                    <motion.div
+                      className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-300 rounded-full"
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.5, 1, 0.5],
+                        rotate: [0, 180, 360],
+                        transition: {
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 0.2
+                        }
+                      }}
+                    />
+                    
+                    <motion.div
+                      className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-blue-300 rounded-full"
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.3, 1, 0.3],
+                        rotate: [360, 180, 0],
+                        transition: {
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 0.8
+                        }
+                      }}
+                    />
+                    
+                    <motion.div
+                      className="absolute top-1 -left-2 w-1 h-1 bg-white rounded-full"
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.2, 1, 0.2],
+                        transition: {
+                          duration: 1.8,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 1.2
+                        }
+                      }}
+                    />
+                  </motion.div>
+                  
+                  {/* Эффект "глаз совы" при наведении */}
+                  <motion.div
+                    className="absolute inset-0 pointer-events-none"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ 
+                      opacity: 1,
+                      transition: { duration: 0.3 }
+                    }}
+                  >
+                    {/* Левый глаз */}
+                    <motion.div
+                      className="absolute top-3 left-3 w-1 h-1 bg-yellow-400 rounded-full shadow-lg"
+                      animate={{
+                        scale: [1, 1.5, 1],
+                        opacity: [0.7, 1, 0.7],
+                        transition: {
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }
+                      }}
+                    />
+                    
+                    {/* Правый глаз */}
+                    <motion.div
+                      className="absolute top-3 right-3 w-1 h-1 bg-yellow-400 rounded-full shadow-lg"
+                      animate={{
+                        scale: [1, 1.5, 1],
+                        opacity: [0.7, 1, 0.7],
+                        transition: {
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 0.5
+                        }
+                      }}
+                    />
+                  </motion.div>
                 </div>
               </Link>
             </motion.div>
@@ -787,7 +991,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     transition={{ delay: index * 0.1 + 0.4 }}
                     className="flex items-center gap-1"
                   >
-                    {/* Показываем "Библиотека" только на главной странице или как ссылку на непоследних страницах */}
+                    {/* Показываем "СИНАПС" только на главной странице или как ссылку на непоследних страницах */}
                     {(index === 0 && (pathname === "/admin" || !item.isLast)) && (
                       <>
                         {!item.isLast ? (
@@ -796,21 +1000,181 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             className="group flex items-center"
                           >
                             <motion.span
-                              whileHover={{ scale: 1.05 }}
+                              whileHover={{ 
+                                scale: 1.05,
+                                textShadow: "0 0 20px rgba(255,255,255,0.8)",
+                                rotateX: 15,
+                                rotateY: 10,
+                                z: 50
+                              }}
                               whileTap={{ scale: 0.95 }}
-                              className="text-white hover:text-blue-100 hover:bg-white/20 text-xl font-bold transition-all duration-300 px-3 py-1.5 rounded-lg"
+                              onMouseMove={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const x = e.clientX - rect.left - rect.width / 2;
+                                const y = e.clientY - rect.top - rect.height / 2;
+                                
+                                e.currentTarget.style.transform = `
+                                  perspective(1000px) 
+                                  rotateY(${x / 10}deg) 
+                                  rotateX(${-y / 10}deg) 
+                                  translateZ(20px)
+                                `;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg) translateZ(0px)';
+                              }}
+                              className="text-white hover:text-blue-100 hover:bg-white/20 text-2xl font-black transition-all duration-300 px-4 py-2 rounded-lg bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm shadow-lg border border-white/20 tracking-wider relative overflow-hidden"
+                              style={{
+                                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                                transformStyle: 'preserve-3d',
+                              }}
                             >
-                              {item.label}
+                              <motion.span
+                                className="relative z-10"
+                                animate={{
+                                  backgroundPosition: ['0% 50%', '200% 50%']
+                                }}
+                                transition={{
+                                  duration: 6,
+                                  repeat: Infinity,
+                                  ease: "linear"
+                                }}
+                                style={{
+                                  backgroundImage: 'linear-gradient(90deg, #ffffff 0%, #ffffff 10%, #60a5fa 25%, #3b82f6 40%, #1d4ed8 50%, #3b82f6 60%, #60a5fa 75%, #ffffff 90%, #ffffff 100%)',
+                                  backgroundSize: '200% 100%',
+                                  WebkitBackgroundClip: 'text',
+                                  WebkitTextFillColor: 'transparent',
+                                  backgroundClip: 'text',
+                                  color: 'transparent',
+                                  WebkitFontSmoothing: 'antialiased',
+                                  textRendering: 'optimizeLegibility',
+                                } as React.CSSProperties}
+                              >
+                                {item.label}
+                              </motion.span>
+                              {/* 3D карточка эффект - задний слой */}
+                              <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-lg"
+                                style={{
+                                  transform: 'translateZ(-10px)',
+                                  transformStyle: 'preserve-3d',
+                                }}
+                                whileHover={{
+                                  transform: 'translateZ(-20px) rotateX(-5deg)',
+                                  transition: { duration: 0.3 }
+                                }}
+                              />
                             </motion.span>
                           </Link>
                         ) : (
                           <motion.span
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: index * 0.1 + 0.5 }}
-                            className="text-white text-xl font-semibold px-3 py-1.5 rounded-lg bg-white/25 backdrop-blur-sm shadow-lg"
+                            initial={{ scale: 0.9, opacity: 0, rotateX: -15 }}
+                            animate={{ 
+                              scale: 1, 
+                              opacity: 1, 
+                              rotateX: 0,
+                              textShadow: [
+                                "0 0 0px rgba(255,255,255,0)",
+                                "0 0 10px rgba(255,255,255,0.5)",
+                                "0 0 20px rgba(255,255,255,0.3)",
+                                "0 0 10px rgba(255,255,255,0.5)",
+                                "0 0 0px rgba(255,255,255,0)"
+                              ]
+                            }}
+                            transition={{ 
+                              delay: index * 0.1 + 0.5,
+                              duration: 1.2,
+                              textShadow: {
+                                duration: 3,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }
+                            }}
+                            whileHover={{
+                              scale: 1.1,
+                              rotateY: [0, 5, -5, 0],
+                              rotateX: 20,
+                              z: 60,
+                              textShadow: "0 0 30px rgba(255,255,255,0.9)",
+                              transition: {
+                                duration: 0.8,
+                                ease: "easeInOut"
+                              }
+                            }}
+                            onMouseMove={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const x = e.clientX - rect.left - rect.width / 2;
+                              const y = e.clientY - rect.top - rect.height / 2;
+                              
+                              e.currentTarget.style.transform = `
+                                perspective(1000px) 
+                                rotateY(${x / 8}deg) 
+                                rotateX(${-y / 8}deg) 
+                                translateZ(30px)
+                                scale(1.05)
+                              `;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg) translateZ(0px) scale(1)';
+                            }}
+                            className="text-white text-2xl font-black px-4 py-2 rounded-lg bg-gradient-to-r from-white/30 to-white/20 backdrop-blur-sm shadow-xl border border-white/30 tracking-wider cursor-default relative overflow-hidden"
+                            style={{
+                              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                              textShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                              background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.25) 100%)',
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.4)',
+                              transformStyle: 'preserve-3d',
+                            }}
                           >
-                            {item.label}
+                            <motion.span
+                              className="relative z-10"
+                              animate={{
+                                backgroundPosition: ['0% 50%', '200% 50%']
+                              }}
+                              transition={{
+                                duration: 8,
+                                repeat: Infinity,
+                                ease: "linear"
+                              }}
+                              style={{
+                                backgroundImage: 'linear-gradient(90deg, #ffffff 0%, #ffffff 8%, #93c5fd 20%, #60a5fa 30%, #3b82f6 40%, #1d4ed8 50%, #3b82f6 60%, #60a5fa 70%, #93c5fd 80%, #ffffff 92%, #ffffff 100%)',
+                                backgroundSize: '200% 100%',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                color: 'transparent',
+                                WebkitFontSmoothing: 'antialiased',
+                                textRendering: 'optimizeLegibility',
+                              } as React.CSSProperties}
+                            >
+                              {item.label}
+                            </motion.span>
+                            {/* 3D карточка эффект - задний слой */}
+                            <motion.div
+                              className="absolute inset-0 bg-gradient-to-r from-blue-400/30 to-blue-600/30 rounded-lg"
+                              style={{
+                                transform: 'translateZ(-15px)',
+                                transformStyle: 'preserve-3d',
+                              }}
+                              whileHover={{
+                                transform: 'translateZ(-30px) rotateX(-8deg) rotateY(3deg)',
+                                transition: { duration: 0.4 }
+                              }}
+                            />
+                            {/* Дополнительный слой для глубины */}
+                            <motion.div
+                              className="absolute inset-0 bg-gradient-to-r from-blue-300/20 to-blue-500/20 rounded-lg"
+                              style={{
+                                transform: 'translateZ(-25px)',
+                                transformStyle: 'preserve-3d',
+                              }}
+                              whileHover={{
+                                transform: 'translateZ(-40px) rotateX(-12deg) rotateY(5deg)',
+                                transition: { duration: 0.4, delay: 0.1 }
+                              }}
+                            />
                           </motion.span>
                         )}
                         
@@ -821,13 +1185,13 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             transition={{ delay: index * 0.1 + 0.6 }}
                             className="flex-shrink-0"
                           >
-                            <ChevronRight className="h-4 w-4 text-white/60" />
+                            <ChevronRight className="h-5 w-5 text-white/70 drop-shadow-sm" />
                           </motion.div>
                         )}
                       </>
                     )}
                     
-                    {/* Остальные элементы breadcrumb (не "Библиотека") */}
+                    {/* Остальные элементы breadcrumb (не "СИНАПС") */}
                     {index > 0 && (
                       <>
                         {!item.isLast ? (
@@ -916,73 +1280,73 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                       <span className="text-white">Управление</span>
                     </NavigationMenuTrigger>
                   </motion.div>
-                  <NavigationMenuContent>
-                    <div className="relative">
-                      <div className="absolute inset-0 -z-10 rounded-xl" />
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="relative w-[900px] p-6 backdrop-blur-xl bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-gray-50/30 to-blue-50/50 pointer-events-none rounded-xl" />
-                        <div className="relative grid grid-cols-2 gap-8">
-                          {megaMenuSections.map((section, sectionIndex) => (
-                            <div key={section.title} className="space-y-4">
-                              <motion.h3
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: sectionIndex * 0.1 }}
-                                className="text-sm font-bold text-blue-700 uppercase tracking-wider"
-                              >
-                                {section.title}
-                              </motion.h3>
-                              <div className="space-y-2">
-                                {section.items.map((item, itemIndex) => (
-                                  <motion.div
-                                    key={item.href}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: (sectionIndex * 0.1) + (itemIndex * 0.05) }}
-                                    onHoverStart={() => setHoveredItem(item.href)}
-                                    onHoverEnd={() => setHoveredItem(null)}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
+                  <NavigationMenuContent
+                    ref={megaMenuContentRef}
+                    onMouseLeave={handleHidePreview}
+                  >
+                    <motion.div
+                      onMouseEnter={cancelHidePreview}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="w-[900px] p-6 backdrop-blur-xl bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-gray-50/30 to-blue-50/50 pointer-events-none rounded-xl" />
+                      <div className="relative grid grid-cols-2 gap-8">
+                        {megaMenuSections.map((section, sectionIndex) => (
+                          <div key={section.title} className="space-y-4">
+                            <motion.h3
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: sectionIndex * 0.1 }}
+                              className="text-sm font-bold text-blue-700 uppercase tracking-wider"
+                            >
+                              {section.title}
+                            </motion.h3>
+                            <div className="space-y-2">
+                              {section.items.map((item, itemIndex) => (
+                                <motion.div
+                                  key={item.href}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: (sectionIndex * 0.1) + (itemIndex * 0.05) }}
+                                  onHoverStart={() => handleShowPreview(item.href, item.previewType)}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  <Link
+                                    href={item.href}
+                                    className="group flex items-start gap-4 p-4 rounded-lg hover:bg-blue-50 transition-all duration-300 border border-transparent hover:border-blue-200 text-gray-800"
                                   >
-                                    <Link
-                                      href={item.href}
-                                      className="group flex items-start gap-4 p-4 rounded-lg hover:bg-blue-50 transition-all duration-300 border border-transparent hover:border-blue-200 text-gray-800"
-                                    >
-                                      <div className="flex-shrink-0 mt-1">
-                                        <motion.div
-                                          animate={{
-                                            rotate: hoveredItem === item.href ? 360 : 0,
-                                            scale: hoveredItem === item.href ? 1.2 : 1,
-                                          }}
-                                          transition={{ duration: 0.3 }}
-                                          className="text-blue-500"
-                                        >
-                                          {item.icon}
-                                        </motion.div>
+                                    <div className="flex-shrink-0 mt-1">
+                                      <motion.div
+                                        animate={{
+                                          rotate: activePreview?.href === item.href ? 360 : 0,
+                                          scale: activePreview?.href === item.href ? 1.2 : 1,
+                                        }}
+                                        transition={{ duration: 0.3 }}
+                                        className="text-blue-500"
+                                      >
+                                        {item.icon}
+                                      </motion.div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
+                                        {item.title}
                                       </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
-                                          {item.title}
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 group-hover:text-blue-600 transition-colors">
-                                          {item.description}
-                                        </div>
+                                      <div className="text-xs text-gray-500 mt-1 group-hover:text-blue-600 transition-colors">
+                                        {item.description}
                                       </div>
-                                    </Link>
-                                  </motion.div>
-                                ))}
-                              </div>
+                                    </div>
+                                  </Link>
+                                </motion.div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
@@ -1672,6 +2036,25 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           )}
         </AnimatePresence>
       </div>
+      {activePreview && (
+        <div
+          style={{
+            position: 'fixed',
+            top: `${activePreview.top}px`,
+            left: `${activePreview.left}px`,
+            zIndex: 1000,
+          }}
+          onMouseEnter={cancelHidePreview}
+          onMouseLeave={handleHidePreview}
+        >
+          <PreviewSwitcher
+            isVisible={!!activePreview}
+            route={activePreview.href}
+            type={activePreview.type}
+            position={'left'}
+          />
+        </div>
+      )}
     </header>
   )
 }

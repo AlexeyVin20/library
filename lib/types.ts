@@ -289,7 +289,7 @@ export const USER_ROLES = {
   ADMIN: { id: 1, name: 'Администратор', maxBooksAllowed: 100, loanPeriodDays: 365 },
   LIBRARIAN: { id: 2, name: 'Библиотекарь', maxBooksAllowed: 50, loanPeriodDays: 90 },
   EMPLOYEE: { id: 3, name: 'Сотрудник', maxBooksAllowed: 30, loanPeriodDays: 60 },
-  GUEST: { id: 4, name: 'Гость', maxBooksAllowed: 5, loanPeriodDays: 14 }
+  GUEST: { id: 4, name: 'Гость', maxBooksAllowed: 30, loanPeriodDays: 60 }
 } as const;
 
 export function getRoleById(roleId: number): UserRole | null {

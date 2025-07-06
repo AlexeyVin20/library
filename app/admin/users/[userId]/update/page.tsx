@@ -9,10 +9,6 @@ interface UserRole {
   roleId: number;
 }
 
-interface Book {
-  // Можно оставить пустым, если не требуется при обновлении
-}
-
 interface UserUpdateDto {
   id: string;
   fullName: string;
@@ -20,14 +16,12 @@ interface UserUpdateDto {
   phone: string;
   dateRegistered: string;
   username: string;
-  password: string;
   isActive: boolean;
   borrowedBooksCount: number;
   maxBooksAllowed: number;
   loanPeriodDays: number;
   fineAmount: number;
   userRoles: UserRole[] | null;
-  borrowedBooks: Book[] | null;
 }
 
 const FadeInView = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
@@ -70,14 +64,12 @@ export default function UpdateUserPage() {
     phone: "",
     dateRegistered: "",
     username: "",
-    password: "",
     isActive: true,
     borrowedBooksCount: 0,
     maxBooksAllowed: 0,
     loanPeriodDays: 0,
     fineAmount: 0,
     userRoles: null,
-    borrowedBooks: null,
   });
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -176,7 +168,6 @@ export default function UpdateUserPage() {
         // Сохраняем существующие роли, но не даем их изменять
         userRoles: formData.userRoles,
         borrowedBooks: null,
-        password: formData.password,
       };
       const response = await fetch(`${baseUrl}/api/User/${userId}`, {
         method: "PUT",
@@ -303,7 +294,6 @@ export default function UpdateUserPage() {
             <div className="space-y-4">
               {[
                 { label: "Имя пользователя", name: "username", type: "text", required: true },
-                { label: "Пароль", name: "password", type: "password", required: true },
                 { label: "ФИО", name: "fullName", type: "text", required: true },
                 { label: "Email", name: "email", type: "email", required: true },
                 { label: "Телефон", name: "phone", type: "tel" },

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Check, X, Loader, AlertCircle, BookOpen, Tag, Layers, Info, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import type { Book } from "@/lib/types";
+import RubricatorSelectorModal from "./RubricatorSelectorModal";
+
+interface Rubricator {
+  id: number;
+  name: string;
+  description: string | null;
+}
 
 interface GenreAssignment {
   bookId: string;
@@ -54,6 +61,43 @@ const AutoAssignGenres: React.FC<AutoAssignGenresProps> = ({
   const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>('both');
   const [bookFilterMode, setBookFilterMode] = useState<BookFilterMode>('missing-both');
   const [webSearchInfo, setWebSearchInfo] = useState<{queries: string[], chunksCount: number} | null>(null);
+  const [rubricators, setRubricators] = useState<Rubricator[]>([]);
+  const [rubricatorModalOpen, setRubricatorModalOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchRubricators = async () => {
+      if (!open) return;
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Rubricator`);
+        if (!response.ok) {
+          throw new Error('Не удалось загрузить рубрикаторы');
+        }
+        const data = await response.json();
+        setRubricators(data);
+        toast({ title: "Справочник рубрикаторов успешно загружен." });
+      } catch (e: any) {
+        setError(`Ошибка загрузки рубрикаторов: ${e.message}`);
+        toast({ title: "Ошибка", description: `Не удалось загрузить справочник рубрикаторов: ${e.message}`, variant: "destructive" });
+      }
+    };
+
+    fetchRubricators();
+  }, [open]);
+
+  const handleRubricatorModalClose = () => {
+    setRubricatorModalOpen(false);
+    // После закрытия модального окна обновляем справочник
+    setTimeout(() => {
+      if (open) {
+        fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/Rubricator`).then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            setRubricators(data);
+          }
+        });
+      }
+    }, 300);
+  };
 
   const analyzeAndAssignGenres = async () => {
     setIsAnalyzing(true);
@@ -120,14 +164,22 @@ const AutoAssignGenres: React.FC<AutoAssignGenresProps> = ({
           break;
       }
 
-      const prompt = `
-Ты - эксперт библиотекарь и книговед. Твоя задача - ${taskDescription} на основе их метаданных с использованием актуальной информации из интернета.
+      const rubricatorList = rubricators.map(r => `- ${r.name}: ${r.description || 'без описания'}`).join('\\n');
 
-ИНСТРУКЦИИ ПО ПОИСКУ:
-1. Для каждой книги найди в интернете актуальную информацию о жанре, категории, обзорах
-2. Ищи информацию о книге на сайтах библиотек, книжных магазинов, литературных порталах
-3. Проверь актуальные классификации и стандарты жанров в 2024-2025 году
-4. Используй найденную информацию для точного определения жанров и категоризации
+      const prompt = `
+Ты - эксперт библиотекарь и книговед. Твоя задача - ${taskDescription} на основе их метаданных, используя предоставленный справочник рубрикаторов и, при необходимости, актуальную информацию из интернета.
+
+**ВАЖНО: СПРАВОЧНИК РУБРИКАТОРОВ В ПРИОРИТЕТЕ!**
+При анализе поля 'categorization' сначала всегда ищи подходящую категорию в предоставленном ниже справочнике. Если подходящий вариант найден, используй его.
+
+**СПРАВОЧНИК РУБРИКАТОРОВ (КАТЕГОРИЙ):**
+${rubricatorList || "Справочник не загружен."}
+
+ИНСТРУКЦИИ ПО ПОИСКУ (ИСПОЛЬЗУЕТСЯ, ЕСЛИ В СПРАВОЧНИКЕ НЕТ ПОДХОДЯЩЕЙ КАТЕГОРИИ):
+1. Для каждой книги найди в интернете актуальную информацию о жанре, категории, обзорах.
+2. Ищи информацию о книге на сайтах библиотек, книжных магазинов, литературных порталах.
+3. Проверь актуальные классификации и стандарты жанров в 2024-2025 году.
+4. Используй найденную информацию для точного определения жанров и категоризации.
 
 СТАТИСТИКА ОБРАБАТЫВАЕМЫХ КНИГ:
 - Всего книг в базе: ${books.length}
@@ -166,14 +218,15 @@ ${assignmentMode === 'categorization' || assignmentMode === 'both' ? `
 ` : ''}
 
 ПРАВИЛА:
-1. ОБЯЗАТЕЛЬНО используй веб-поиск для каждой книги для получения актуальной информации
-2. Анализируй название, авторов, описание, издательство, год издания И найденную в интернете информацию
-3. ВАЖНО: Поле currentGenre="" означает что жанр НЕ УКАЗАН (пустая строка)
-4. ВАЖНО: Поле currentCategorization="" означает что категоризация НЕ УКАЗАНА (пустая строка, в реальных данных это поле "categorization")  
-5. Для книг с существующими жанрами/категоризацией предлагай улучшения только если текущее значение явно неподходящее или устаревшее
-6. Жанры должны быть краткими, точными и современными (1-3 слова)
-7. Категоризация должна следовать актуальным библиотечным стандартам
-8. Обоснуй каждое назначение со ссылкой на источник информации из интернета
+1. **ПРИОРИТЕТ СПРАВОЧНИКА**: Для поля 'categorization' в первую очередь используй значения из предоставленного справочника рубрикаторов.
+2. **ВЕБ-ПОИСК**: Если в справочнике нет подходящей категории, используй веб-поиск для определения наиболее подходящей. В этом случае, ты можешь предложить найденный в интернете жанр в качестве категории, если он хорошо описывает книгу. Для определения самих жанров также всегда используй веб-поиск.
+3. Анализируй название, авторов, описание, издательство, год издания И найденную в интернете информацию.
+4. ВАЖНО: Поле currentGenre="" означает что жанр НЕ УКАЗАН (пустая строка).
+5. ВАЖНО: Поле currentCategorization="" означает что категоризация НЕ УКАЗАНА (пустая строка, в реальных данных это поле "categorization").
+6. Для книг с существующими жанрами/категоризацией предлагай улучшения только если текущее значение явно неподходящее или устаревшее.
+7. Жанры должны быть краткими, точными и современными (1-3 слова).
+8. Категоризация должна следовать предоставленному справочнику. Если подходящей категории в справочнике нет, предложи наиболее релевантный вариант, найденный в интернете. Этот вариант может совпадать с жанром книги.
+9. Обоснуй каждое назначение. Если использовал справочник, напиши "согласно справочнику". Если веб-поиск - укажи источник.
 
 ФОРМАТ ОТВЕТА (только JSON, без дополнительного текста):
 {
@@ -188,14 +241,14 @@ ${assignmentMode === 'categorization' || assignmentMode === 'both' ? `
     {
       "bookId": "id_книги", 
       "categorization": "предлагаемая_категоризация",
-      "reason": "краткое обоснование с указанием источника из веб-поиска"
+      "reason": "краткое обоснование (например, 'согласно справочнику' или источник из веб-поиска)"
     }
   ],` : ''}
-  "summary": "краткое описание логики назначений с упоминанием использованных веб-источников"
+  "summary": "краткое описание логики назначений с упоминанием использованных веб-источников или справочника"
 }
 `;
 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -517,7 +570,16 @@ ${assignmentMode === 'categorization' || assignmentMode === 'both' ? `
               Автоматическое назначение жанров и категорий с помощью ИИ
             </DialogTitle>
           </DialogHeader>
-
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              className="text-blue-700 border-blue-400"
+              onClick={() => setRubricatorModalOpen(true)}
+            >
+              <Layers className="h-4 w-4 mr-2 text-blue-500" />
+              Справочник рубрикаторов
+            </Button>
+          </div>
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -890,6 +952,12 @@ ${assignmentMode === 'categorization' || assignmentMode === 'both' ? `
               </div>
             </div>
           )}
+          {/* Модальное окно выбора/редактирования рубрикаторов */}
+          <RubricatorSelectorModal
+            isOpen={rubricatorModalOpen}
+            onClose={handleRubricatorModalClose}
+            onSelect={() => setRubricatorModalOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </TooltipProvider>

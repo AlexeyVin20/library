@@ -7,7 +7,7 @@ import Footer from "@/components/admin/Footer";
 import { ReactNode, useEffect, useState } from "react";
 import "@/styles/admin.css";
 import { useAuth, User } from "@/lib/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import NewTopNavigation from "@/components/admin/New-top-navigation";
 
 type AdminLayoutProps = {
@@ -17,6 +17,8 @@ type AdminLayoutProps = {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get('preview') === 'true';
   
   useEffect(() => {
     // Перенаправляем на страницу входа, если пользователь не аутентифицирован
@@ -53,9 +55,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-green/10 rounded-full blur-3xl print:hidden pointer-events-none"></div>
       
       <div className="flex flex-col flex-1">
-        <div className="print:hidden">
-          <NewTopNavigation user={user} />
-        </div>
+        {!isPreview && (
+          <div className="print:hidden">
+            <NewTopNavigation user={user} />
+          </div>
+        )}
         <main className="p-6 print:p-0">{children}</main>
       </div>
     </div>

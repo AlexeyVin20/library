@@ -1,15 +1,15 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion"
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -25,9 +25,34 @@ import {
   Calendar,
   User,
   BookOpen,
+  TrendingUp,
+  BarChart3,
+  Activity,
+  PieChart,
+  LineChart as LucideLineChart,
 } from "lucide-react"
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  Line,
+  LineChart as RechartsLineChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+  PieChart as RechartsPieChart,
+  Cell,
+  Pie,
+} from "recharts"
 import { toast } from "@/hooks/use-toast"
 import Image from "next/image"
+import { Book } from "@/components/ui/book"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
 
 interface Reservation {
   id: string
@@ -150,13 +175,511 @@ const StatusIcon = ({ status }: { status: string }) => {
   return <Clock className="w-5 h-5 text-gray-500" />
 }
 
+const monthNames = [
+  "Январь",
+  "Февраль",
+  "Март",
+  "Апрель",
+  "Май",
+  "Июнь",
+  "Июль",
+  "Август",
+  "Сентябрь",
+  "Октябрь",
+  "Ноябрь",
+  "Декабрь",
+]
+
+const statusConfig = {
+  active: {
+    label: "Активные",
+    color: "#3b82f6",
+    gradient: "from-blue-400 to-blue-500",
+    statuses: ["активна", "подтверждена", "обрабатывается", "одобрена", "выдана"],
+  },
+  returned: {
+    label: "Возвращенные",
+    color: "#10b981",
+    gradient: "from-emerald-400 to-green-500",
+    statuses: ["возвращена"],
+  },
+  cancelled: {
+    label: "Отмененные",
+    color: "#ef4444",
+    gradient: "from-red-400 to-rose-500",
+    statuses: ["отменена", "отменена_пользователем", "истекла", "просрочена"],
+  },
+}
+
+type StatusConfigType = typeof statusConfig
+
+const CountUp = ({ end, duration = 1.5 }: { end: number; duration?: number }) => {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    if (end === 0) {
+      setCount(0)
+      return
+    }
+
+    const startTime = Date.now()
+    const interval = setInterval(() => {
+      const now = Date.now()
+      const progress = Math.min((now - startTime) / (duration * 1000), 1)
+      setCount(Math.floor(progress * end))
+
+      if (progress === 1) {
+        clearInterval(interval)
+      }
+    }, 16)
+
+    return () => clearInterval(interval)
+  }, [end, duration])
+
+  return <span>{count}</span>
+}
+
+const StatCard = ({
+  label,
+  value,
+  color,
+  gradient,
+  delay = 0,
+  percentage,
+  statusKey,
+  isSelected,
+  isOtherSelected,
+  onClick,
+}: {
+  label: string
+  value: number
+  color: string
+  gradient: string
+  delay?: number
+  percentage: number
+  statusKey: string
+  isSelected: boolean
+  isOtherSelected: boolean
+  onClick: () => void
+}) => {
+  const safeValue = isNaN(value) ? 0 : value
+  const safePercentage = isNaN(percentage) ? 0 : percentage
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{
+        opacity: isOtherSelected && !isSelected ? 0.4 : 1,
+        y: 0,
+        scale: isSelected ? 1.02 : 1,
+      }}
+      transition={{ duration: 0.5, delay }}
+      whileHover={{ y: -2, scale: isSelected ? 1.02 : 1.01 }}
+      onClick={onClick}
+      className="cursor-pointer"
+    >
+      <Card
+        className={`relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 ${
+          isSelected ? "ring-2 ring-offset-2 ring-blue-500" : ""
+        }`}
+      >
+        <div
+          className={`absolute inset-0 bg-gradient-to-br ${gradient} ${
+            isSelected ? "opacity-15" : "opacity-5"
+          }`}
+        />
+        {isSelected && (
+          <div className="absolute top-2 right-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+          </div>
+        )}
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">{label}</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-foreground">
+                  <CountUp end={safeValue} />
+                </p>
+                <Badge variant="secondary" className="text-xs">
+                  {safePercentage.toFixed(1)}%
+                </Badge>
+              </div>
+            </div>
+            <div
+              className={`w-12 h-12 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg ${
+                isSelected ? "scale-110" : ""
+              } transition-transform duration-300`}
+            >
+              <div className="w-6 h-6 rounded-full bg-white/20" />
+            </div>
+          </div>
+          <div className="mt-4 w-full bg-muted rounded-full h-2">
+            <motion.div
+              className={`h-2 rounded-full bg-gradient-to-r ${gradient}`}
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(safePercentage, 100)}%` }}
+              transition={{ duration: 1, delay: delay + 0.5 }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: any[]
+  label?: string
+  coordinate?: { x: number; y: number }
+  selectedStatus?: string | null
+}
+
+const CustomTooltip = ({ active, payload, label, selectedStatus }: CustomTooltipProps) => {
+  if (!active || !payload || !payload.length) {
+    return null
+  }
+
+  let activeEntry = null
+
+  if (selectedStatus) {
+    activeEntry = payload.find((entry) => entry.dataKey === selectedStatus)
+    if (!activeEntry || activeEntry.value === 0) {
+      return null
+    }
+  } else {
+    const nonZeroEntries = payload.filter((entry) => entry.value > 0)
+    if (nonZeroEntries.length > 0) {
+      activeEntry = nonZeroEntries.reduce((prev, current) => {
+        return (current.value || 0) > (prev.value || 0) ? current : prev
+      })
+    } else {
+      activeEntry = payload[0]
+    }
+  }
+
+  if (!activeEntry) return null
+
+  const value = activeEntry.value || 0
+  const name = activeEntry.name || activeEntry.dataKey || "Unknown"
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-white border border-gray-200 rounded-lg p-4 shadow-xl z-50"
+      style={{ backgroundColor: "white" }}
+    >
+      <p className="font-semibold mb-3 text-gray-900">{label}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: activeEntry.color || "#000" }} />
+          <span className="text-sm text-gray-600">{name}</span>
+        </div>
+        <span className="font-semibold text-gray-900">{value}</span>
+      </div>
+      {selectedStatus && (
+        <div className="mt-2 text-xs text-gray-500">
+          Фильтр: {name}
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+const ChartRenderer = ({
+  type,
+  data,
+  statusConfig,
+  width,
+  height,
+  selectedStatus,
+}: {
+  type: "area"
+  data: any[]
+  statusConfig: StatusConfigType
+  width?: number
+  height?: number
+  selectedStatus?: string | null
+}) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Нет данных для отображения</p>
+      </div>
+    )
+  }
+
+  const pieData = Object.entries(statusConfig)
+    .map(([key, config]) => ({
+      name: config.label,
+      value: data.reduce((sum: number, item: any) => {
+        const itemValue = item[key] || 0
+        return sum + (isNaN(itemValue) ? 0 : itemValue)
+      }, 0),
+      color: config.color,
+    }))
+    .filter((item) => item.value > 0)
+
+  const commonProps = {
+    margin: { top: 20, right: 30, left: 20, bottom: 20 },
+  }
+
+  const axisProps = {
+    axisLine: false,
+    tickLine: false,
+    tick: { fill: "#6b7280", fontSize: 12 },
+    tickMargin: 10,
+  }
+
+  try {
+    return (
+      <AreaChart data={data} width={width} height={height} {...commonProps}>
+        <defs>
+          {Object.entries(statusConfig).map(([key, config]) => (
+            <linearGradient key={key} id={`user-gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={config.color} stopOpacity={0.8} />
+              <stop offset="95%" stopColor={config.color} stopOpacity={0.1} />
+            </linearGradient>
+          ))}
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+        <XAxis dataKey="shortMonth" {...axisProps} />
+        <YAxis {...axisProps} />
+        <Tooltip
+          content={<CustomTooltip selectedStatus={selectedStatus} />}
+          shared={false}
+          cursor={{ fill: "rgba(0, 0, 0, 0.1)" }}
+        />
+        {Object.entries(statusConfig).map(([key, config]) => {
+          const isSelected = selectedStatus === key
+          const isOtherSelected = selectedStatus !== null && selectedStatus !== key
+          const opacity = isOtherSelected ? 0.2 : 1
+
+          return (
+            <Area
+              key={key}
+              type="monotone"
+              dataKey={key}
+              name={config.label}
+              stroke={config.color}
+              fillOpacity={opacity}
+              fill={`url(#user-gradient-${key})`}
+              strokeWidth={isSelected ? 3 : 2}
+              style={{ opacity }}
+            />
+          )
+        })}
+      </AreaChart>
+    )
+  } catch (error) {
+    console.error("Chart rendering error:", error)
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Alert>
+          <AlertDescription>
+            Ошибка при отображении графика. Проверьте консоль для деталей.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+}
+
+function ReservationsHistoryChart({ reservations }: { reservations: Reservation[] }) {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
+
+  const { chartData, totalStats, hasData } = useMemo(() => {
+    const months = Array.from({ length: 12 }, (_, i) => ({
+      month: monthNames[i],
+      shortMonth: monthNames[i].slice(0, 3),
+      active: 0,
+      returned: 0,
+      cancelled: 0,
+    }))
+
+    const stats = {
+      active: 0,
+      returned: 0,
+      cancelled: 0,
+    }
+
+    let processedCount = 0
+
+    if (!reservations || !Array.isArray(reservations) || reservations.length === 0) {
+      return {
+        chartData: months,
+        totalStats: stats,
+        hasData: false,
+      }
+    }
+
+    reservations.forEach((r) => {
+      try {
+        if (!r || !r.reservationDate || !r.status) return
+        const date = new Date(r.reservationDate)
+        if (isNaN(date.getTime()) || date.getFullYear() !== selectedYear) return
+
+        const monthIndex = date.getMonth()
+        let statusMatched = false
+
+        for (const [key, config] of Object.entries(statusConfig)) {
+          if (config.statuses.includes(r.status.toLowerCase())) {
+            months[monthIndex][key as keyof (typeof months)[0]]++
+            stats[key as keyof typeof stats]++
+            statusMatched = true
+            processedCount++
+            break
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing reservation`, error)
+      }
+    })
+
+    return {
+      chartData: months,
+      totalStats: stats,
+      hasData: processedCount > 0,
+    }
+  }, [reservations, selectedYear])
+
+  const totalReservations = Object.values(totalStats).reduce((sum, val) => sum + val, 0)
+
+  const availableYears = useMemo(() => {
+    if (!reservations || !Array.isArray(reservations)) {
+      return [new Date().getFullYear()]
+    }
+    const years = new Set<number>()
+    reservations.forEach((r) => {
+      try {
+        const date = new Date(r.reservationDate)
+        if (!isNaN(date.getTime())) {
+          years.add(date.getFullYear())
+        }
+      } catch (error) {
+        /* ignore */
+      }
+    })
+    return Array.from(years).sort((a, b) => b - a)
+  }, [reservations])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="space-y-6"
+    >
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="text-2xl font-bold">Статистика бронирований</CardTitle>
+              <p className="text-muted-foreground">Анализ динамики по месяцам и статусам</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              {selectedStatus && selectedStatus in statusConfig && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{
+                      backgroundColor: statusConfig[selectedStatus as keyof typeof statusConfig].color,
+                    }}
+                  />
+                  <span className="text-sm font-medium text-blue-800">
+                    {statusConfig[selectedStatus as keyof typeof statusConfig].label}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedStatus(null)}
+                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+                  >
+                    ×
+                  </Button>
+                </div>
+              )}
+
+              <Select
+                value={selectedYear.toString()}
+                onValueChange={(value) => setSelectedYear(Number(value))}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {!hasData && (
+        <Alert>
+          <AlertDescription>
+            Нет данных для отображения за выбранный год ({selectedYear}). Попробуйте выбрать другой год.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {Object.entries(statusConfig).map(([key, config], index) => {
+          const value = totalStats[key as keyof typeof totalStats]
+          const percentage = totalReservations > 0 ? (value / totalReservations) * 100 : 0
+
+          return (
+            <StatCard
+              key={key}
+              statusKey={key}
+              label={config.label}
+              value={value}
+              color={config.color}
+              gradient={config.gradient}
+              delay={index * 0.1}
+              percentage={percentage}
+              isSelected={selectedStatus === key}
+              isOtherSelected={selectedStatus !== null && selectedStatus !== key}
+              onClick={() => setSelectedStatus(selectedStatus === key ? null : key)}
+            />
+          )
+        })}
+      </div>
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ChartRenderer
+                type="area"
+                data={chartData}
+                statusConfig={statusConfig}
+                selectedStatus={selectedStatus}
+              />
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
 // Enhanced reservation item component
 const ReservationItem: React.FC<{
   reservation: Reservation
   index: number
 }> = ({ reservation, index }) => {
   const router = useRouter()
-  const [isHovered, setIsHovered] = useState(false)
 
   const formattedReservationDate = new Date(reservation.reservationDate).toLocaleDateString("ru-RU")
   const formattedExpirationDate = new Date(reservation.expirationDate).toLocaleDateString("ru-RU")
@@ -196,64 +719,62 @@ const ReservationItem: React.FC<{
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
+      whileHover={{ y: -5, scale: 1.01 }}
       className="group"
     >
-      <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden">
+      <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg group-hover:shadow-2xl transition-all duration-300 overflow-hidden">
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row">
             {/* Book cover */}
-            <div className="relative md:w-48 h-48 md:h-auto flex-shrink-0">
-              {reservation.book?.cover ? (
-                <Image
-                  src={reservation.book.cover || "/placeholder.svg"}
-                  alt={reservation.book.title || "Обложка книги"}
-                  fill
-                  className="object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-                  <BookOpen className="w-16 h-16 text-blue-500" />
+            <div className="relative md:w-56 h-auto flex-shrink-0 flex items-center justify-center p-6">
+              <div className="relative">
+                <Book
+                  width={150}
+                  illustration={
+                    reservation.book?.cover ? (
+                      <Image
+                        src={reservation.book.cover}
+                        alt={reservation.book.title || "Обложка книги"}
+                        fill
+                        className="object-cover rounded-md"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                        <BookOpen className="w-12 h-12 text-blue-500" />
+                      </div>
+                    )
+                  }
+                >
+                  <div />
+                </Book>
+                {/* Status overlay */}
+                <div className="absolute top-2 left-2 z-20">
+                  <motion.div
+                    className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 shadow-lg"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                  >
+                    <StatusIcon status={reservation.status} />
+                    <span className="text-sm font-medium text-gray-800">{reservation.status}</span>
+                  </motion.div>
                 </div>
-              )}
-
-              {/* Status overlay */}
-              <div className="absolute top-4 left-4">
-                <motion.div
-                  className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 shadow-lg"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                >
-                  <StatusIcon status={reservation.status} />
-                  <span className="text-sm font-medium text-gray-800">{reservation.status}</span>
-                </motion.div>
+                {/* Expiring soon warning */}
+                {isExpiringSoon() && (
+                  <motion.div
+                    className="absolute top-2 right-2 z-20 bg-orange-500 text-white rounded-full px-2 py-1 text-xs font-bold flex items-center gap-1"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                  >
+                    <AlertTriangle className="w-3 h-3" />
+                    Скоро истекает
+                  </motion.div>
+                )}
               </div>
-
-              {/* Expiring soon warning */}
-              {isExpiringSoon() && (
-                <motion.div
-                  className="absolute top-4 right-4 bg-orange-500 text-white rounded-full px-2 py-1 text-xs font-bold flex items-center gap-1"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                >
-                  <AlertTriangle className="w-3 h-3" />
-                  Скоро истекает
-                </motion.div>
-              )}
-
-              {/* Gradient overlay */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: isHovered ? 1 : 0 }}
-                transition={{ duration: 0.3 }}
-              />
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-6 pl-0">
               <div className="flex flex-col h-full">
                 {/* Header */}
                 <div className="mb-4">
@@ -307,7 +828,9 @@ const ReservationItem: React.FC<{
                     <div className="flex items-center gap-2">
                       <ListChecks className="w-4 h-4 text-purple-500" />
                       <span className="text-sm text-gray-600">Статус:</span>
-                      <Badge className={`${getStatusColor(reservation.status)} border`}>{reservation.status}</Badge>
+                      <Badge className={`${getStatusColor(reservation.status)} border`}>
+                        {reservation.status}
+                      </Badge>
                     </div>
 
                     <Button
@@ -340,83 +863,6 @@ const ReservationItem: React.FC<{
           </div>
         </CardContent>
       </Card>
-    </motion.div>
-  )
-}
-
-// Stats component
-const StatsSection = ({ reservations }: { reservations: Reservation[] }) => {
-  const activeCount = reservations.filter((r) =>
-    ["активна", "подтверждена", "обрабатывается", "одобрена", "выдана"].includes(r.status.toLowerCase()),
-  ).length
-  const completedCount = reservations.filter((r) => r.status.toLowerCase() === "возвращена").length
-  const cancelledCount = reservations.filter((r) =>
-    ["отменена", "отменена_пользователем", "истекла", "просрочена"].includes(r.status.toLowerCase()),
-  ).length
-
-  const stats = [
-    {
-      label: "Активные",
-      value: activeCount,
-      icon: CheckCircle,
-      color: "from-green-500 to-emerald-500",
-      bgColor: "bg-green-50",
-    },
-    {
-      label: "Завершенные",
-      value: completedCount,
-      icon: BookOpenCheck,
-      color: "from-blue-500 to-cyan-500",
-      bgColor: "bg-blue-50",
-    },
-    {
-      label: "Отмененные",
-      value: cancelledCount,
-      icon: XCircle,
-      color: "from-red-500 to-pink-500",
-      bgColor: "bg-red-50",
-    },
-  ]
-
-  return (
-    <motion.div
-      className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.2 }}
-    >
-      {stats.map((stat, index) => (
-        <motion.div
-          key={stat.label}
-          whileHover={{ scale: 1.05, y: -5 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <motion.div
-                    className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.5 + index * 0.1, type: "spring", stiffness: 200 }}
-                  >
-                    {stat.value}
-                  </motion.div>
-                  <div className="text-gray-600 font-medium">{stat.label}</div>
-                </div>
-                <motion.div
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center shadow-lg`}
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <stat.icon className="w-6 h-6 text-white" />
-                </motion.div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      ))}
     </motion.div>
   )
 }
@@ -475,6 +921,16 @@ export default function ReservationHistoryPage() {
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
 
+  const overdueReservations = useMemo(
+    () => reservations.filter((r) => ["просрочена", "истекла"].includes(r.status.toLowerCase())),
+    [reservations],
+  )
+
+  const nonOverdueReservations = useMemo(
+    () => reservations.filter((r) => !["просрочена", "истекла"].includes(r.status.toLowerCase())),
+    [reservations],
+  )
+
   useEffect(() => {
     if (user === undefined) {
       return
@@ -524,7 +980,7 @@ export default function ReservationHistoryPage() {
               }
               // Запрос деталей пользователя
               if (reservation.userId) {
-                const userRes = await fetch(`${baseUrl}/api/users/${reservation.userId}`)
+                const userRes = await fetch(`${baseUrl}/api/User/${reservation.userId}`)
                 if (userRes.ok) {
                   userDetails = await userRes.json()
                 } else {
@@ -581,7 +1037,7 @@ export default function ReservationHistoryPage() {
 
   // Filter reservations
   useEffect(() => {
-    let filtered = reservations
+    let filtered = nonOverdueReservations
 
     // Filter by search query
     if (searchQuery) {
@@ -598,7 +1054,7 @@ export default function ReservationHistoryPage() {
     }
 
     setFilteredReservations(filtered)
-  }, [reservations, searchQuery, statusFilter])
+  }, [nonOverdueReservations, searchQuery, statusFilter])
 
   if (user === undefined) {
     return <EnhancedLoading />
@@ -721,47 +1177,73 @@ export default function ReservationHistoryPage() {
           </Card>
         </motion.div>
 
-        {/* Stats */}
-        <StatsSection reservations={reservations} />
-
-        {/* Reservations list */}
-        <AnimatePresence mode="wait">
-          {filteredReservations.length === 0 ? (
-            <motion.div
-              key="no-results"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center py-16"
-            >
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl p-12 max-w-md mx-auto border border-white/20">
-                <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Ничего не найдено</h3>
-                <p className="text-gray-600">Попробуйте изменить фильтры или поисковый запрос</p>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="results"
-              className="space-y-6"
-              variants={{
-                hidden: { opacity: 0 },
-                show: {
-                  opacity: 1,
-                  transition: {
-                    staggerChildren: 0.1,
-                  },
-                },
-              }}
-              initial="hidden"
-              animate="show"
-            >
-              {filteredReservations.map((reservation, index) => (
+        {/* Overdue Section */}
+        {overdueReservations.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="my-8"
+          >
+            <Alert variant="destructive" className="mb-6">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Просроченные бронирования ({overdueReservations.length})</AlertTitle>
+              <AlertDescription>
+                Пожалуйста, верните следующие книги как можно скорее, чтобы избежать штрафов.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-6">
+              {overdueReservations.map((reservation, index) => (
                 <ReservationItem key={reservation.id} reservation={reservation} index={index} />
               ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+            <Separator className="my-8" />
+          </motion.div>
+        )}
+
+        {/* Stats Chart */}
+        <ReservationsHistoryChart reservations={reservations} />
+
+        {/* Reservations list */}
+        <div className="mt-8">
+          <AnimatePresence mode="wait">
+            {filteredReservations.length === 0 ? (
+              <motion.div
+                key="no-results"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center py-16"
+              >
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl p-12 max-w-md mx-auto border border-white/20">
+                  <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Ничего не найдено</h3>
+                  <p className="text-gray-600">Попробуйте изменить фильтры или поисковый запрос</p>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="results"
+                className="space-y-6"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: {
+                    opacity: 1,
+                    transition: {
+                      staggerChildren: 0.1,
+                    },
+                  },
+                }}
+                initial="hidden"
+                animate="show"
+              >
+                {filteredReservations.map((reservation, index) => (
+                  <ReservationItem key={reservation.id} reservation={reservation} index={index} />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   )

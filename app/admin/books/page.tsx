@@ -11,6 +11,7 @@ import BookCover from "@/components/BookCover";
 import { Book } from "@/components/ui/book";
 import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
 import AutoAssignGenres from "@/components/admin/AutoAssignGenres";
+import IframePagePreviewCentered from "@/components/ui/iframe-page-preview-centered";
 
 /**
  * Interface for book item
@@ -240,6 +241,9 @@ const ThreeDBookView = ({
   onPrintFormulars
 }: ViewProps) => {
   const [spineColors, setSpineColors] = useState<{ [id: string]: string }>({});
+  const [hoverState, setHoverState] = useState<{ id: string | null; position: "left" | "right" | "top" | "bottom" }>({ id: null, position: "right" });
+  const [previewState, setPreviewState] = useState<{ id: string | null; position: "left" | "right" | "top" | "bottom" }>({ id: null, position: "right" });
+  const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
   const imgRefs = useRef<{ [id: string]: HTMLImageElement | null }>({});
   useEffect(() => {
     books.forEach(book => {
@@ -256,6 +260,54 @@ const ThreeDBookView = ({
   }, [books]);
   const allSelected = books.length > 0 && selectedBooks.length === books.length;
   const someSelected = selectedBooks.length > 0 && selectedBooks.length < books.length;
+
+  const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>, bookId: string) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const previewWidth = 800; // Ширина превью
+    const previewHeight = 450; // Высота превью
+    const previewMargin = 16; // Отступ (ml-4/mr-4/mt-4/mb-4)
+
+    const hasSpaceOnRight = rect.right + previewMargin + previewWidth <= window.innerWidth;
+    const hasSpaceOnLeft = rect.left - previewMargin - previewWidth >= 0;
+    const hasSpaceOnBottom = rect.bottom + previewMargin + previewHeight <= window.innerHeight;
+    const hasSpaceOnTop = rect.top - previewMargin - previewHeight >= 0;
+
+    // Определяем наилучшую позицию
+    let position: "left" | "right" | "top" | "bottom" = "right";
+
+    if (hasSpaceOnRight) {
+      position = "right";
+    } else if (hasSpaceOnLeft) {
+      position = "left";
+    } else if (hasSpaceOnBottom) {
+      position = "bottom";
+    } else if (hasSpaceOnTop) {
+      position = "top";
+    }
+    // Если нигде не помещается, останется 'right' по умолчанию
+
+    setHoverState({ id: bookId, position });
+  };
+
+  const handleMouseLeave = () => {
+    setHoverState({ id: null, position: "right" });
+  };
+
+  useEffect(() => {
+    if (hoverTimeout.current) {
+      clearTimeout(hoverTimeout.current);
+    }
+    hoverTimeout.current = setTimeout(() => {
+      setPreviewState(hoverState);
+    }, 700);
+
+    return () => {
+      if (hoverTimeout.current) {
+        clearTimeout(hoverTimeout.current);
+      }
+    };
+  }, [hoverState]);
+
   return <div className="relative">
     {/* Панель действий при выборе */}
     {books.length > 0 && (
@@ -312,6 +364,8 @@ const ThreeDBookView = ({
         return <FadeInView key={book.id} delay={0.05 * index}>
           <div
             className={`group text-gray-800 relative cursor-pointer ${isSelected ? 'ring-4 ring-blue-400 border-blue-500 border-2 bg-blue-50' : ''}`}
+            onMouseEnter={(e) => handleMouseEnter(e, book.id)}
+            onMouseLeave={handleMouseLeave}
             onClick={e => {
               if (onSelectBook) {
                 e.stopPropagation();
@@ -341,6 +395,14 @@ const ThreeDBookView = ({
                   </Book>
                 </Link>
               </motion.div>
+              {/* Превью страницы книги */}
+              <IframePagePreviewCentered 
+                route={`/admin/books/${book.id}`}
+                isVisible={previewState.id === book.id}
+                delay={0}
+                displayMode="iframe"
+                coords={{ top: 150, left: 150 }}
+              />
             </div>
             <motion.div className="mt-2 bg-white rounded-lg p-3 shadow-md border border-gray-100 text-center" whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}>
               <Link href={`/admin/books/${book.id}`}>
