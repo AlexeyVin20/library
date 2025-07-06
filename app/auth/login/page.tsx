@@ -80,13 +80,8 @@ export default function LoginPage() {
 
   return (
     <FadeInView>
-      <Card className="w-full bg-white rounded-xl shadow-lg border-0">
+      <Card className="w-full bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/80">
         <CardHeader className="space-y-1 pb-4">
-          <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center">
-              <BookOpen className="h-6 w-6 text-white" />
-            </div>
-          </div>
           <CardTitle className="text-2xl font-bold text-center text-gray-800">
             Вход в систему
           </CardTitle>
@@ -108,18 +103,18 @@ export default function LoginPage() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-800 font-medium">Имя пользователя</FormLabel>
+                    <FormLabel className="text-gray-700 font-medium">Имя пользователя</FormLabel>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <FormControl>
                         <Input 
                           placeholder="username" 
                           {...field} 
                           disabled={isLoading} 
-                          className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
+                          className="pl-10 bg-gray-100 border-gray-300 text-gray-800 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11"
                         />
                       </FormControl>
-                      <FormMessage className="text-red-800" />
+                      <FormMessage className="text-red-600" />
                     </div>
                   </FormItem>
                 )}
@@ -130,19 +125,19 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-800 font-medium">Пароль</FormLabel>
+                    <FormLabel className="text-gray-700 font-medium">Пароль</FormLabel>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <FormControl>
                         <Input 
                           type="password" 
                           placeholder="********" 
                           {...field} 
                           disabled={isLoading} 
-                          className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
+                          className="pl-10 bg-gray-100 border-gray-300 text-gray-800 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11"
                         />
                       </FormControl>
-                      <FormMessage className="text-red-800" />
+                      <FormMessage className="text-red-600" />
                     </div>
                   </FormItem>
                 )}
@@ -150,7 +145,7 @@ export default function LoginPage() {
               
               <Button 
                 type="submit" 
-                className="w-full bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg h-11 mt-6 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg h-11 mt-6 shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150" 
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -168,7 +163,7 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm text-gray-500">
             Ещё нет аккаунта?{" "}
-            <Link href="/auth/register" className="font-medium text-blue-500 hover:text-blue-700 transition-colors">
+            <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-700 transition-colors">
               Зарегистрироваться
             </Link>
           </div>

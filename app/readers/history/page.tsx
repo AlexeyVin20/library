@@ -30,6 +30,7 @@ import {
   Activity,
   PieChart,
   LineChart as LucideLineChart,
+  Hash,
 } from "lucide-react"
 import {
   Area,
@@ -57,6 +58,7 @@ import { Separator } from "@/components/ui/separator"
 interface Reservation {
   id: string
   bookId: string
+  bookInstanceId?: string
   userId: string
   reservationDate: string
   expirationDate: string
@@ -73,6 +75,9 @@ interface Reservation {
     cover?: string
     genre?: string
     availableCopies?: number
+  }
+  bookInstance?: {
+    instanceCode: string
   }
 }
 
@@ -857,6 +862,23 @@ const ReservationItem: React.FC<{
                       </div>
                     </motion.div>
                   )}
+
+                  {reservation.bookInstance?.instanceCode && (
+                    <motion.div
+                      className="bg-gradient-to-r from-purple-50 to-indigo-50 border-l-4 border-purple-500 rounded-r-xl p-4"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Hash className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs text-purple-700 font-medium mb-1">Код экземпляра</p>
+                          <p className="text-purple-800 text-sm font-mono">
+                            {reservation.bookInstance.instanceCode}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </div>
             </div>
@@ -951,7 +973,15 @@ export default function ReservationHistoryPage() {
       setLoading(true)
       setError(null)
       try {
-        const response = await fetch(`${baseUrl}/api/Reservation/user/${user.id}`)
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('Токен авторизации не найден. Пожалуйста, войдите в систему заново.');
+        }
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+        const response = await fetch(`${baseUrl}/api/Reservation/user/${user.id}`, { headers })
         if (!response.ok) {
           if (response.status === 404) {
             setReservations([])
@@ -968,10 +998,11 @@ export default function ReservationHistoryPage() {
           const enrichedReservations = await Promise.all(baseReservations.map(async reservation => {
             let bookDetails = null
             let userDetails = null
+            let instanceDetails = null
             try {
               // Запрос деталей книги
               if (reservation.bookId) {
-                const bookRes = await fetch(`${baseUrl}/api/books/${reservation.bookId}`)
+                const bookRes = await fetch(`${baseUrl}/api/books/${reservation.bookId}`, { headers })
                 if (bookRes.ok) {
                   bookDetails = await bookRes.json()
                 } else {
@@ -980,11 +1011,22 @@ export default function ReservationHistoryPage() {
               }
               // Запрос деталей пользователя
               if (reservation.userId) {
-                const userRes = await fetch(`${baseUrl}/api/User/${reservation.userId}`)
+                const userRes = await fetch(`${baseUrl}/api/User/${reservation.userId}`, { headers })
                 if (userRes.ok) {
                   userDetails = await userRes.json()
                 } else {
                   console.warn(`Не удалось загрузить пользователя ${reservation.userId} для резервирования ${reservation.id}`)
+                }
+              }
+              // Запрос деталей экземпляра
+              if (reservation.bookInstanceId) {
+                const instanceRes = await fetch(`${baseUrl}/api/BookInstance/${reservation.bookInstanceId}`, { headers })
+                if (instanceRes.ok) {
+                  instanceDetails = await instanceRes.json()
+                } else {
+                  console.warn(
+                    `Не удалось загрузить экземпляр ${reservation.bookInstanceId} для резервирования ${reservation.id}`,
+                  )
                 }
               }
             } catch (err) {
@@ -1000,7 +1042,13 @@ export default function ReservationHistoryPage() {
               user: userDetails ? {
                 ...reservation.user,
                 ...userDetails
-              } : reservation.user
+              } : reservation.user,
+              bookInstance: instanceDetails
+                ? {
+                    ...reservation.bookInstance,
+                    ...instanceDetails,
+                  }
+                : reservation.bookInstance,
             }
           }))
 

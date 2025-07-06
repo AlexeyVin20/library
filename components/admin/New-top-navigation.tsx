@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, createRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -8,7 +8,7 @@ import { cn, getInitials } from "@/lib/utils"
 import { adminSideBarLinks } from "@/constants"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
-import { Bell, Search, Menu, Moon, Sun, UserIcon, Book, FileText, ExternalLink, Clock, LogOut, Settings, ChevronDown, X, BookOpen, Users, Calendar, BarChart2, Bookmark, CheckCircle2, AlertCircle, PlusCircle, ScrollText, LayoutGrid, Shield, PieChart, Home, HelpCircle, FileQuestion, Mail, Command, Zap, ChevronRight } from 'lucide-react'
+import { Bell, Search, Menu, Moon, Sun, UserIcon, Book, FileText, ExternalLink, Clock, LogOut, Settings, ChevronDown, X, BookOpen, Users, Calendar, BarChart2, Bookmark, CheckCircle2, AlertCircle, PlusCircle, ScrollText, LayoutGrid, Shield, PieChart, Home, HelpCircle, FileQuestion, Mail, Command, Zap, ChevronRight, Eye } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
-import type React from "react"
+import React from "react"
 import { useAuth, type User } from "@/lib/auth"
 import { useNotifications } from "@/hooks/use-notifications"
 import { 
@@ -166,6 +166,115 @@ const generateBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
   return breadcrumbs
 }
 
+// --- Мега-меню структура с изображениями (перемещено выше) ---
+const megaMenuSections: MegaMenuSection[] = [
+  {
+    title: "Управление фондом",
+    items: [
+      {
+        title: "Все книги",
+        href: "/admin/books",
+        description: "Просмотр и управление каталогом книг",
+        icon: <BookOpen className="h-5 w-5" />,
+        previewType: 'iframe',
+      },
+      {
+        title: "Добавить книгу",
+        href: "/admin/books/create",
+        description: "Добавить новую книгу в каталог",
+        icon: <PlusCircle className="h-5 w-5" />,
+        previewType: 'quick',
+      },
+      {
+        title: "Полки",
+        href: "/admin/shelfs",
+        description: "Организация и управление полками",
+        icon: <Bookmark className="h-5 w-5" />,
+        previewType: 'iframe',
+      },
+    ],
+  },
+  {
+    title: "Пользователи и роли",
+    items: [
+      {
+        title: "Все пользователи",
+        href: "/admin/users",
+        description: "Управление пользователями системы",
+        icon: <Users className="h-5 w-5" />,
+        previewType: 'iframe',
+      },
+      {
+        title: "Быстрый просмотр",
+        href: "/admin/users/quick-overview",
+        description: "Быстрый обзор пользователей",
+        icon: <Users className="h-5 w-5" />,
+        previewType: 'api',
+      },
+      {
+        title: "Управление ролями",
+        href: "/admin/roles",
+        description: "Настройка ролей и разрешений",
+        icon: <Shield className="h-5 w-5" />,
+        previewType: 'quick',
+      },
+    ],
+  },
+  {
+    title: "Резервирования и статистика",
+    items: [
+      {
+        title: "Резервирования",
+        href: "/admin/reservations",
+        description: "Управление резервациями книг",
+        icon: <Calendar className="h-5 w-5" />,
+        previewType: 'iframe',
+      },
+      {
+        title: "Статистика",
+        href: "/admin/statistics",
+        description: "Аналитика и отчеты системы",
+        icon: <PieChart className="h-5 w-5" />,
+        previewType: 'iframe',
+      },
+      {
+        title: "Уведомления",
+        href: "/admin/notifications",
+        description: "Просмотр и управление уведомлениями",
+        icon: <Bell className="h-5 w-5" />,
+        previewType: 'quick',
+      },
+    ],
+  },
+  {
+    title: "Поддержка и помощь",
+    items: [
+      {
+        title: "Справка",
+        href: "/admin/help",
+        description: "Документация и руководства",
+        icon: <HelpCircle className="h-5 w-5" />,
+        previewType: 'quick',
+      },
+      {
+        title: "FAQ",
+        href: "/admin/faq",
+        description: "Часто задаваемые вопросы",
+        icon: <FileQuestion className="h-5 w-5" />,
+        previewType: 'quick',
+      },
+      {
+        title: "Связаться с нами",
+        href: "/admin/contact",
+        description: "Техническая поддержка",
+        icon: <Mail className="h-5 w-5" />,
+        previewType: 'quick',
+      },
+    ],
+  },
+];
+// --- конец блока megaMenuSections ---
+
 const TopNavigation = ({ user }: { user: User | null }) => {
   const { logout } = useAuth()
   const pathname = usePathname()
@@ -185,6 +294,13 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   const [activePreview, setActivePreview] = useState<{ href: string; type: PreviewType; coords: { top: number; left: number; }; } | null>(null);
   const previewTimer = useRef<NodeJS.Timeout | null>(null);
   const megaMenuContentRef = useRef<HTMLDivElement>(null);
+  // --- ДОБАВЛЕНО: refs для кнопок мега-меню ---
+  const megaMenuButtonRefs = useRef<Array<React.RefObject<HTMLAnchorElement>>>([]);
+  // Инициализация ref-ов по количеству пунктов
+  if (megaMenuButtonRefs.current.length !== megaMenuSections.flatMap(s => s.items).length) {
+    megaMenuButtonRefs.current = megaMenuSections.flatMap(s => s.items).map(() => createRef<HTMLAnchorElement>());
+  }
+  // --- КОНЕЦ ДОБАВЛЕНИЯ ---
   
   // Используем хук для работы с уведомлениями
   const {
@@ -222,39 +338,55 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     }
   }, [isConnected])
 
-  const handleShowPreview = (href: string, type: PreviewType) => {
+  // handleShowPreview теперь принимает индекс пункта
+  const handleShowPreview = (href: string, type: PreviewType, btnIndex?: number) => {
     if (previewTimer.current) {
       clearTimeout(previewTimer.current);
     }
     previewTimer.current = setTimeout(() => {
-      if (megaMenuContentRef.current) {
-        const rect = megaMenuContentRef.current.getBoundingClientRect();
-        const previewWidth = 800; // Ширина PreviewSwitcher
+      let coords = { top: 0, left: 0 };
+      if (typeof btnIndex === 'number' && megaMenuButtonRefs.current[btnIndex]?.current) {
+        const btnRect = megaMenuButtonRefs.current[btnIndex].current!.getBoundingClientRect();
+        const previewWidth = 800;
         const previewHeight = 750;
-        const gap = 16; // Отступ
+        const gap = 12;
+        let left = btnRect.left - previewWidth - gap;
+        // Если не помещается слева — прижимаем к левому краю
+        if (left < gap) left = gap;
+        let top = btnRect.top;
+        // Если не помещается снизу — прижимаем выше
+        if (top + previewHeight > window.innerHeight - gap) {
+          top = window.innerHeight - previewHeight - gap;
+        }
+        if (top < gap) top = gap;
+        coords = { top, left };
+      } else if (megaMenuContentRef.current) {
+        // fallback: старое поведение
+        const rect = megaMenuContentRef.current.getBoundingClientRect();
+        const previewWidth = 800;
+        const previewHeight = 750;
+        const gap = 16;
         let left = rect.left - previewWidth - gap;
-        // Если слева не помещается — показываем справа
         if (left < gap) {
           left = rect.right + gap;
-          // Если и справа выходим за экран — прижимаем к правому краю
           if (left + previewWidth > window.innerWidth - gap) {
             left = window.innerWidth - previewWidth - gap;
           }
         }
         let top = rect.top;
-        // Если снизу не помещается — прижимаем выше
         if (top + previewHeight > window.innerHeight - gap) {
           top = window.innerHeight - previewHeight - gap;
         }
         if (top < gap) {
           top = gap;
         }
-        setActivePreview({
-          href,
-          type,
-          coords: { top, left },
-        });
+        coords = { top, left };
       }
+      setActivePreview({
+        href,
+        type,
+        coords,
+      });
     }, 700);
   };
 
@@ -275,114 +407,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
 
   // Генерируем breadcrumbs на основе текущего пути
   const breadcrumbs = generateBreadcrumbs(pathname)
-
-  // Мега-меню структура с изображениями
-  const megaMenuSections: MegaMenuSection[] = [
-    {
-      title: "Управление фондом",
-      items: [
-        {
-          title: "Все книги",
-          href: "/admin/books",
-          description: "Просмотр и управление каталогом книг",
-          icon: <BookOpen className="h-5 w-5" />,
-          previewType: 'iframe',
-        },
-        {
-          title: "Добавить книгу",
-          href: "/admin/books/create",
-          description: "Добавить новую книгу в каталог",
-          icon: <PlusCircle className="h-5 w-5" />,
-          previewType: 'quick',
-        },
-        {
-          title: "Полки",
-          href: "/admin/shelfs",
-          description: "Организация и управление полками",
-          icon: <Bookmark className="h-5 w-5" />,
-          previewType: 'iframe',
-        },
-      ],
-    },
-    {
-      title: "Пользователи и роли",
-      items: [
-        {
-          title: "Все пользователи",
-          href: "/admin/users",
-          description: "Управление пользователями системы",
-          icon: <Users className="h-5 w-5" />,
-          previewType: 'iframe',
-        },
-        {
-          title: "Быстрый просмотр",
-          href: "/admin/users/quick-overview",
-          description: "Быстрый обзор пользователей",
-          icon: <Users className="h-5 w-5" />,
-          previewType: 'api',
-        },
-        {
-          title: "Управление ролями",
-          href: "/admin/roles",
-          description: "Настройка ролей и разрешений",
-          icon: <Shield className="h-5 w-5" />,
-          previewType: 'quick',
-        },
-      ],
-    },
-    {
-      title: "Резервирования и статистика",
-      items: [
-        {
-          title: "Резервирования",
-          href: "/admin/reservations",
-          description: "Управление резервациями книг",
-          icon: <Calendar className="h-5 w-5" />,
-          previewType: 'iframe',
-        },
-        {
-          title: "Статистика",
-          href: "/admin/statistics",
-          description: "Аналитика и отчеты системы",
-          icon: <PieChart className="h-5 w-5" />,
-          previewType: 'iframe',
-        },
-        {
-          title: "Уведомления",
-          href: "/admin/notifications",
-          description: "Просмотр и управление уведомлениями",
-          icon: <Bell className="h-5 w-5" />,
-          previewType: 'quick',
-        },
-      ],
-    },
-    {
-      title: "Поддержка и помощь",
-      items: [
-        {
-          title: "Справка",
-          href: "/admin/help",
-          description: "Документация и руководства",
-          icon: <HelpCircle className="h-5 w-5" />,
-          previewType: 'quick',
-        },
-        {
-          title: "FAQ",
-          href: "/admin/faq",
-          description: "Часто задаваемые вопросы",
-          icon: <FileQuestion className="h-5 w-5" />,
-          previewType: 'quick',
-        },
-        {
-          title: "Связаться с нами",
-          href: "/admin/contact",
-          description: "Техническая поддержка",
-          icon: <Mail className="h-5 w-5" />,
-          previewType: 'quick',
-        },
-      ],
-    },
-  ]
 
   // Keyboard shortcut handler for backslash
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -1315,44 +1339,52 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                               {section.title}
                             </motion.h3>
                             <div className="space-y-2">
-                              {section.items.map((item, itemIndex) => (
-                                <motion.div
-                                  key={item.href}
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: (sectionIndex * 0.1) + (itemIndex * 0.05) }}
-                                  onHoverStart={() => handleShowPreview(item.href, item.previewType)}
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                >
-                                  <a
-                                    href={item.href}
-                                    onClick={e => { e.preventDefault(); handleMenuLinkClick(item.href) }}
-                                    className="group flex items-start gap-4 p-4 rounded-lg hover:bg-blue-50 transition-all duration-300 border border-transparent hover:border-blue-200 text-gray-800"
+                              {section.items.map((item, itemIndex) => {
+                                const flatIndex = megaMenuSections.slice(0, sectionIndex).reduce((acc, s) => acc + s.items.length, 0) + itemIndex;
+                                return (
+                                  <motion.div
+                                    key={item.href}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: (sectionIndex * 0.1) + (itemIndex * 0.05) }}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
                                   >
-                                    <div className="flex-shrink-0 mt-1">
-                                      <motion.div
-                                        animate={{
-                                          rotate: activePreview?.href === item.href ? 360 : 0,
-                                          scale: activePreview?.href === item.href ? 1.2 : 1,
-                                        }}
-                                        transition={{ duration: 0.3 }}
-                                        className="text-blue-500"
-                                      >
-                                        {item.icon}
-                                      </motion.div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
-                                        {item.title}
+                                    <a
+                                      ref={megaMenuButtonRefs.current[flatIndex]}
+                                      href={item.href}
+                                      onClick={e => { e.preventDefault(); handleMenuLinkClick(item.href) }}
+                                      className="group flex items-start gap-4 p-4 rounded-lg hover:bg-blue-50 transition-all duration-300 border border-transparent hover:border-blue-200 text-gray-800 relative"
+                                    >
+                                      <div className="flex-shrink-0 mt-1">
+                                        <motion.div
+                                          onMouseEnter={() => handleShowPreview(item.href, item.previewType, flatIndex)}
+                                          onMouseLeave={handleHidePreview}
+                                          animate={{
+                                            rotate: activePreview?.href === item.href ? 360 : 0,
+                                            scale: activePreview?.href === item.href ? 1.2 : 1,
+                                          }}
+                                          transition={{ duration: 0.3 }}
+                                          className="text-blue-500 cursor-pointer"
+                                        >
+                                          {React.cloneElement(
+                                            item.icon as React.ReactElement<any>,
+                                            { ...(item.icon.props as any), className: 'w-5 h-5 text-blue-400' }
+                                          )}
+                                        </motion.div>
                                       </div>
-                                      <div className="text-xs text-gray-500 mt-1 group-hover:text-blue-600 transition-colors">
-                                        {item.description}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
+                                          {item.title}
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1 group-hover:text-blue-600 transition-colors">
+                                          {item.description}
+                                        </div>
                                       </div>
-                                    </div>
-                                  </a>
-                                </motion.div>
-                              ))}
+                                    </a>
+                                  </motion.div>
+                                );
+                              })}
                             </div>
                           </div>
                         ))}
@@ -2054,7 +2086,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
         <IframePagePreviewCentered
           route={activePreview.href}
           isVisible={!!activePreview}
-          coords={{ top: 0, left: 0 }}
+          coords={activePreview.coords}
           displayMode={activePreview.type === 'iframe-enhanced' ? 'iframe' : activePreview.type as 'quick' | 'api' | 'iframe'}
           onMouseEnter={cancelHidePreview}
           onMouseLeave={handleHidePreview}

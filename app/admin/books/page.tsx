@@ -399,9 +399,9 @@ const ThreeDBookView = ({
               <IframePagePreviewCentered 
                 route={`/admin/books/${book.id}`}
                 isVisible={previewState.id === book.id}
-                delay={0}
+                delay={1000}
                 displayMode="iframe"
-                coords={{ top: 150, left: 150 }}
+                coords={{ top: 0, left: 0 }}
               />
             </div>
             <motion.div className="mt-2 bg-white rounded-lg p-3 shadow-md border border-gray-100 text-center" whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" }}>

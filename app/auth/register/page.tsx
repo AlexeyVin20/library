@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, BookOpen, User, Mail, Phone, Lock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { USER_ROLES } from "@/lib/types";
 
 // Схема валидации для формы регистрации
@@ -228,25 +228,28 @@ export default function RegisterPage() {
       <div className="flex justify-center mb-6">
         {Array.from({ length: totalSteps }).map((_, index) => (
           <div key={index} className="flex items-center">
-            <div 
-              className={`h-8 w-8 rounded-full flex items-center justify-center ${
+            <motion.div 
+              className={`h-8 w-8 rounded-full flex items-center justify-center font-bold transition-all duration-500 ${
                 currentStep > index + 1 
                   ? "bg-blue-500 text-white" 
                   : currentStep === index + 1 
-                    ? "bg-blue-300 border border-blue-500 text-blue-700" 
-                    : "bg-gray-100 border border-gray-200 text-gray-500"
+                    ? "bg-blue-200 border-2 border-blue-500 text-blue-800" 
+                    : "bg-gray-200 border border-gray-300 text-gray-500"
               }`}
+              animate={{ scale: currentStep === index + 1 ? 1.1 : 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >
               {currentStep > index + 1 ? "✓" : index + 1}
-            </div>
+            </motion.div>
             {index < totalSteps - 1 && (
-              <div 
-                className={`w-12 h-1 ${
-                  currentStep > index + 1 
-                    ? "bg-blue-500" 
-                    : "bg-gray-100"
-                }`}
-              ></div>
+              <motion.div 
+                className="w-16 h-1"
+                initial={{ width: 0 }}
+                animate={{ width: currentStep > index + 1 ? 64 : 0 }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+              >
+                <div className={`h-full w-full ${currentStep > index + 1 ? "bg-blue-500" : "bg-gray-200"}`} />
+              </motion.div>
             )}
           </div>
         ))}
@@ -256,239 +259,151 @@ export default function RegisterPage() {
 
   return (
     <FadeInView>
-      <Card className="w-full max-w-2xl bg-white rounded-xl shadow-lg border-0">
+      <Card className="w-full bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/80">
         <CardHeader className="space-y-1 pb-4">
-          <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center">
-              <BookOpen className="h-6 w-6 text-white" />
-            </div>
-          </div>
           <CardTitle className="text-2xl font-bold text-center text-gray-800">
-            Регистрация нового пользователя
+            Создание аккаунта
           </CardTitle>
           <CardDescription className="text-center text-gray-500">
-            Заполните форму для создания новой учетной записи
+            Заполните форму для регистрации нового пользователя
           </CardDescription>
-          {renderStepIndicator()}
         </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {error && (
-                  <Alert className="bg-red-100 border-l-4 border-red-500 rounded-lg">
-                    <AlertDescription className="text-red-800">{error}</AlertDescription>
-                  </Alert>
-                )}
-                
-                {/* Step 1: Personal Information */}
-                {currentStep === 1 && (
-                  <FadeInView>
-                    <FormSection title="Личная информация">
-                      <FormField
-                        control={form.control}
-                        name="fullName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Полное имя</FormLabel>
-                            <div className="relative">
-                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  placeholder="Иванов Иван Иванович" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Email</FormLabel>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  type="email" 
-                                  placeholder="example@mail.ru" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Телефон</FormLabel>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <FormControl>
-                                <Input 
-                                  placeholder="+7 (999) 123-45-67" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
+        <CardContent>
+          {renderStepIndicator()}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {error && (
+                <Alert className="bg-red-100 border-l-4 border-red-500 rounded-lg">
+                  <AlertDescription className="text-red-800">{error}</AlertDescription>
+                </Alert>
+              )}
 
-                    </FormSection>
-                  </FadeInView>
-                )}
-                
-                {/* Step 2: Account Information */}
-                {currentStep === 2 && (
-                  <FadeInView>
-                    <FormSection title="Данные учетной записи">
-                      <FormField
-                        control={form.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Имя пользователя</FormLabel>
-                            <div className="relative">
-                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep}
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {currentStep === 1 && (
+                    <div className="space-y-4">
+                       <FormField
+                          control={form.control}
+                          name="fullName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Полное имя</FormLabel>
                               <FormControl>
-                                <Input 
-                                  placeholder="user123" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
+                                <Input placeholder="Иванов Иван Иванович" {...field} className="bg-gray-100 border-gray-300 text-gray-800 focus:bg-white" />
                               </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="hidden md:block"></div>
-                      
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Пароль</FormLabel>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                              <FormMessage className="text-red-600" />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Email</FormLabel>
                               <FormControl>
-                                <Input 
-                                  type="password" 
-                                  placeholder="********" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
+                                <Input placeholder="example@mail.com" {...field} className="bg-gray-100 border-gray-300 text-gray-800 focus:bg-white" />
                               </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-800 font-medium">Подтверждение пароля</FormLabel>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                              <FormMessage className="text-red-600" />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Телефон</FormLabel>
                               <FormControl>
-                                <Input 
-                                  type="password" 
-                                  placeholder="********" 
-                                  {...field} 
-                                  disabled={isLoading} 
-                                  className="pl-10 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 rounded-lg h-11 text-gray-800"
-                                />
+                                <Input placeholder="+7 (999) 999-99-99" {...field} className="bg-gray-100 border-gray-300 text-gray-800 focus:bg-white" />
                               </FormControl>
-                              <FormMessage className="text-red-800" />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </FormSection>
-                  </FadeInView>
-                )}
-                
-                <div className="flex justify-between pt-6 border-t border-gray-100">
-                  {currentStep > 1 && (
-                    <motion.button
-                      type="button"
-                      onClick={prevStep}
-                      className="bg-white border-2 border-blue-500 text-blue-500 hover:bg-gray-100 font-medium rounded-lg px-6 py-2 flex items-center gap-2"
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      disabled={isLoading}
-                    >
-                      Назад
-                    </motion.button>
+                              <FormMessage className="text-red-600" />
+                            </FormItem>
+                          )}
+                        />
+                    </div>
                   )}
-                  
-                  {currentStep < totalSteps ? (
-                    <motion.button
-                      type="button"
-                      onClick={nextStep}
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-2 flex items-center gap-2 ml-auto"
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      disabled={isLoading}
-                    >
-                      Далее
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      type="submit"
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-2 flex items-center gap-2 ml-auto"
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Регистрация...
-                        </>
-                      ) : (
-                        "Зарегистрироваться"
-                      )}
-                    </motion.button>
+
+                  {currentStep === 2 && (
+                    <div className="space-y-4">
+                      <FormField
+                          control={form.control}
+                          name="username"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Имя пользователя</FormLabel>
+                              <FormControl>
+                                <Input placeholder="username" {...field} className="bg-gray-100 border-gray-300 text-gray-800 focus:bg-white" />
+                              </FormControl>
+                              <FormMessage className="text-red-600" />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Пароль</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="********" {...field} className="bg-gray-100 border-gray-300 text-gray-800 focus:bg-white" />
+                              </FormControl>
+                              <FormMessage className="text-red-600" />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Подтвердите пароль</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="********" {...field} className="bg-gray-100 border-gray-300 text-gray-800 focus:bg-white" />
+                              </FormControl>
+                              <FormMessage className="text-red-600" />
+                            </FormItem>
+                          )}
+                        />
+                    </div>
                   )}
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-center text-sm text-gray-500">
-              Уже есть аккаунт?{" "}
-              <Link href="/auth/login" className="font-medium text-blue-500 hover:text-blue-700 transition-colors">
-                Войти
-              </Link>
-            </div>
-          </CardFooter>
-        </Card>
-      </FadeInView>
-    );
-  }
+                </motion.div>
+              </AnimatePresence>
+
+              <div className="flex justify-between pt-4">
+                {currentStep > 1 && (
+                  <Button type="button" variant="outline" onClick={prevStep} className="bg-transparent border-gray-400 text-gray-700 hover:bg-gray-200">
+                    Назад
+                  </Button>
+                )}
+                {currentStep < totalSteps ? (
+                  <Button type="button" onClick={nextStep} className="bg-blue-600 hover:bg-blue-700 text-white ml-auto">
+                    Далее
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    {isLoading ? <Loader2 className="animate-spin" /> : "Зарегистрироваться"}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="text-center text-sm text-gray-500">
+            Уже есть аккаунт?{" "}
+            <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-700 transition-colors">
+              Войти
+            </Link>
+          </div>
+        </CardFooter>
+      </Card>
+    </FadeInView>
+  );
+}

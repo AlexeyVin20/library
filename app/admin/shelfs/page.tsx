@@ -1615,7 +1615,7 @@ export default function ShelfsPage() {
         onShelfSuggestion={handleShelfSuggestion}
         onUndo={undoAiArrangement}
       />
-      {previewItemState.id && (
+      {previewItemState.id && !isDraggingItem && (
         <IframePagePreviewCentered
             route={`/readers/books/${previewItemState.id}`}
             isVisible={!!previewItemState.id}
@@ -1625,5 +1625,5 @@ export default function ShelfsPage() {
             onMouseLeave={handlePreviewMouseLeave}
         />
       )}
-    </div>;
+    </div>
 }
