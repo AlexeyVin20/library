@@ -42,6 +42,7 @@ import {
 } from "@/lib/notification-utils"
 import { Variants } from "framer-motion"
 import { PreviewSwitcher, PreviewType } from "@/components/ui/preview-switcher"
+import IframePagePreviewCentered from "@/components/ui/iframe-page-preview-centered"
 
 // Интерфейсы для результатов поиска
 interface SearchResult {
@@ -176,11 +177,12 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResultCategory[]>([])
   const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [navigationMenuValue, setNavigationMenuValue] = useState<string>("")
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchResultsRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLElement>(null)
   const [scrolled, setScrolled] = useState(false)
-  const [activePreview, setActivePreview] = useState<{ href: string; type: PreviewType; top: number; left: number; } | null>(null);
+  const [activePreview, setActivePreview] = useState<{ href: string; type: PreviewType; coords: { top: number; left: number; }; } | null>(null);
   const previewTimer = useRef<NodeJS.Timeout | null>(null);
   const megaMenuContentRef = useRef<HTMLDivElement>(null);
   
@@ -250,8 +252,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
         setActivePreview({
           href,
           type,
-          top,
-          left,
+          coords: { top, left },
         });
       }
     }, 700);
@@ -692,6 +693,16 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     performSearch(query)
   }
 
+  // Универсальный обработчик клика по пункту меню
+  const handleMenuLinkClick = useCallback((url: string) => {
+    setIsMobileMenuOpen(false)
+    setIsSearchOpen(false)
+    setSearchQuery("")
+    setSearchResults([])
+    setNavigationMenuValue("") // Закрываем NavigationMenu на десктопе
+    router.push(url)
+  }, [router])
+
   // Search result click handler
   const handleSearchResultClick = (result: SearchResult) => {
     if (searchQuery.trim()) {
@@ -699,11 +710,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
       setRecentSearches(newRecentSearches)
       localStorage.setItem("recentSearches", JSON.stringify(newRecentSearches))
     }
-
-    setIsSearchOpen(false)
-    setSearchQuery("")
-    setSearchResults([])
-    router.push(result.url)
+    handleMenuLinkClick(result.url)
   }
 
   // Select recent search
@@ -843,7 +850,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               whileHover="hover"
               className="flex-shrink-0 cursor-pointer"
             >
-              <Link href="/">
+              <a href="/" onClick={e => { e.preventDefault(); handleMenuLinkClick('/') }}>
                 <div className="relative group">
                   <motion.div
                     className="relative"
@@ -971,7 +978,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     />
                   </motion.div>
                 </div>
-              </Link>
+              </a>
             </motion.div>
             
             {/* Breadcrumb Navigation */}
@@ -995,8 +1002,9 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     {(index === 0 && (pathname === "/admin" || !item.isLast)) && (
                       <>
                         {!item.isLast ? (
-                          <Link
+                          <a
                             href={item.href}
+                            onClick={e => { e.preventDefault(); handleMenuLinkClick(item.href) }}
                             className="group flex items-center"
                           >
                             <motion.span
@@ -1067,7 +1075,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                 }}
                               />
                             </motion.span>
-                          </Link>
+                          </a>
                         ) : (
                           <motion.span
                             initial={{ scale: 0.9, opacity: 0, rotateX: -15 }}
@@ -1195,8 +1203,9 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     {index > 0 && (
                       <>
                         {!item.isLast ? (
-                          <Link
+                          <a
                             href={item.href}
+                            onClick={e => { e.preventDefault(); handleMenuLinkClick(item.href) }}
                             className="group flex items-center"
                           >
                             <motion.span
@@ -1206,7 +1215,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                             >
                               {item.label}
                             </motion.span>
-                          </Link>
+                          </a>
                         ) : (
                           <motion.span
                             initial={{ scale: 0.9, opacity: 0 }}
@@ -1238,7 +1247,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
 
           {/* Desktop Navigation with Mega Menu - Centered */}
           <div className="hidden lg:flex items-center justify-center absolute left-1/2 transform -translate-x-1/2">
-            <NavigationMenu>
+            <NavigationMenu value={navigationMenuValue} onValueChange={setNavigationMenuValue}>
               <NavigationMenuList className="gap-2">
                 {/* Dashboard */}
                 <NavigationMenuItem>
@@ -1250,8 +1259,9 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     whileHover="hover"
                     whileTap="tap"
                   >
-                    <Link
+                    <a
                       href="/admin"
+                      onClick={e => { e.preventDefault(); handleMenuLinkClick('/admin') }}
                       className={cn(
                         "group inline-flex h-10 w-max items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-300",
                         pathname === "/admin"
@@ -1261,12 +1271,12 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     >
                       <Home className="mr-2 h-4 w-4" />
                       Главная
-                    </Link>
+                    </a>
                   </motion.div>
                 </NavigationMenuItem>
 
                 {/* Mega Menu */}
-                <NavigationMenuItem>
+                <NavigationMenuItem value="management">
                   <motion.div
                     custom={1}
                     variants={navItemVariants as unknown as Variants}
@@ -1315,8 +1325,9 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                   whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.98 }}
                                 >
-                                  <Link
+                                  <a
                                     href={item.href}
+                                    onClick={e => { e.preventDefault(); handleMenuLinkClick(item.href) }}
                                     className="group flex items-start gap-4 p-4 rounded-lg hover:bg-blue-50 transition-all duration-300 border border-transparent hover:border-blue-200 text-gray-800"
                                   >
                                     <div className="flex-shrink-0 mt-1">
@@ -1339,7 +1350,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                         {item.description}
                                       </div>
                                     </div>
-                                  </Link>
+                                  </a>
                                 </motion.div>
                               ))}
                             </div>
@@ -1360,8 +1371,9 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     whileHover="hover"
                     whileTap="tap"
                   >
-                    <Link
+                    <a
                       href="/admin/statistics"
+                      onClick={e => { e.preventDefault(); handleMenuLinkClick('/admin/statistics') }}
                       className={cn(
                         "group inline-flex h-10 w-max items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-300",
                         pathname.includes("/admin/statistics")
@@ -1371,7 +1383,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     >
                       <BarChart2 className="mr-2 h-4 w-4" />
                       Статистика
-                    </Link>
+                    </a>
                   </motion.div>
                 </NavigationMenuItem>
               </NavigationMenuList>
@@ -1676,10 +1688,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                         <Button
                           variant="ghost"
                           className="w-full text-sm text-gray-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                          onClick={() => {
-                            router.push(`/admin/search?q=${encodeURIComponent(searchQuery)}`)
-                            setIsSearchOpen(false)
-                          }}
+                          onClick={() => { handleMenuLinkClick(`/admin/search?q=${encodeURIComponent(searchQuery)}`) }}
                         >
                           <Search className="h-4 w-4 mr-2" />
                           Расширенный поиск по "{searchQuery}"
@@ -1853,7 +1862,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                   <Button
                     variant="outline"
                     className="w-full text-sm font-semibold text-blue-600 hover:bg-blue-50 border-blue-200 rounded-lg transition-all duration-200"
-                    onClick={() => router.push('/admin/notifications')}
+                    onClick={() => handleMenuLinkClick('/admin/notifications')}
                   >
                     Управление уведомлениями
                   </Button>
@@ -1923,30 +1932,33 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                 </div>
                 <DropdownMenuSeparator className="bg-gray-200" />
                 <DropdownMenuGroup>
-                  <Link href="/profile" className="w-full">
-                    <motion.div whileHover={{ x: 4 }}>
-                      <DropdownMenuItem className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200">
-                        <UserIcon className="h-4 w-4 mr-3 text-blue-500" />
-                        Профиль
-                      </DropdownMenuItem>
-                    </motion.div>
-                  </Link>
-                  <Link href="/settings" className="w-full">
-                    <motion.div whileHover={{ x: 4 }}>
-                      <DropdownMenuItem className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200">
-                        <Settings className="h-4 w-4 mr-3 text-blue-500" />
-                        Настройки
-                      </DropdownMenuItem>
-                    </motion.div>
-                  </Link>
-                  <Link href="/profile/mybooks" className="w-full">
-                    <motion.div whileHover={{ x: 4 }}>
-                      <DropdownMenuItem className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200">
-                        <BookOpen className="h-4 w-4 mr-3 text-blue-500" />
-                        Мои книги
-                      </DropdownMenuItem>
-                    </motion.div>
-                  </Link>
+                  <motion.div whileHover={{ x: 4 }}>
+                    <DropdownMenuItem 
+                      className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200"
+                      onClick={() => handleMenuLinkClick('/profile')}
+                    >
+                      <UserIcon className="h-4 w-4 mr-3 text-blue-500" />
+                      Профиль
+                    </DropdownMenuItem>
+                  </motion.div>
+                  <motion.div whileHover={{ x: 4 }}>
+                    <DropdownMenuItem 
+                      className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200"
+                      onClick={() => handleMenuLinkClick('/settings')}
+                    >
+                      <Settings className="h-4 w-4 mr-3 text-blue-500" />
+                      Настройки
+                    </DropdownMenuItem>
+                  </motion.div>
+                  <motion.div whileHover={{ x: 4 }}>
+                    <DropdownMenuItem 
+                      className="py-3 px-3 rounded-lg hover:bg-blue-50 cursor-pointer text-sm text-gray-800 transition-all duration-200"
+                      onClick={() => handleMenuLinkClick('/profile/mybooks')}
+                    >
+                      <BookOpen className="h-4 w-4 mr-3 text-blue-500" />
+                      Мои книги
+                    </DropdownMenuItem>
+                  </motion.div>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator className="bg-gray-200" />
                 <motion.div whileHover={{ x: 4 }}>
@@ -2007,7 +2019,10 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                       whileHover={{ x: 8, scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Link href={link.route}>
+                      <a
+                        href={link.route}
+                        onClick={e => { e.preventDefault(); handleMenuLinkClick(link.route) }}
+                      >
                         <div
                           className={cn(
                             "flex items-center gap-4 p-4 rounded-lg transition-all duration-300",
@@ -2015,7 +2030,6 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                               ? "bg-white/25 text-white shadow-lg"
                               : "hover:bg-white/15 text-white/90 hover:text-white",
                           )}
-                          onClick={() => setIsMobileMenuOpen(false)}
                         >
                           <div className="relative w-6 h-6">
                             <Image 
@@ -2027,7 +2041,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                           </div>
                           <span className="font-medium text-sm">{link.text}</span>
                         </div>
-                      </Link>
+                      </a>
                     </motion.div>
                   )
                 })}
@@ -2037,23 +2051,14 @@ const TopNavigation = ({ user }: { user: User | null }) => {
         </AnimatePresence>
       </div>
       {activePreview && (
-        <div
-          style={{
-            position: 'fixed',
-            top: `${activePreview.top}px`,
-            left: `${activePreview.left}px`,
-            zIndex: 1000,
-          }}
+        <IframePagePreviewCentered
+          route={activePreview.href}
+          isVisible={!!activePreview}
+          coords={{ top: 0, left: 0 }}
+          displayMode={activePreview.type === 'iframe-enhanced' ? 'iframe' : activePreview.type as 'quick' | 'api' | 'iframe'}
           onMouseEnter={cancelHidePreview}
           onMouseLeave={handleHidePreview}
-        >
-          <PreviewSwitcher
-            isVisible={!!activePreview}
-            route={activePreview.href}
-            type={activePreview.type}
-            position={'left'}
-          />
-        </div>
+        />
       )}
     </header>
   )

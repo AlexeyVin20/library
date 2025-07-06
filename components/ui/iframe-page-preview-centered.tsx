@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
-import { ExternalLink, Loader2, AlertCircle, Mouse, Users, Tag, BookText, Calendar, Building, Info, GripVertical, Package, CheckCircle, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ExternalLink, Loader2, AlertCircle, Mouse, Users, Tag, BookText, Calendar, Building, Info, GripVertical, Package, CheckCircle, XCircle, BookOpen, Heart, Clock, Home, TrendingUp, Search, Filter, Star, Shield, Bookmark, BarChart2, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BookInstance } from '@/lib/types';
+import { useAuth } from '@/lib/auth';
 
 const getStatusIcon = (status: string) => {
   switch (status.toLowerCase()) {
@@ -90,17 +92,159 @@ interface Book {
   instances?: BookInstance[];
 }
 
+// Интерфейс для данных предварительного просмотра API
+interface PreviewData {
+  title: string;
+  description: string;
+  stats?: {
+    label: string;
+    value: string | number;
+    icon?: React.ReactNode;
+  }[];
+  preview?: React.ReactNode;
+  loading?: boolean;
+}
+
 export interface IframePagePreviewCenteredProps {
   route: string;
   isVisible: boolean;
   className?: string;
   delay?: number;
   enableScrollControl?: boolean;
-  displayMode?: 'iframe' | 'api';
+  displayMode?: 'iframe' | 'api' | 'quick';
   coords: { top: number; left: number };
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }
+
+// Статические данные для быстрого предварительного просмотра
+const getQuickPreviewContent = (route: string) => {
+  switch (route) {
+    case '/readers':
+      return {
+        title: 'Главная страница',
+        description: 'Поиск книг, рекомендации и новинки',
+        features: [
+          { icon: <Search className="h-4 w-4" />, text: 'Умный поиск' },
+          { icon: <TrendingUp className="h-4 w-4" />, text: 'Популярные книги' },
+          { icon: <Star className="h-4 w-4" />, text: 'Рекомендации' }
+        ],
+        color: 'from-blue-500 to-purple-600',
+        bgColor: 'bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20'
+      };
+    
+    case '/admin/books/create':
+      return {
+        title: 'Добавить книгу',
+        description: 'Форма для добавления новой книги в каталог',
+        features: [
+          { icon: <BookOpen className="h-4 w-4" />, text: 'Автоматический ввод данных книги' },
+          { icon: <Star className="h-4 w-4" />, text: 'Авто загрузка обложки' },
+          { icon: <TrendingUp className="h-4 w-4" />, text: 'Поиск по ISBN' }
+        ],
+        color: 'from-green-500 to-lime-600',
+        bgColor: 'bg-gradient-to-br from-green-50 to-lime-50 dark:from-green-900/20 dark:to-lime-900/20'
+      };
+
+    case '/admin/roles':
+      return {
+        title: 'Управление ролями',
+        description: 'Создание и редактирование пользовательских ролей',
+        features: [
+          { icon: <Shield className="h-4 w-4" />, text: 'Настройка разрешений' },
+          { icon: <Users className="h-4 w-4" />, text: 'Назначение ролей пользователям' }
+        ],
+        color: 'from-purple-500 to-indigo-600',
+        bgColor: 'bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20'
+      };
+
+    case '/admin/notifications':
+      return {
+        title: 'Уведомления',
+        description: 'Просмотр и управление системными уведомлениями',
+        features: [
+          { icon: <Bell className="h-4 w-4" />, text: 'Отметка как прочитанных' },
+          { icon: <AlertCircle className="h-4 w-4" />, text: 'Приоритеты' }
+        ],
+        color: 'from-pink-500 to-rose-600',
+        bgColor: 'bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20'
+      };
+    
+    default:
+      return {
+        title: 'Страница',
+        description: 'Информация о странице',
+        features: [],
+        color: 'from-gray-500 to-gray-600',
+        bgColor: 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20'
+      };
+  }
+};
+
+// Хук для получения данных предварительного просмотра API
+const usePagePreview = (route: string, isVisible: boolean): PreviewData => {
+  const [data, setData] = useState<PreviewData>({
+    title: '',
+    description: '',
+    loading: true
+  });
+
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const fetchPreviewData = async () => {
+      setData(prev => ({ ...prev, loading: true }));
+      
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+        
+        switch (route) {
+          case '/admin/users/quick-overview':
+            // Получаем быстрый обзор пользователей
+            const [usersResponse, booksResponse] = await Promise.all([
+              fetch(`${baseUrl}/api/User`).catch(() => null),
+              fetch(`${baseUrl}/api/books`).catch(() => null)
+            ]);
+            
+            const usersCount = usersResponse?.ok ? (await usersResponse.json()).length : 0;
+            const booksCount = booksResponse?.ok ? (await booksResponse.json()).length : 0;
+            
+            setData({
+              title: 'Быстрый обзор пользователей',
+              description: 'Статистика пользователей системы',
+              stats: [
+                { label: 'Всего пользователей', value: usersCount, icon: <Users className="h-4 w-4" /> },
+                { label: 'Книг в каталоге', value: booksCount, icon: <BookOpen className="h-4 w-4" /> }
+              ],
+              loading: false
+            });
+            break;
+
+          default:
+            setData({
+              title: 'Предварительный просмотр',
+              description: 'Информация недоступна',
+              loading: false
+            });
+            break;
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки данных предварительного просмотра:', error);
+        setData({
+          title: 'Ошибка',
+          description: 'Не удалось загрузить данные',
+          loading: false
+        });
+      }
+    };
+
+    fetchPreviewData();
+  }, [route, isVisible, user]);
+
+  return data;
+};
 
 export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps> = ({
   route,
@@ -122,6 +266,10 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
   const dragControls = useDragControls();
 
   const bookId = route.split('/').pop();
+  
+  // Данные для разных режимов
+  const quickContent = getQuickPreviewContent(route);
+  const apiData = usePagePreview(route, isVisible && displayMode === 'api');
 
   useEffect(() => {
     const disableBodyScroll = () => {
@@ -161,7 +309,7 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
   }, [isVisible, delay, displayMode]);
 
   useEffect(() => {
-    if (displayMode === 'api' && isVisible && bookId) {
+    if (displayMode === 'api' && isVisible && bookId && route.includes('/books/')) {
       setIsFetchingBook(true);
       const fetchBookWithInstances = async () => {
         try {
@@ -198,8 +346,11 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
         }
       };
       fetchBookWithInstances();
+    } else if (displayMode !== 'api' || !route.includes('/books/')) {
+      setIsFetchingBook(false);
+      setBookData(null);
     }
-  }, [displayMode, isVisible, bookId]);
+  }, [displayMode, isVisible, bookId, route]);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -230,15 +381,22 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
           className={cn(
-            'z-[9999] w-[800px] h-[750px] transform-gpu',
+            'z-[9999] transform-gpu',
+            displayMode === 'iframe' ? 'w-[800px] h-[750px]' : 'w-[320px] h-[400px]',
             className
           )}
         >
-          <Card className="backdrop-blur-xl bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-600 shadow-xl overflow-hidden transition-all duration-300 h-full flex flex-col border-blue-500 shadow-2xl">
-            <div 
-              onPointerDown={(e) => dragControls.start(e)}
-              className="drag-handle p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 cursor-move flex items-center justify-between text-xs select-none"
-            >
+          <Card className={cn(
+            "backdrop-blur-xl overflow-hidden transition-all duration-300 h-full flex flex-col",
+            displayMode === 'iframe' 
+              ? "bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-600 shadow-xl border-blue-500 shadow-2xl"
+              : "bg-white/98 dark:bg-gray-900/98 border border-blue-200 dark:border-blue-700 shadow-2xl shadow-blue-500/20 rounded-xl"
+          )}>
+            {displayMode === 'iframe' ? (
+              <div 
+                onPointerDown={(e) => dragControls.start(e)}
+                className="drag-handle p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 cursor-move flex items-center justify-between text-xs select-none"
+              >
                 <div className="flex items-center gap-2 overflow-hidden">
                     <GripVertical className="h-5 w-5 text-gray-400 flex-shrink-0" />
                     <div className="flex gap-1.5 items-center">
@@ -254,22 +412,72 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
                     </a>
                 </div>
             </div>
+            ) : (
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 text-center">
+                <h3 className="font-semibold text-sm">{quickContent?.title || 'Предварительный просмотр'}</h3>
+              </div>
+            )}
             <CardContent className="p-0 h-full flex flex-col">
-              {displayMode === 'api' && (
-                <div className="p-6 h-full overflow-y-auto bg-white">
+              {/* Quick Preview Mode */}
+              {displayMode === 'quick' && (
+                <div className="h-full overflow-y-auto bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20">
+                  <div className="p-4">
+                    <div className="text-center mb-4">
+                      <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <Star className="h-6 w-6 text-white" />
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {quickContent.description}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {quickContent.features.map((feature, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: index * 0.1, duration: 0.3 }}
+                          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-3 border border-blue-200/50 dark:border-blue-700/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <div className="text-white text-xs">
+                                {feature.icon}
+                              </div>
+                            </div>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{feature.text}</span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* API Preview Mode for Books */}
+              {displayMode === 'api' && route.includes('/books/') && (
+                <div className="h-full overflow-y-auto bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-900/20 dark:via-teal-900/20 dark:to-cyan-900/20">
                   {isFetchingBook ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                     </div>
                   ) : bookData ? (
-                    <div className="space-y-4 text-gray-800">
-                      <h3 className="text-xl font-bold text-gray-900 border-b pb-2 mb-4">{bookData.title}</h3>
+                    <div className="p-4 space-y-3">
+                      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/50">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
+                            <BookOpen className="h-5 w-5 text-white" />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 line-clamp-2">{bookData.title}</h3>
+                        </div>
                       
-                      <div className="flex items-start gap-3">
-                        <Users className="w-5 h-5 text-gray-500 mt-1 flex-shrink-0" />
-                        <div>
-                          <span className="font-semibold text-gray-600">Авторы:</span>
-                          <p className="text-gray-800">{Array.isArray(bookData.authors) ? bookData.authors.join(', ') : bookData.authors}</p>
+                                              <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-emerald-600" />
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Авторы</span>
+                          </div>
+                          <p className="text-sm text-gray-800 dark:text-gray-200">{Array.isArray(bookData.authors) ? bookData.authors.join(', ') : bookData.authors}</p>
                         </div>
                       </div>
                       
@@ -365,6 +573,42 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
                     <div className="flex items-center justify-center h-full text-red-500">
                       <AlertCircle className="w-6 h-6 mr-2" />
                       <span>Не удалось загрузить информацию о книге.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* API Preview Mode for Other Pages */}
+              {displayMode === 'api' && !route.includes('/books/') && (
+                <div className="h-full overflow-y-auto bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-red-900/20 p-4">
+                  {apiData.loading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4 text-gray-800">
+                      <h3 className="text-xl font-bold text-gray-900 border-b pb-2 mb-4">{apiData.title}</h3>
+                      <p className="text-sm text-gray-600">{apiData.description}</p>
+                      
+                      {apiData.stats && apiData.stats.length > 0 && (
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          {apiData.stats.map((stat, index) => (
+                            <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                              <div className="flex items-center gap-2 mb-1">
+                                {stat.icon}
+                                <span className="text-xs font-medium text-gray-600">{stat.label}</span>
+                              </div>
+                              <p className="text-lg font-bold text-gray-900">{stat.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {apiData.preview && (
+                        <div className="mt-4 border-t pt-3">
+                          {apiData.preview}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
