@@ -22,6 +22,7 @@ import {
   getPriorityTextColor,
   getNotificationTypeLabel
 } from "@/lib/notification-utils";
+import { PreviewSwitcher, PreviewType } from "@/components/ui/preview-switcher";
 
 // Интерфейсы для результатов поиска
 interface SearchResult {
@@ -39,27 +40,39 @@ interface SearchResultCategory {
   results: SearchResult[]
 }
 
+interface ReaderNavLink {
+  text: string;
+  route: string;
+  img: string;
+  icon: React.ReactElement;
+  previewType: PreviewType;
+}
+
 // Reader navigation links
-const readerNavLinks = [{
+const readerNavLinks: ReaderNavLink[] = [{
   text: "Главная",
   route: "/readers",
   img: "/icons/admin/dashboard.png",
-  icon: <Home className="h-5 w-5" />
+  icon: <Home className="h-5 w-5" />,
+  previewType: 'api'
 }, {
   text: "Книги",
   route: "/readers/books",
   img: "/icons/admin/books.png",
-  icon: <Book className="h-5 w-5" />
+  icon: <Book className="h-5 w-5" />,
+  previewType: 'iframe'
 }, {
   text: "Избранное",
   route: "/readers/favorites",
   img: "/icons/admin/favorites.png",
-  icon: <Heart className="h-5 w-5" />
+  icon: <Heart className="h-5 w-5" />,
+  previewType: 'api'
 }, {
   text: "История",
   route: "/readers/history",
   img: "/icons/admin/history.png",
-  icon: <Clock className="h-5 w-5" />
+  icon: <Clock className="h-5 w-5" />,
+  previewType: 'api'
 }];
 
 // Вспомогательная функция для получения инициалов пользователя
@@ -87,6 +100,9 @@ const ReaderNavigation = () => {
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [hoveredNavItem, setHoveredNavItem] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<PreviewType>('iframe');
+  const hidePreviewTimeout = useRef<NodeJS.Timeout | null>(null);
   
   // Используем хук для работы с уведомлениями
   const {
@@ -98,6 +114,19 @@ const ReaderNavigation = () => {
     markAllAsRead,
     fetchNotifications
   } = useNotifications();
+
+  const handleNavMouseEnter = (route: string) => {
+    if (hidePreviewTimeout.current) {
+      clearTimeout(hidePreviewTimeout.current);
+    }
+    setHoveredNavItem(route);
+  };
+
+  const handleNavMouseLeave = () => {
+    hidePreviewTimeout.current = setTimeout(() => {
+      setHoveredNavItem(null);
+    }, 200); // Задержка перед скрытием
+  };
 
   // Keyboard shortcut handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -477,9 +506,9 @@ const ReaderNavigation = () => {
       )}
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center h-16">
           {/* Logo and Title */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4 flex-shrink-0">
             <motion.div 
               variants={logoVariants} 
               initial="initial" 
@@ -488,21 +517,222 @@ const ReaderNavigation = () => {
               className="flex-shrink-0 cursor-pointer"
             >
               <Link href="/">
-                <Image src="/icons/admin/logo.png" alt="logo" height={36} width={36} className="object-contain" />
+                <div className="relative group">
+                  <motion.div
+                    className="relative"
+                    whileHover={{
+                      scale: 1.15,
+                      rotate: [0, -5, 5, -3, 3, 0],
+                      transition: { 
+                        duration: 0.6,
+                        ease: "easeInOut"
+                      }
+                    }}
+                    animate={{
+                      y: [0, -2, 0],
+                      transition: {
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }
+                    }}
+                  >
+                    <Image 
+                      src="/images/owl-svgrepo-com.svg" 
+                      alt="СИНАПС - Сова логотип" 
+                      height={40} 
+                      width={40} 
+                      className="object-contain drop-shadow-xl transition-all duration-300 group-hover:drop-shadow-2xl" 
+                    />
+                    
+                    {/* Магическое свечение вокруг совы */}
+                    <motion.div 
+                      className="absolute inset-0 bg-gradient-to-r from-blue-400/40 via-purple-400/40 to-blue-400/40 rounded-full blur-xl"
+                      animate={{
+                        opacity: [0.3, 0.6, 0.3],
+                        scale: [1, 1.2, 1],
+                        transition: {
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }
+                      }}
+                    />
+                    
+                    {/* Мерцающие звездочки вокруг совы */}
+                    <motion.div
+                      className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-300 rounded-full"
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.5, 1, 0.5],
+                        rotate: [0, 180, 360],
+                        transition: {
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 0.2
+                        }
+                      }}
+                    />
+                    
+                    <motion.div
+                      className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-blue-300 rounded-full"
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.3, 1, 0.3],
+                        rotate: [360, 180, 0],
+                        transition: {
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 0.8
+                        }
+                      }}
+                    />
+                    
+                    <motion.div
+                      className="absolute top-1 -left-2 w-1 h-1 bg-white rounded-full"
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.2, 1, 0.2],
+                        transition: {
+                          duration: 1.8,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 1.2
+                        }
+                      }}
+                    />
+                  </motion.div>
+                  
+                  {/* Эффект "глаз совы" при наведении */}
+                  <motion.div
+                    className="absolute inset-0 pointer-events-none"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ 
+                      opacity: 1,
+                      transition: { duration: 0.3 }
+                    }}
+                  >
+                    {/* Левый глаз */}
+                    <motion.div
+                      className="absolute top-3 left-3 w-1 h-1 bg-yellow-400 rounded-full shadow-lg"
+                      animate={{
+                        scale: [1, 1.5, 1],
+                        opacity: [0.7, 1, 0.7],
+                        transition: {
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }
+                      }}
+                    />
+                    
+                    {/* Правый глаз */}
+                    <motion.div
+                      className="absolute top-3 right-3 w-1 h-1 bg-yellow-400 rounded-full shadow-lg"
+                      animate={{
+                        scale: [1, 1.5, 1],
+                        opacity: [0.7, 1, 0.7],
+                        transition: {
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 0.5
+                        }
+                      }}
+                    />
+                  </motion.div>
+                </div>
               </Link>
             </motion.div>
-            <motion.h1 
+            
+            <motion.div
               initial={{ x: -20, opacity: 0 }} 
               animate={{ x: 0, opacity: 1 }} 
-              transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }} 
-              className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent"
+              transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="flex-shrink-0"
             >
-              Библиотека
-            </motion.h1>
+              <motion.h1 
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left - rect.width / 2;
+                  const y = e.clientY - rect.top - rect.height / 2;
+                  
+                  e.currentTarget.style.transform = `
+                    perspective(1000px) 
+                    rotateY(${x / 12}deg) 
+                    rotateX(${-y / 12}deg) 
+                    translateZ(20px)
+                  `;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg) translateZ(0px)';
+                }}
+                className="text-2xl font-black px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-100/30 to-blue-50/20 backdrop-blur-sm shadow-lg border border-blue-200/30 tracking-wider cursor-default relative overflow-hidden transition-all duration-300"
+                style={{
+                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 50%, rgba(59, 130, 246, 0.1) 100%)',
+                  boxShadow: '0 8px 32px rgba(59, 130, 246, 0.1), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  transformStyle: 'preserve-3d',
+                }}
+              >
+                <motion.span
+                  className="relative z-10"
+                  animate={{
+                    backgroundPosition: ['0% 50%', '200% 50%']
+                  }}
+                  transition={{
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                  style={{
+                    backgroundImage: 'linear-gradient(90deg, #1e40af 0%, #1e40af 8%, #3b82f6 20%, #60a5fa 30%, #93c5fd 40%, #dbeafe 50%, #93c5fd 60%, #60a5fa 70%, #3b82f6 80%, #1e40af 92%, #1e40af 100%)',
+                    backgroundSize: '200% 100%',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    color: 'transparent',
+                    WebkitFontSmoothing: 'antialiased',
+                    textRendering: 'optimizeLegibility',
+                  } as React.CSSProperties}
+                >
+                  СИНАПС
+                </motion.span>
+                
+                {/* 3D карточка эффект - задний слой */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-blue-600/20 rounded-lg"
+                  style={{
+                    transform: 'translateZ(-15px)',
+                    transformStyle: 'preserve-3d',
+                  }}
+                  whileHover={{
+                    transform: 'translateZ(-25px) rotateX(-8deg) rotateY(3deg)',
+                    transition: { duration: 0.4 }
+                  }}
+                />
+                
+                {/* Дополнительный слой для глубины */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-blue-300/15 to-blue-500/15 rounded-lg"
+                  style={{
+                    transform: 'translateZ(-25px)',
+                    transformStyle: 'preserve-3d',
+                  }}
+                  whileHover={{
+                    transform: 'translateZ(-35px) rotateX(-12deg) rotateY(5deg)',
+                    transition: { duration: 0.4, delay: 0.1 }
+                  }}
+                />
+              </motion.h1>
+            </motion.div>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          {/* Desktop Navigation - Centered */}
+          <div className="hidden md:flex items-center space-x-1 flex-1 justify-center">
             {readerNavLinks.map((link, index) => {
               const isSelected = (link.route !== "/readers" && pathname.includes(link.route) && link.route.length > 1) || pathname === link.route;
               return (
@@ -513,6 +743,9 @@ const ReaderNavigation = () => {
                   animate="visible" 
                   whileHover="hover" 
                   variants={navItemVariants}
+                  className="relative"
+                  onMouseEnter={() => handleNavMouseEnter(link.route)}
+                  onMouseLeave={() => handleNavMouseLeave()}
                 >
                   <Link href={link.route}>
                     <div className={cn(
@@ -538,6 +771,16 @@ const ReaderNavigation = () => {
                       )}
                     </div>
                   </Link>
+                  
+                  {/* Page Preview */}
+                  <PreviewSwitcher
+                    route={link.route}
+                    isVisible={hoveredNavItem === link.route}
+                    position="bottom"
+                    className="left-1/2 transform -translate-x-1/2"
+                    type={link.previewType}
+                    enableScrollControl={true}
+                  />
                 </motion.div>
               );
             })}

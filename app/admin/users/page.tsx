@@ -431,7 +431,6 @@ export default function AllUsersPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatCard title="Активные пользователи" value={activeUsersCount} subtitle={`из ${users.length} пользователей`} icon={<Users className="w-5 h-5 text-blue-500" />} color="bg-blue-500" delay={0.1} />
           <StatCard title="Взято книг" value={totalBorrowed} subtitle="всего на руках" icon={<Users className="w-5 h-5 text-blue-500" />} color="bg-blue-500" delay={0.2} />
-          <StatCard title="Штрафы" value={totalFines} subtitle="общая сумма" icon={<Users className="w-5 h-5 text-blue-500" />} color="bg-blue-500" delay={0.3} />
         </div>
 
         

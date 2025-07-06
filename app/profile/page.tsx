@@ -401,19 +401,20 @@ export default function ProfilePage() {
         throw new Error("Токен авторизации не найден")
       }
 
-      // Send password change request
+      // Отправка запроса на изменение пароля
       const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/User/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "accept": "*/*",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          userId: id,
+          id: id,
           oldPassword: data.currentPassword,
           newPassword: data.newPassword,
         }),
-      })
+      });
 
       if (!response.ok) {
         let errorMessage = "Не удалось изменить пароль"

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { motion, useScroll, useTransform } from "framer-motion"
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion"
 import ReaderNavigation from "@/components/reader-navigation"
 import {
   BookOpen,
@@ -36,6 +36,8 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { LibraryFeaturesSectionWithHoverEffects } from "@/components/feature-section-with-hover-effects"
 import { useRouter } from "next/navigation"
+import EdgePeekingOwl from "@/components/ui/edge-peeking-owl"
+import AuthHeader from "@/components/auth/AuthHeader"
 
 const PixelCanvas = dynamic(() => import("@/components/ui/pixel-canvas").then((mod) => mod.PixelCanvas), {
   ssr: false,
@@ -102,6 +104,46 @@ const FloatingParticles = () => {
   )
 }
 
+// Небольшие мерцающие звёзды для фона
+const SparklingStars = () => {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  const stars = [
+    { left: 15, top: 10, size: 4, delay: 0 },
+    { left: 35, top: 25, size: 3, delay: 1 },
+    { left: 55, top: 40, size: 5, delay: 2 },
+    { left: 75, top: 60, size: 4, delay: 3 },
+    { left: 90, top: 20, size: 3, delay: 4 },
+    { left: 10, top: 70, size: 5, delay: 2 },
+    { left: 45, top: 85, size: 4, delay: 1 },
+  ]
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {stars.map((star, index) => (
+        <motion.div
+          key={index}
+          className="absolute bg-yellow-300 rounded-full shadow-lg"
+          style={{
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            left: `${star.left}%`,
+            top: `${star.top}%`,
+          }}
+          animate={{ opacity: [0.2, 1, 0.2], scale: [1, 1.8, 1] }}
+          transition={{ duration: 2.5, repeat: Infinity, delay: star.delay }}
+        />
+      ))}
+    </div>
+  )
+}
+
 // Предположим, что у вас есть тип для роли пользователя
 type UserRole = "Администратор" | "Пользователь" | "Библиотекарь" | null
 
@@ -113,6 +155,74 @@ interface StatCard {
   color: string
   trend?: string
   bgGradient: string
+}
+
+// Добавляю массивы функций для разных ролей
+const readerFeatures = [
+  { text: "Интеллектуальный поиск по каталогу", icon: Target },
+  { text: "Система резервирования книг", icon: Clock },
+  { text: "Персональная история чтения", icon: BookMarked },
+  { text: "Умные рекомендации на основе ИИ", icon: Sparkles },
+]
+
+const adminFeatures = [
+  { text: "Управление каталогом и экземплярами", icon: BookOpen },
+  { text: "Мониторинг статистики и отчетность", icon: BarChart3 },
+  { text: "Управление ролями и пользователями", icon: Users },
+  { text: "Система уведомлений и оповещений", icon: Zap },
+]
+
+// Компонент-обертка с 3D-наклоном (по аналогии с ReservationSummaryCard)
+const InfoCard3D = ({ children }: { children: React.ReactNode }) => {
+  const ref = useRef<HTMLDivElement>(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+
+  const mouseXSpring = useSpring(x)
+  const mouseYSpring = useSpring(y)
+
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["17deg", "-17deg"])
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-17deg", "17deg"])
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const mouseY = e.clientY - rect.top
+    const xPct = mouseX / rect.width - 0.5
+    const yPct = mouseY / rect.height - 0.5
+    x.set(xPct)
+    y.set(yPct)
+  }
+
+  const handleMouseLeave = () => {
+    x.set(0)
+    y.set(0)
+  }
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+      className="relative"
+    >
+      {/* Градиентная подложка для усиления 3D-эффекта */}
+      <div
+        className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 opacity-30"
+        style={{ transform: "translateZ(0px)", transformStyle: "preserve-3d" }}
+      />
+
+      {/* Основной контент немного приподнят */}
+      <div
+        style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
+        className="h-full w-full"
+      >
+        {children}
+      </div>
+    </motion.div>
+  )
 }
 
 export default function Home() {
@@ -234,17 +344,6 @@ export default function Home() {
     return (
       <div className="min-h-screen font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 relative overflow-hidden">
         <ReaderNavigation />
-        <main className="relative z-10 container mx-auto px-4 py-20">
-          <div className="text-center space-y-12">
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-blue-500 bg-clip-text text-transparent leading-tight">
-              Библиотека
-              <br />
-              <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
-                будущего
-              </span>
-            </h1>
-          </div>
-        </main>
       </div>
     )
   }
@@ -267,6 +366,7 @@ export default function Home() {
           noFocus={true}
         />
         <FloatingParticles />
+        <SparklingStars />
       </div>
 
       {/* Gradient overlay */}
@@ -312,24 +412,10 @@ export default function Home() {
             }}
             className="relative"
           >
-            <motion.h1
-              className="text-6xl md:text-8xl lg:text-9xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-blue-500 bg-clip-text text-transparent leading-tight relative"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              Библиотека
-              <br />
-              <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent relative">
-                будущего
-                <motion.div
-                  className="absolute -top-4 -right-4 text-2xl"
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                >
-                  ✨
-                </motion.div>
-              </span>
-            </motion.h1>
+            {/* Логотип программы */}
+            <div className="mb-8 flex justify-center">
+              <AuthHeader />
+            </div>
           </motion.div>
 
           <motion.p
@@ -504,34 +590,36 @@ export default function Home() {
           {/* Раздел для читателей */}
           <div>
             <PinContainer title="Перейти к чтению" href="/readers" className="h-full">
-              <Card className="h-full border-0 shadow-none bg-transparent">
-                <CardContent className="flex flex-col h-full p-8 space-y-8">
-                  <div className="flex items-center justify-center mb-6">
-                    <div className="relative">
-                      <div
-                        className="w-24 h-24 rounded-3xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl transition-transform duration-300 hover:scale-110 hover:rotate-3"
-                      >
-                        <BookOpen className="w-12 h-12 text-white" />
+              <InfoCard3D>
+                <Card className="h-full border-0 shadow-none bg-transparent">
+                  <CardContent className="flex flex-col h-full p-8 space-y-8">
+                    <div className="flex items-center justify-center mb-6">
+                      <div className="relative">
+                        <div
+                          className="w-24 h-24 rounded-3xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl transition-transform duration-300 hover:scale-110 hover:rotate-3"
+                        >
+                          <BookOpen className="w-12 h-12 text-white" />
+                        </div>
+                        <motion.div
+                          className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg"
+                          animate={{ rotate: [0, 360], scale: [1, 1.1, 1] }}
+                          transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                        >
+                          <Sparkles className="w-4 h-4 text-white" />
+                        </motion.div>
                       </div>
-                      <motion.div
-                        className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg"
-                        animate={{ rotate: [0, 360], scale: [1, 1.1, 1] }}
-                        transition={{
-                          duration: 3,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                      >
-                        <Sparkles className="w-4 h-4 text-white" />
-                      </motion.div>
                     </div>
-                  </div>
 
-                  <CardTitle className="text-3xl font-bold text-gray-800 dark:text-gray-200 text-center">
-                    Читательский портал
-                  </CardTitle>
-                </CardContent>
-              </Card>
+                    <CardTitle className="text-3xl font-bold text-gray-800 dark:text-gray-200 text-center">
+                      Читательский портал
+                    </CardTitle>
+                  </CardContent>
+                </Card>
+              </InfoCard3D>
             </PinContainer>
           </div>
 
@@ -539,125 +627,38 @@ export default function Home() {
           {(userRole === "Администратор" || userRole === "Библиотекарь") && (
             <div>
               <PinContainer title="Панель управления" href="/admin" className="h-full">
-                <Card className="h-full border-0 shadow-none bg-transparent">
-                  <CardContent className="flex flex-col h-full p-8 space-y-8">
-                    <div className="flex items-center justify-center mb-6">
-                      <div className="relative">
-                        <div
-                          className="w-24 h-24 rounded-3xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl transition-transform duration-300 hover:scale-110 hover:-rotate-3"
-                        >
-                          <Shield className="w-12 h-12 text-white" />
+                <InfoCard3D>
+                  <Card className="h-full border-0 shadow-none bg-transparent">
+                    <CardContent className="flex flex-col h-full p-8 space-y-8">
+                      <div className="flex items-center justify-center mb-6">
+                        <div className="relative">
+                          <div
+                            className="w-24 h-24 rounded-3xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl transition-transform duration-300 hover:scale-110 hover:-rotate-3"
+                          >
+                            <Shield className="w-12 h-12 text-white" />
+                          </div>
+                          <motion.div
+                            className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-red-400 to-orange-500 rounded-full"
+                            animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.2, 1] }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
+                          />
                         </div>
-                        <motion.div
-                          className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-red-400 to-orange-500 rounded-full"
-                          animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.2, 1] }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "linear",
-                          }}
-                        />
                       </div>
-                    </div>
 
-                    <CardTitle className="text-3xl font-bold text-gray-800 dark:text-gray-200 text-center">
-                      Администрирование
-                    </CardTitle>
-                  </CardContent>
-                </Card>
+                      <CardTitle className="text-3xl font-bold text-gray-800 dark:text-gray-200 text-center">
+                        Администрирование
+                      </CardTitle>
+                    </CardContent>
+                  </Card>
+                </InfoCard3D>
               </PinContainer>
             </div>
           )}
         </div>
-
-        {/* Секция популярных категорий */}
-        {libraryStats && libraryStats.categories.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-            viewport={{ once: true }}
-          >
-            <Card className="max-w-6xl mx-auto bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl rounded-3xl overflow-hidden">
-              <CardHeader className="text-center space-y-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-12">
-                <motion.div
-                  initial={{ scale: 0.8 }}
-                  whileInView={{ scale: 1 }}
-                  transition={{ duration: 0.6 }}
-                  viewport={{ once: true }}
-                >
-                  <CardTitle className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                    Популярные категории
-                  </CardTitle>
-                </motion.div>
-                <CardDescription className="text-xl text-gray-600 dark:text-gray-400">
-                  Откройте для себя самые востребованные разделы нашей библиотеки
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="p-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {libraryStats.categories.map((category, index) => (
-                    <motion.div
-                      key={category.name}
-                      className="space-y-4 p-6 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:shadow-xl transition-all duration-500 group cursor-pointer"
-                      initial={{ opacity: 0, y: 30 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: index * 0.1 }}
-                      whileHover={{ scale: 1.02, y: -5 }}
-                      viewport={{ once: true }}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          <motion.div
-                            className={`w-4 h-4 rounded-full bg-gradient-to-r ${
-                              index % 4 === 0
-                                ? "from-blue-500 to-cyan-500"
-                                : index % 4 === 1
-                                  ? "from-purple-500 to-pink-500"
-                                  : index % 4 === 2
-                                    ? "from-green-500 to-emerald-500"
-                                    : "from-orange-500 to-red-500"
-                            } shadow-lg`}
-                            whileHover={{ scale: 1.5 }}
-                            transition={{ type: "spring", stiffness: 300 }}
-                          />
-                          <span className="font-bold text-lg text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {category.name}
-                          </span>
-                        </div>
-
-                        <Badge
-                          variant="secondary"
-                          className="bg-white/70 text-gray-700 border-gray-200 px-4 py-2 text-sm font-semibold shadow-sm"
-                        >
-                          {formatNumber(category.count)} книг
-                        </Badge>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                          <span className="font-medium">Популярность</span>
-                          <span className="font-bold">{category.percentage.toFixed(1)}%</span>
-                        </div>
-                        <div className="relative">
-                          <Progress value={category.percentage} className="h-3 bg-gray-200 dark:bg-gray-700" />
-                          <motion.div
-                            className="absolute top-0 left-0 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
-                            initial={{ width: 0 }}
-                            whileInView={{ width: `${category.percentage}%` }}
-                            transition={{ duration: 1.5, delay: index * 0.2 }}
-                            viewport={{ once: true }}
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
 
         {/* Информационная секция */}
         <motion.div
@@ -666,61 +667,41 @@ export default function Home() {
           transition={{ duration: 1 }}
           viewport={{ once: true }}
         >
-          <Card className="max-w-6xl mx-auto bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden rounded-3xl">
-            <CardHeader className="text-center space-y-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-12">
-              <motion.div
-                initial={{ scale: 0.8 }}
-                whileInView={{ scale: 1 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-                <CardTitle className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-                  Возможности системы
-                </CardTitle>
-              </motion.div>
-              <CardDescription className="text-xl text-gray-600 dark:text-gray-400">
-                Полный спектр инструментов для современной библиотеки
-              </CardDescription>
-            </CardHeader>
+          {/* Заголовок секции */}
+          <motion.h2
+            className="text-4xl md:text-5xl font-bold text-center mb-12 bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            Возможности системы
+          </motion.h2>
 
-            <CardContent className="p-12">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <motion.div
-                  className="space-y-8"
-                  initial={{ opacity: 0, x: -30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.8 }}
-                  viewport={{ once: true }}
-                >
-                  <div className="flex items-center gap-4 mb-6">
-                    <motion.div
-                      className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-xl"
-                      whileHover={{ rotate: 360, scale: 1.1 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      <BookOpen className="w-7 h-7 text-white" />
-                    </motion.div>
-                    <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Для читателей</h3>
-                  </div>
+          {/* Grid карточек */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            {/* Карточка для читателей */}
+            <InfoCard3D>
+              <Card className="bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden rounded-3xl">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-10">
+                  <CardTitle className="text-3xl font-bold text-gray-800 dark:text-gray-200 text-center">
+                    Для читателей
+                  </CardTitle>
+                </CardHeader>
 
-                  <div className="space-y-4">
-                    {[
-                      { text: "Интеллектуальный поиск по каталогу", icon: Target },
-                      { text: "Система резервирования книг", icon: Clock },
-                      { text: "Персональная история чтения", icon: BookMarked },
-                      { text: "Умные рекомендации на основе ИИ", icon: Sparkles },
-                    ].map((item, index) => (
+                <CardContent className="p-0">
+                  <div className="w-full space-y-4 py-8 px-4 md:px-12">
+                    {readerFeatures.map((item, index) => (
                       <motion.div
                         key={item.text}
                         className="flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300 cursor-pointer group"
                         initial={{ opacity: 0, x: -20 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: index * 0.1 }}
-                        whileHover={{ x: 10 }}
                         viewport={{ once: true }}
                       >
                         <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
-                          <item.icon className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <item.icon className="w-6 h-6 text-green-500 flex-shrink-0" />
                         </motion.div>
                         <span className="text-gray-700 dark:text-gray-300 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {item.text}
@@ -728,55 +709,45 @@ export default function Home() {
                       </motion.div>
                     ))}
                   </div>
-                </motion.div>
+                </CardContent>
+              </Card>
+            </InfoCard3D>
 
-                <motion.div
-                  className="space-y-8"
-                  initial={{ opacity: 0, x: 30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                  viewport={{ once: true }}
-                >
-                  <div className="flex items-center gap-4 mb-6">
-                    <motion.div
-                      className="w-14 h-14 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-xl"
-                      whileHover={{ rotate: 360, scale: 1.1 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      <Shield className="w-7 h-7 text-white" />
-                    </motion.div>
-                    <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Для администраторов</h3>
-                  </div>
+            {/* Карточка для администраторов */}
+            {(userRole === "Администратор" || userRole === "Библиотекарь") && (
+              <InfoCard3D>
+                <Card className="bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden rounded-3xl">
+                  <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-10">
+                    <CardTitle className="text-3xl font-bold text-gray-800 dark:text-gray-200 text-center">
+                      Для администраторов
+                    </CardTitle>
+                  </CardHeader>
 
-                  <div className="space-y-4">
-                    {[
-                      { text: "Автоматизированное управление коллекцией", icon: Rocket },
-                      { text: "Детальная аналитика и отчетность", icon: BarChart3 },
-                      { text: "Гибкий контроль пользователей", icon: Users },
-                      { text: "Система уведомлений в реальном времени", icon: Zap },
-                    ].map((item, index) => (
-                      <motion.div
-                        key={item.text}
-                        className="flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300 cursor-pointer group"
-                        initial={{ opacity: 0, x: -20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.5, delay: index * 0.1 }}
-                        whileHover={{ x: 10 }}
-                        viewport={{ once: true }}
-                      >
-                        <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
-                          <item.icon className="w-5 h-5 text-purple-500 flex-shrink-0" />
+                  <CardContent className="p-0">
+                    <div className="w-full space-y-4 py-8 px-4 md:px-12">
+                      {adminFeatures.map((item, index) => (
+                        <motion.div
+                          key={item.text}
+                          className="flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300 cursor-pointer group"
+                          initial={{ opacity: 0, x: -20 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.5, delay: index * 0.1 }}
+                          viewport={{ once: true }}
+                        >
+                          <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                            <item.icon className="w-6 h-6 text-pink-500 flex-shrink-0" />
+                          </motion.div>
+                          <span className="text-gray-700 dark:text-gray-300 font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                            {item.text}
+                          </span>
                         </motion.div>
-                        <span className="text-gray-700 dark:text-gray-300 font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                          {item.text}
-                        </span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              </div>
-            </CardContent>
-          </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </InfoCard3D>
+            )}
+          </div>
         </motion.div>
       </main>
 
@@ -833,6 +804,9 @@ export default function Home() {
           </Card>
         </motion.div>
       </footer>
+
+      {/* Сова, выглядывающая из-за краёв */}
+      <EdgePeekingOwl />
     </div>
   )
 }

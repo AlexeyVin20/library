@@ -18,6 +18,7 @@ import ShelfCanvas from "@/components/admin/ShelfCanvas";
 import BookSelectorModal from "@/components/admin/BookSelectorModal";
 import BookInfoModal from "@/components/admin/BookInfoModal";
 import AutoArrangeBooks from "@/components/admin/AutoArrangeBooks";
+import IframePagePreviewCentered from "@/components/ui/iframe-page-preview-centered";
 // Тип для предложений полок от ИИ
 interface AIShelfSuggestion {
   category: string;
@@ -174,12 +175,31 @@ export default function ShelfsPage() {
   const [showAutoArrange, setShowAutoArrange] = useState(false);
   const [aiArrangedBooks, setAiArrangedBooks] = useState<string[]>([]);
   const [lastArrangements, setLastArrangements] = useState<any[]>([]);
+  const [hoveredItemState, setHoveredItemState] = useState<{ id: string | null; isJournal: boolean; coords: { top: number, left: number } | null }>({ id: null, isJournal: false, coords: null });
+  const [previewItemState, setPreviewItemState] = useState<{ id: string | null; isJournal: boolean; coords: { top: number, left: number } | null }>({ id: null, isJournal: false, coords: null });
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     fetchShelves();
     fetchBooks();
     fetchJournals();
   }, []);
+
+  const handlePreviewMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+    }
+  };
+
+  const handlePreviewMouseLeave = () => {
+      if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
+      }
+      hoverTimeoutRef.current = setTimeout(() => {
+        setPreviewItemState({ id: null, isJournal: false, coords: null });
+      }, 300);
+  };
+
   const fetchShelves = async () => {
     try {
       setLoading(true);
@@ -219,24 +239,25 @@ export default function ShelfsPage() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
-      // Загружаем книги и экземпляры параллельно
-      const [booksResponse, instancesResponse] = await Promise.all([
-        fetch(`${baseUrl}/api/Books`),
-        fetch(`${baseUrl}/api/BookInstance`, { headers })
-      ]);
       
+      // Загружаем книги
+      const booksResponse = await fetch(`${baseUrl}/api/Books`);
       if (!booksResponse.ok) throw new Error(`API ответил с кодом: ${booksResponse.status}`);
       const booksData = await booksResponse.json();
-      
-      let instancesData = [];
-      if (instancesResponse.ok) {
-        instancesData = await instancesResponse.json();
-      }
-      
-      // Обогащаем книги информацией об экземплярах на полках
-      const enrichedBooks = booksData.map((book: Book) => {
+
+      // Для каждой книги загружаем её экземпляры
+      const enrichedBooksPromises = booksData.map(async (book: Book) => {
+        const instancesResponse = await fetch(`${baseUrl}/api/BookInstance?bookId=${book.id}`, { headers });
+        
+        let instancesData: BookInstance[] = [];
+        if (instancesResponse.ok) {
+          instancesData = await instancesResponse.json();
+        } else {
+            console.warn(`Could not fetch instances for book ${book.id}. Status: ${instancesResponse.status}`);
+        }
+
+        // Обогащаем книгу информацией об экземплярах на полках
         const bookInstances = instancesData.filter((instance: BookInstance) =>  
-          instance.book && instance.book.id === book.id && 
           instance.isActive &&
           instance.status.toLowerCase() !== 'утеряна' &&
           instance.status.toLowerCase() !== 'списана'
@@ -248,6 +269,8 @@ export default function ShelfsPage() {
           instances: bookInstances
         };
       });
+
+      const enrichedBooks = await Promise.all(enrichedBooksPromises);
       
       setBooks(enrichedBooks);
       setFilteredBooks(enrichedBooks);
@@ -1181,6 +1204,37 @@ export default function ShelfsPage() {
     }
   };
 
+  const handleItemHoverStart = (item: Book | Journal, isJournal: boolean, event: React.MouseEvent<HTMLDivElement>) => {
+    if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+    const coords = {
+      top: rect.top + scrollTop - 10,
+      left: rect.right + scrollLeft + 10,
+    };
+
+    hoverTimeoutRef.current = setTimeout(() => {
+        setPreviewItemState({
+            id: String(item.id),
+            isJournal,
+            coords
+        });
+    }, 700);
+  };
+
+  const handleItemHoverEnd = () => {
+    if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+        setPreviewItemState({ id: null, isJournal: false, coords: null });
+    }, 300);
+  };
+
   return <div className="min-h-screen bg-gray-200">
       <div className="container mx-auto p-6">
         {/* Header */}
@@ -1445,7 +1499,7 @@ export default function ShelfsPage() {
                   onDragMove={handleDragMove} 
                   onDragEnd={handleDragEnd} 
                   onShelfEdit={startEditShelf} 
-                  onShelfDelete={deleteShelf} 
+                  onShelfDelete={deleteShelf}
                   onItemClick={handleItemClick} 
                   onEmptySlotClick={handleEmptySlotClick} 
                   overlappingShelfIds={overlappingShelfIds} 
@@ -1461,6 +1515,8 @@ export default function ShelfsPage() {
                   onItemDragEnd={handleItemDragEnd}
                   // AI arrangement props
                   aiArrangedBooks={aiArrangedBooks}
+                  onItemHoverStart={handleItemHoverStart}
+                  onItemHoverEnd={handleItemHoverEnd}
                 />
               </motion.div>
 
@@ -1559,5 +1615,15 @@ export default function ShelfsPage() {
         onShelfSuggestion={handleShelfSuggestion}
         onUndo={undoAiArrangement}
       />
-    </div>;
+      {previewItemState.id && !isDraggingItem && (
+        <IframePagePreviewCentered
+            route={`/readers/books/${previewItemState.id}`}
+            isVisible={!!previewItemState.id}
+            coords={previewItemState.coords ?? { top: 0, left: 0 }}
+            displayMode="api"
+            onMouseEnter={handlePreviewMouseEnter}
+            onMouseLeave={handlePreviewMouseLeave}
+        />
+      )}
+    </div>
 }

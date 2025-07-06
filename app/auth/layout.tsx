@@ -4,7 +4,9 @@
 import { ReactNode, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import "@/styles/admin.css";
+import AuthHeader from "@/components/auth/AuthHeader";
+import PeekingOwl from "@/components/auth/PeekingOwl";
+import Image from "next/image";
 
 type AuthLayoutProps = {
   children: ReactNode;
@@ -23,18 +25,22 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
   
   // Показываем пустой контейнер во время загрузки, чтобы избежать мигания контента
   if (isLoading) {
-    return <div className="min-h-screen flex bg-gray-200" />;
+    return <div className="min-h-screen flex bg-white" />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-200">
+    <div className="relative min-h-screen w-full bg-gray-50 overflow-hidden">
       {/* Декоративные элементы */}
-      <div className="fixed top-1/4 right-10 w-64 h-64 bg-blue-300/20 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="fixed bottom-1/4 left-10 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="fixed top-1/2 left-1/3 w-40 h-40 bg-blue-700/10 rounded-full blur-3xl pointer-events-none"></div>
-      
-      <div className="flex flex-col flex-1 items-center justify-center min-h-screen">
-        <main className="p-6 w-full max-w-md">{children}</main>
+      <div className="fixed -top-32 -left-40 w-96 h-96 bg-blue-200/70 rounded-full blur-3xl animate-pulse pointer-events-none animation-delay-2000"></div>
+      <div className="fixed -bottom-40 -right-32 w-[30rem] h-[30rem] bg-indigo-200/80 rounded-full blur-3xl animate-pulse pointer-events-none animation-delay-4000"></div>
+      <div className="fixed top-1/2 -right-32 w-80 h-80 bg-pink-200/60 rounded-full blur-3xl animate-pulse pointer-events-none"></div>
+      <div className="fixed bottom-1/4 -left-32 w-80 h-80 bg-teal-200/70 rounded-full blur-3xl animate-pulse pointer-events-none animation-delay-6000"></div>
+
+      <PeekingOwl />
+
+      <div className="relative flex flex-col items-center justify-center min-h-screen p-4">
+        <AuthHeader />
+        <main className="w-full max-w-md z-10">{children}</main>
       </div>
     </div>
   );
