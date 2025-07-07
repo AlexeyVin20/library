@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --no-lint",
-    "start": "next start"
+    "start": "next start",
+    "load-env": "node scripts/load-env.js",
+    "predev": "npm run load-env",
+    "prebuild": "npm run load-env",
+    "prestart": "npm run load-env"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",
