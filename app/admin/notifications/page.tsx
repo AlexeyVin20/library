@@ -214,6 +214,24 @@ function getPriorityColor(priority: string) {
   return colorMap[priority] || 'blue'
 }
 
+// Вспомогательная функция для форматирования даты в dd.MM.YYYY
+const formatDateDDMMYYYY = (date: string | Date | undefined | null): string => {
+  if (!date) return 'N/A';
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) {
+      return 'N/A'; // Возвращаем N/A если дата невалидна
+    }
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}.${month}.${year}`;
+  } catch (error) {
+    console.error("Error formatting date:", date, error);
+    return 'Invalid Date';
+  }
+};
+
 const notificationTypeToNumber = (type: string): number => {
   const map: Record<string, number> = {
     'GeneralEmail': 0,
@@ -601,7 +619,7 @@ function ReservationPickerModal({
                   <div>
                     <div className="font-medium text-gray-800">{reservation.bookTitle}</div>
                     <div className="text-sm text-gray-500">
-                      {new Date(reservation.reservationDate).toLocaleDateString()} - {reservation.status}
+                      {formatDateDDMMYYYY(reservation.reservationDate)} - {reservation.status}
                     </div>
                   </div>
                 </div>
@@ -1108,8 +1126,8 @@ export default function AdminNotificationsPage() {
                 return {
                   UserName: data.user?.fullName || 'N/A',
                   BookTitle: data.book?.title || 'N/A',
-                  DueDate: data.expirationDate ? new Date(data.expirationDate).toLocaleDateString() : 'N/A',
-                  ActualReturnDate: data.actualReturnDate ? new Date(data.actualReturnDate).toLocaleDateString() : 'N/A',
+                  DueDate: formatDateDDMMYYYY(data.expirationDate),
+                  ActualReturnDate: formatDateDDMMYYYY(data.actualReturnDate),
                   FineAmount: data.fineAmount || 'N/A',
                   Reason: data.reason || 'N/A',
                   ReservationStatus: data.status || 'N/A',
@@ -1230,34 +1248,34 @@ export default function AdminNotificationsPage() {
         templateData['PublicationYear'] = selectedBook.publicationYear;
       }
       if (selectedReservation) {
-        templateData['ReservationDate'] = new Date(selectedReservation.reservationDate).toLocaleDateString();
-        templateData['ExpirationDate'] = selectedReservation.expirationDate ? new Date(selectedReservation.expirationDate).toLocaleDateString() : 'N/A';
+        templateData['ReservationDate'] = formatDateDDMMYYYY(selectedReservation.reservationDate);
+        templateData['ExpirationDate'] = selectedReservation.expirationDate ? formatDateDDMMYYYY(selectedReservation.expirationDate) : 'N/A';
         templateData['ReservationStatus'] = selectedReservation.status;
         // Для BookOverdue — ExpirationDate
         if (singleNotificationForm.type === 'BookOverdue' && selectedReservation.expirationDate) {
-          templateData['ExpirationDate'] = new Date(selectedReservation.expirationDate).toLocaleDateString();
+          templateData['ExpirationDate'] = formatDateDDMMYYYY(selectedReservation.expirationDate);
         }
         // Для BookReturned — ActualReturnDate
         if (singleNotificationForm.type === 'BookReturned' && selectedReservation.actualReturnDate) {
-          templateData['ActualReturnDate'] = new Date(selectedReservation.actualReturnDate).toLocaleDateString();
+          templateData['ActualReturnDate'] = formatDateDDMMYYYY(selectedReservation.actualReturnDate);
         }
       }
       if (selectedUser) {
         templateData['UserName'] = selectedUser.fullName;
       }
-      // Если выбран тип FineAdded, добавляем поля FineAmount, Reason, DateIssued
+      // Если выбран тип FineAded, добавляем поля FineAmount, Reason, DateIssued
       if (singleNotificationForm.type === 'FineAdded') {
         templateData['FineAmount'] = singleNotificationForm.fineAmount || '';
         templateData['Reason'] = singleNotificationForm.reason || '';
-        templateData['DateIssued'] = new Date().toLocaleDateString();
+        templateData['DateIssued'] = formatDateDDMMYYYY(new Date());
       }
       // Если выбран тип ReturnSoon, добавляем DueDate
       if (singleNotificationForm.type === 'ReturnSoon') {
-        templateData['DueDate'] = singleNotificationForm.dueDate || '';
+        templateData['DueDate'] = formatDateDDMMYYYY(singleNotificationForm.dueDate);
       }
       // Если выбран тип ReservationReady, добавляем PickupUntilDate
       if (singleNotificationForm.type === 'ReservationReady') {
-        templateData['PickupUntilDate'] = singleNotificationForm.pickupUntilDate || '';
+        templateData['PickupUntilDate'] = formatDateDDMMYYYY(singleNotificationForm.pickupUntilDate);
       }
 
       const payload = {
@@ -1576,8 +1594,6 @@ export default function AdminNotificationsPage() {
         <Tabs defaultValue="send" className="space-y-6">
           <TabsList className="bg-white p-1 rounded-xl shadow-lg border border-gray-200">
             <TabsTrigger value="send" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Индивидуальная отправка</TabsTrigger>
-            <TabsTrigger value="bulk" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Массовая отправка</TabsTrigger>
-            <TabsTrigger value="auto" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Автоматические</TabsTrigger>
             <TabsTrigger value="manage" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 transition-all duration-200">Управление</TabsTrigger>
           </TabsList>
 
@@ -1700,7 +1716,7 @@ export default function AdminNotificationsPage() {
                               <div>
                                 <div className="font-semibold text-gray-800">{selectedReservation.bookTitle}</div>
                                 <div className="text-green-600 text-sm">
-                                  {new Date(selectedReservation.reservationDate).toLocaleDateString()}
+                                  {formatDateDDMMYYYY(selectedReservation.reservationDate)}
                                 </div>
                               </div>
                             </div>
@@ -1933,7 +1949,7 @@ export default function AdminNotificationsPage() {
         </TabsContent>
 
         {/* Массовая отправка */}
-        <TabsContent value="bulk">
+        {/* <TabsContent value="bulk">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1964,7 +1980,7 @@ export default function AdminNotificationsPage() {
                   </CardHeader>
                   
                   <CardContent className="px-6 pb-6 space-y-5">
-                    {/* Выбор пользователей */}
+                    
                     <div className="space-y-3">
                       <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                         <Users className="w-4 h-4 text-blue-500" />
@@ -2014,7 +2030,7 @@ export default function AdminNotificationsPage() {
                       )}
                     </div>
 
-                    {/* Настройки */}
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Категория</Label>
@@ -2055,7 +2071,7 @@ export default function AdminNotificationsPage() {
                       </div>
                     </div>
                     
-                    {/* Содержание */}
+                    
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
@@ -2085,7 +2101,7 @@ export default function AdminNotificationsPage() {
                       </div>
                     </div>
                     
-                    {/* Кнопки отправки */}
+                    
                     <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-gray-200">
                       <Button 
                         onClick={sendBulkNotifications}
@@ -2109,10 +2125,10 @@ export default function AdminNotificationsPage() {
                 </Card>
               </div>
             </motion.div>
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Автоматические уведомления */}
-        <TabsContent value="auto">
+        {/* <TabsContent value="auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2183,7 +2199,7 @@ export default function AdminNotificationsPage() {
             >
             </motion.div>
           </motion.div>
-        </TabsContent>
+        </TabsContent> */}
         </Tabs>
       </FadeInView>
 

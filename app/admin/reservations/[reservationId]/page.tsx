@@ -5,11 +5,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText, Printer, Mail, Phone, BookOpen, ArrowRight, Settings } from "lucide-react";
+import { ChevronLeft, CheckCircle, XCircle, Clock, Book, User, Calendar, FileText, Printer, Mail, Phone, BookOpen, ArrowRight, Settings, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Book as BookComponent } from "@/components/ui/book";
+import QueueDisplay from "@/components/admin/QueueDisplay";
 
 interface Reservation {
   id: string;
@@ -1205,6 +1206,7 @@ export default function ReservationDetailsPage({
                 <TabsList className="bg-white p-1 rounded-xl border border-gray-300 shadow-md text-gray-800">
                   <AnimatedTabsTrigger value="details" icon={<Book className="w-4 h-4" />} label="Детали книги" isActive={activeTab === "details"} />
                   <AnimatedTabsTrigger value="user" icon={<User className="w-4 h-4" />} label="Пользователь" isActive={activeTab === "user"} />
+                  <AnimatedTabsTrigger value="queue" icon={<Users className="w-4 h-4" />} label="Очередь" isActive={activeTab === "queue"} />
                 </TabsList>
 
                 <TabsContent value="details" className="pt-6">
@@ -1382,6 +1384,56 @@ export default function ReservationDetailsPage({
                           icon={<Calendar className="h-4 w-4 text-blue-500" />} 
                         />
                       )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="queue" className="pt-6">
+                  <div className="space-y-6">
+                    {/* Информация о позиции в очереди для текущего резервирования */}
+                    {reservation.status === "Обрабатывается" && reservation.notes?.includes("В очереди") && (
+                      <div className="bg-orange-50 rounded-xl p-4 border border-orange-200">
+                        <h3 className="text-lg font-medium mb-3 text-orange-800 flex items-center gap-2">
+                          <Clock className="h-5 w-5" />
+                          Позиция в очереди для данного резервирования
+                        </h3>
+                        <div className="bg-white rounded-lg p-3 border border-orange-200">
+                          <p className="text-sm text-orange-700">
+                            Это резервирование находится в очереди на книгу "{reservation.book?.title}". 
+                            Резервирование будет автоматически обработано, когда книга станет доступна.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Полная очередь на книгу */}
+                    {reservation.bookId && (
+                      <div>
+                        <h3 className="text-lg font-medium mb-3 text-gray-800 flex items-center gap-2">
+                          <Users className="h-5 w-5 text-blue-500" />
+                          Полная очередь на книгу "{reservation.book?.title}"
+                        </h3>
+                        <QueueDisplay
+                          bookId={reservation.bookId}
+                          bookTitle={reservation.book?.title}
+                          showControls={true}
+                          onQueueUpdate={() => fetchReservation()}
+                          maxVisibleItems={10}
+                        />
+                      </div>
+                    )}
+
+                    {/* Дополнительная информация */}
+                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                      <h4 className="text-md font-medium mb-2 text-blue-800">
+                        Управление очередью
+                      </h4>
+                      <div className="space-y-2 text-sm text-blue-700">
+                        <p>• Резервирования в очереди обрабатываются автоматически по мере освобождения экземпляров</p>
+                        <p>• Пользователи получают уведомления об изменении своей позиции в очереди</p>
+                        <p>• Администраторы могут вручную отменить резервирования из очереди</p>
+                        <p>• Время ожидания рассчитывается на основе среднего срока выдачи книг</p>
+                      </div>
                     </div>
                   </div>
                 </TabsContent>

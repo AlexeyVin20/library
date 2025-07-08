@@ -12,6 +12,8 @@ import { Calendar as CalendarIcon, BookOpen, Heart, Share2, Calendar, User, Book
 import { useAuth } from "@/lib/auth";
 import { getHighestPriorityRole } from "@/lib/types";
 import { Calendar as UiCalendar } from "@/components/ui/calendar";
+import QueuePosition from "@/components/ui/queue-position";
+import QueueDisplay from "@/components/admin/QueueDisplay";
 import { format, addDays } from "date-fns";
 import { ru } from 'date-fns/locale';
 
@@ -78,6 +80,7 @@ export default function BookDetailsPage() {
   const [isBookEffectivelyReservedByCurrentUser, setIsBookEffectivelyReservedByCurrentUser] = useState(false);
   const [userActiveReservationId, setUserActiveReservationId] = useState<string | null>(null);
   const [showReservationModal, setShowReservationModal] = useState(false);
+  const [queueUpdateKey, setQueueUpdateKey] = useState(0); // Для принудительного обновления очереди
   
   // Состояния для дат начала и окончания
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
@@ -103,8 +106,8 @@ export default function BookDetailsPage() {
 
   // Статусы, которые считаются неактивными (пользователь может забронировать снова)
   const nonActiveReservationStatuses = ["отменена", "истекла", "возвращена", "отменена_пользователем"];
-  useEffect(() => {
-    const fetchBookData = async () => {
+  
+  const fetchBookData = React.useCallback(async () => {
       if (!id) return;
       try {
         setLoading(true);
@@ -184,9 +187,17 @@ export default function BookDetailsPage() {
       } finally {
         setLoading(false);
       }
-    };
+    }, [id, currentUserId, baseUrl]);
+
+  // Функция для обновления данных очереди  
+  const handleQueueUpdate = () => {
+    setQueueUpdateKey(prev => prev + 1);
+    fetchBookData(); // Перезагружаем данные книги
+  };
+
+  useEffect(() => {
     fetchBookData();
-  }, [id, currentUserId, baseUrl]);
+  }, [fetchBookData]);
   const handleToggleFavorite = async () => {
     if (!currentUserId) {
       toast({
@@ -331,13 +342,7 @@ export default function BookDetailsPage() {
       setIsBookEffectivelyReservedByCurrentUser(true);
       setUserActiveReservationId(newReservation.id);
       setShowReservationModal(false);
-      // Опционально: обновить availableCopies локально или перезапросить данные книги
-      if (book && book.availableCopies) {
-        setBook({
-          ...book,
-          availableCopies: book.availableCopies - 1
-        });
-      }
+      handleQueueUpdate(); // Обновляем данные очереди
     } catch (error) {
       console.error("Ошибка при создании бронирования:", error);
       toast({
@@ -471,6 +476,33 @@ export default function BookDetailsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Компонент очереди для пользователя */}
+                {currentUserId && (
+                  <div key={queueUpdateKey} className="mt-6">
+                    <QueuePosition
+                      bookId={book.id}
+                      userId={currentUserId}
+                      bookTitle={book.title}
+                      availableCopies={book.availableCopies}
+                      isReserved={isBookEffectivelyReservedByCurrentUser}
+                      onQueueUpdate={handleQueueUpdate}
+                      maxReservationDays={maxReservationDays}
+                    />
+                  </div>
+                )}
+
+                                 {/* Отображение очереди на книгу (без персональных данных для обычных пользователей) */}
+                 <div className="mt-6">
+                   <QueueDisplay
+                     bookId={book.id}
+                     bookTitle={book.title}
+                     showControls={false} // Обычные пользователи не могут управлять очередью
+                     onQueueUpdate={handleQueueUpdate}
+                     maxVisibleItems={3}
+                     showUserNames={false} // Скрываем имена пользователей для обычных читателей
+                   />
+                 </div>
               </div>
             </FadeInView>
           </div>

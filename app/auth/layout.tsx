@@ -13,15 +13,25 @@ type AuthLayoutProps = {
 };
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   
   // Если пользователь уже авторизован, перенаправляем на главную страницу
   useEffect(() => {
+    // Не перенаправляем, если пользователю требуется сменить пароль
+    if (user?.passwordResetRequired) {
+      // Если пользователь находится не на странице смены пароля, а где-то еще в /auth,
+      // принудительно направим его на нужную страницу.
+      if (window.location.pathname !== '/auth/force-password-change') {
+        router.push('/auth/force-password-change');
+      }
+      return;
+    }
+
     if (!isLoading && isAuthenticated) {
       router.push('/');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [user, isAuthenticated, isLoading, router]);
   
   // Показываем пустой контейнер во время загрузки, чтобы избежать мигания контента
   if (isLoading) {
