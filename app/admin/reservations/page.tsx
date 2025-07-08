@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, Plus, CheckCircle, XCircle, Clock, ArrowRight, Filter, Trash2, ChevronDown, ChevronUp, Users } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,6 +13,7 @@ import Filters, { Filter as FilterType, FilterType as FilterTypeEnum, FilterOper
 import { CreateReservationDialog } from "@/components/ui/reservation-creation-modal";
 import type { Reservation as ReservationType, ReservationDto } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import QueueDisplay from "@/components/admin/QueueDisplay";
 
 // Расширенный интерфейс для работы с резервированиями на странице
 interface Reservation extends Omit<ReservationDto, 'book'> {
@@ -714,6 +715,16 @@ export default function ReservationsPage() {
                 {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
               
+              {/* Быстрый фильтр по очереди */}
+              <Button
+                variant="outline"
+                onClick={() => addStatusFilter("В очереди")}
+                className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
+              >
+                <Users className="h-4 w-4" />
+                Книги с очередью
+              </Button>
+
               {/* Быстрые фильтры по статусу */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -974,6 +985,19 @@ export default function ReservationsPage() {
                             />
                           </div>
                         </div>
+
+                        {/* Отображение очереди на книгу */}
+                        {reservation.bookId && (
+                          <div className="mt-3">
+                            <QueueDisplay
+                              bookId={reservation.bookId}
+                              bookTitle={reservation.book?.title}
+                              showControls={true}
+                              onQueueUpdate={() => fetchReservations()}
+                              maxVisibleItems={3}
+                            />
+                          </div>
+                        )}
 
                         <div className="flex flex-col gap-2 mb-4">
                           <div className="flex items-center gap-2">

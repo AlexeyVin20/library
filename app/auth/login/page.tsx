@@ -139,6 +139,12 @@ export default function LoginPage() {
                       </FormControl>
                       <FormMessage className="text-red-600" />
                     </div>
+                    <div className="text-right">
+                        <Link href="/auth/forgot-password"
+                              className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                          Забыли пароль?
+                        </Link>
+                    </div>
                   </FormItem>
                 )}
               />

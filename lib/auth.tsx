@@ -8,6 +8,7 @@ export type User = {
   id: string;
   username: string;
   roles: string[]; // Названия ролей пользователя (например, "Администратор", "Пользователь")
+  passwordResetRequired?: boolean;
 };
 
 type AuthContextType = {
@@ -55,6 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Получаем роли напрямую из userData.roles
           const roles = Array.isArray(userData.roles) ? userData.roles : [];
 
+          // Добавляем passwordResetRequired, если пришел с сервера
+          const passwordResetRequiredFromApi = typeof userData.passwordResetRequired !== "undefined" ? userData.passwordResetRequired : false;
+
           // Обновляем данные пользователя из запроса
           const userInfo: User = {
             id: userData.id,
@@ -64,12 +68,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // email: userData.email,
             // ... и т.д.
             roles: roles, // Используем напрямую полученные роли
+            passwordResetRequired: passwordResetRequiredFromApi,
           };
 
           setUser(userInfo);
           
           // Сохраняем данные пользователя в localStorage для доступа в других компонентах
           localStorage.setItem("user", JSON.stringify(userInfo));
+
+          // Если требуется смена пароля и пользователь не находится на нужной странице, перенаправляем
+          if (userInfo.passwordResetRequired && typeof window !== "undefined" && window.location.pathname !== "/auth/force-password-change") {
+            router.push("/auth/force-password-change");
+          }
 
           // Убираем автоматический редирект, позволяя пользователям оставаться на текущей странице
           // Если нужен редирект для администратора, он будет обрабатываться через соответствующий layout
@@ -127,24 +137,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.user) {
         const roles = Array.isArray(data.user.roles) ? data.user.roles : [];
 
+        const passwordResetRequiredFromApi =
+          typeof data.user.passwordResetRequired !== "undefined"
+            ? data.user.passwordResetRequired
+            : data.passwordResetRequired || false;
+
         const userData: User = {
           id: data.user.id,
           username: data.user.username,
-           // Добавляем другие поля из AuthUserDto, если они нужны
-          roles: roles
+          roles: roles,
+          passwordResetRequired: passwordResetRequiredFromApi,
         };
 
-        // Сохраняем данные пользователя в localStorage для доступа в других компонентах
+        // Сохраняем данные пользователя в localStorage
         localStorage.setItem("user", JSON.stringify(userData));
 
         setUser(userData);
 
-        // Перенаправляем на страницу админа, если у пользователя есть роль "Администратор"
-        // Проверяйте точное название роли
-        if (roles.includes("Администратор")) { // Или "Администратор"
+        // Если пользователь должен сменить пароль, направляем его на страницу смены и прекращаем дальнейшие редиректы
+        if (userData.passwordResetRequired) {
+          router.push("/auth/force-password-change");
+          return; // прерываем дальнейшую логику
+        }
+
+        // Перенаправление после входа
+        if (roles.includes("Администратор")) {
           router.push("/admin");
         } else {
-          router.push("/"); // Или на другую страницу по умолчанию
+          router.push("/");
         }
       } else {
          // Обработка случая, если бэкенд не вернул user в ответе login
