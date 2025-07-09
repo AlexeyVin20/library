@@ -18,7 +18,7 @@ import ShelfCanvas from "@/components/admin/ShelfCanvas";
 import BookSelectorModal from "@/components/admin/BookSelectorModal";
 import BookInfoModal from "@/components/admin/BookInfoModal";
 import AutoArrangeBooks from "@/components/admin/AutoArrangeBooks";
-import IframePagePreviewCentered from "@/components/ui/iframe-page-preview-centered";
+import BookPreviewMini from "@/components/ui/book-preview-mini";
 // Тип для предложений полок от ИИ
 interface AIShelfSuggestion {
   category: string;
@@ -1517,6 +1517,8 @@ export default function ShelfsPage() {
                   aiArrangedBooks={aiArrangedBooks}
                   onItemHoverStart={handleItemHoverStart}
                   onItemHoverEnd={handleItemHoverEnd}
+                  // Admin mode
+                  isReaderMode={false}
                 />
               </motion.div>
 
@@ -1554,14 +1556,6 @@ export default function ShelfsPage() {
                   <div className="flex items-center">
                     <div className="w-6 h-8 bg-gradient-to-br from-green-400 to-blue-500 border border-purple-400 mr-3 rounded animate-pulse"></div>
                     <span className="text-gray-500">Размещено ИИ</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-6 h-8 bg-green-500 mr-3 rounded relative">
-                      <div className="absolute -top-1 -right-1 bg-white text-black text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center border border-gray-300 shadow-md">
-                        2
-                      </div>
-                    </div>
-                    <span className="text-gray-500">Количество экземпляров</span>
                   </div>
                 </div>
               </motion.div>
@@ -1615,12 +1609,11 @@ export default function ShelfsPage() {
         onShelfSuggestion={handleShelfSuggestion}
         onUndo={undoAiArrangement}
       />
-      {previewItemState.id && !isDraggingItem && (
-        <IframePagePreviewCentered
-            route={`/readers/books/${previewItemState.id}`}
+      {previewItemState.id && !isDraggingItem && !previewItemState.isJournal && (
+        <BookPreviewMini
+            bookId={previewItemState.id}
             isVisible={!!previewItemState.id}
             coords={previewItemState.coords ?? { top: 0, left: 0 }}
-            displayMode="api"
             onMouseEnter={handlePreviewMouseEnter}
             onMouseLeave={handlePreviewMouseLeave}
         />

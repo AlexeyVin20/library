@@ -124,8 +124,6 @@ const StatusBadge = ({
         return { color: "bg-green-600", label: "Возвращена" };
       case "Просрочена":
         return { color: "bg-red-600", label: "Просрочена" };
-      case "Отменена_пользователем":
-        return { color: "bg-gray-600", label: "Отменена пользователем" };
       default:
         return { color: "bg-gray-500", label: "Неизвестно" };
     }
@@ -151,7 +149,18 @@ export default function ReservationsPage() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   useEffect(() => {
+    // Уже существующий вызов fetchReservations при монтировании
     fetchReservations();
+
+    // Добавляем слушатель событий для обновления экземпляров книги
+    const handleInstancesUpdate = (event) => {
+      // Можно добавить фильтрацию по bookId, если потребуется
+      fetchReservations();
+    };
+    window.addEventListener('bookInstancesUpdated', handleInstancesUpdate);
+    return () => {
+      window.removeEventListener('bookInstancesUpdated', handleInstancesUpdate);
+    };
   }, []);
 
   // Функция для определения приоритетного статуса с учетом просрочки
@@ -417,8 +426,6 @@ export default function ReservationsPage() {
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case "Просрочена":
         return <XCircle className="w-5 h-5 text-red-600" />;
-      case "Отменена_пользователем":
-        return <XCircle className="w-5 h-5 text-gray-600" />;
       default:
         return <Clock className="w-5 h-5 text-gray-500" />;
     }
@@ -440,8 +447,6 @@ export default function ReservationsPage() {
         return "border-l-4 border-green-600";
       case "Просрочена":
         return "border-l-4 border-red-600";
-      case "Отменена_пользователем":
-        return "border-l-4 border-gray-600";
       default:
         return "border-l-4 border-gray-500";
     }
@@ -607,7 +612,7 @@ export default function ReservationsPage() {
 
   // Группировка резервирований по статусам с определенным порядком
   const groupReservationsByStatus = (reservations: Reservation[]) => {
-    const statusOrder = ['Обрабатывается', 'Одобрена', 'Выдана', 'Возвращена', 'Отменена', 'Истекла', 'Просрочена', 'Отменена_пользователем'];
+    const statusOrder = ['Обрабатывается', 'Одобрена', 'Выдана', 'Возвращена', 'Отменена', 'Истекла', 'Просрочена'];
     
     const groups = statusOrder.reduce((acc, status) => {
       acc[status] = reservations.filter(r => r.status === status);
@@ -636,7 +641,6 @@ export default function ReservationsPage() {
       'Отменена': 'Отмененные',
       'Истекла': 'Истекшие',
       'Просрочена': 'Просроченные',
-      'Отменена_пользователем': 'Отменены пользователем',
       'Неизвестно': 'Неизвестные'
     };
     return statusNames[status] || status;
@@ -659,8 +663,6 @@ export default function ReservationsPage() {
         return <Clock className="w-5 h-5 text-orange-500" />;
       case "Просрочена":
         return <XCircle className="w-5 h-5 text-red-600" />;
-      case "Отменена_пользователем":
-        return <XCircle className="w-5 h-5 text-gray-600" />;
       default:
         return <Clock className="w-5 h-5 text-gray-500" />;
     }
@@ -705,26 +707,19 @@ export default function ReservationsPage() {
         <FadeInView delay={0.2}>
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
-              >
-                <Filter className="h-4 w-4" />
-                Фильтры
-                {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
+              {/* Показываем кнопку фильтров только если есть активные фильтры */}
+              {filters.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
+                >
+                  <Filter className="h-4 w-4" />
+                  Фильтры ({filters.length})
+                  {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              )}
               
-              {/* Быстрый фильтр по очереди */}
-              <Button
-                variant="outline"
-                onClick={() => addStatusFilter("В очереди")}
-                className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
-              >
-                <Users className="h-4 w-4" />
-                Книги с очередью
-              </Button>
-
               {/* Быстрые фильтры по статусу */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -767,10 +762,6 @@ export default function ReservationsPage() {
                         <CommandItem onSelect={() => addStatusFilter("Просрочена")}>
                           <XCircle className="h-4 w-4 mr-2 text-red-600" />
                           Просроченные
-                        </CommandItem>
-                        <CommandItem onSelect={() => addStatusFilter("Отменена_пользователем")}>
-                          <XCircle className="h-4 w-4 mr-2 text-gray-600" />
-                          Отменены пользователем
                         </CommandItem>
                       </CommandGroup>
                     </CommandList>
@@ -842,9 +833,9 @@ export default function ReservationsPage() {
             </motion.button>
           </div>
 
-          {/* Раздел фильтров */}
+          {/* Раздел фильтров - показываем только если есть активные фильтры */}
           <AnimatePresence>
-            {showFilters && (
+            {showFilters && filters.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -855,25 +846,17 @@ export default function ReservationsPage() {
                 <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-800">Активные фильтры</h3>
-                    {filters.length > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setFilters([])}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Очистить все
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFilters([])}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Очистить все
+                    </Button>
                   </div>
                   
-                  {filters.length > 0 ? (
-                    <Filters filters={filters} setFilters={setFilters} />
-                  ) : (
-                    <p className="text-gray-500 text-sm">
-                      Фильтры не применены. Используйте быстрые фильтры выше или добавьте свои.
-                    </p>
-                  )}
+                  <Filters filters={filters} setFilters={setFilters} />
                 </div>
               </motion.div>
             )}
@@ -1117,14 +1100,13 @@ export default function ReservationsPage() {
                             )}
                             
                             {/* Если резервирование завершено, показываем статус */}
-                            {(reservation.status === "Возвращена" || reservation.status === "Отменена" || reservation.status === "Истекла" || reservation.status === "Просрочена" || reservation.status === "Отменена_пользователем") && (
+                            {(reservation.status === "Возвращена" || reservation.status === "Отменена" || reservation.status === "Истекла" || reservation.status === "Просрочена") && (
                               <div className="flex-1 bg-gray-100 text-gray-600 px-3 py-2 rounded-md flex items-center justify-center gap-2 font-medium text-sm">
                                 {getStatusIcon(reservation.status)}
                                 {reservation.status === "Возвращена" ? "Завершено" : 
                                  reservation.status === "Отменена" ? "Отменено" :
                                  reservation.status === "Истекла" ? "Истекло" :
-                                 reservation.status === "Просрочена" ? "Просрочено" :
-                                 "Отменено пользователем"}
+                                 "Просрочено"}
                               </div>
                             )}
                           </div>
@@ -1136,8 +1118,7 @@ export default function ReservationsPage() {
                               {(reservation.originalStatus || reservation.status) !== "Отменена" && 
                                (reservation.originalStatus || reservation.status) !== "Возвращена" && 
                                (reservation.originalStatus || reservation.status) !== "Истекла" && 
-                               (reservation.originalStatus || reservation.status) !== "Просрочена" && 
-                               (reservation.originalStatus || reservation.status) !== "Отменена_пользователем" && (
+                               (reservation.originalStatus || reservation.status) !== "Просрочена" && (
                                 <motion.button 
                                   onClick={() => handleStatusChange(reservation.id, "Отменена")} 
                                   className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md" 

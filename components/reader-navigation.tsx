@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { Search, Menu, Moon, Sun, Book, BookOpen, Home, Heart, Clock, LogIn, Settings, UserIcon, ChevronDown, LogOut, ExternalLink, X, FileText, Zap, Bell } from "lucide-react";
+import { Search, Menu, Moon, Sun, Book, BookOpen, Home, Heart, Clock, LogIn, Settings, UserIcon, ChevronDown, LogOut, ExternalLink, X, FileText, Zap, Bell, Library } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,13 @@ const readerNavLinks: ReaderNavLink[] = [{
   route: "/readers/books",
   img: "/icons/admin/books.png",
   icon: <Book className="h-5 w-5" />,
-  previewType: 'iframe'
+  previewType: 'apiУ'
+}, {
+  text: "Полки",
+  route: "/readers/shelfs",
+  img: "/icons/admin/shelf.png",
+  icon: <Library className="h-5 w-5" />,
+  previewType: 'api'
 }, {
   text: "Избранное",
   route: "/readers/favorites",

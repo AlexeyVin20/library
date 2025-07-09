@@ -8,7 +8,7 @@ import { cn, getInitials } from "@/lib/utils"
 import { adminSideBarLinks } from "@/constants"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
-import { Bell, Search, Menu, Moon, Sun, UserIcon, Book, FileText, ExternalLink, Clock, LogOut, Settings, ChevronDown, X, BookOpen, Users, Calendar, BarChart2, Bookmark, CheckCircle2, AlertCircle, PlusCircle, ScrollText, LayoutGrid, Shield, PieChart, Home, HelpCircle, FileQuestion, Mail, Command, Zap, ChevronRight, Eye } from 'lucide-react'
+import { Bell, Search, Menu, Moon, Sun, UserIcon, Book, FileText, ExternalLink, Clock, LogOut, Settings, ChevronDown, X, BookOpen, Users, Calendar, BarChart2, Bookmark, CheckCircle2, AlertCircle, PlusCircle, ScrollText, LayoutGrid, Shield, PieChart, Home, HelpCircle, FileQuestion, Mail, Command, Zap, ChevronRight, Eye, Package } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -540,9 +540,10 @@ const TopNavigation = ({ user }: { user: User | null }) => {
         }
 
         // Используем правильные эндпоинты - оба должны быть в нижнем регистре
-        const [usersResponse, booksResponse] = await Promise.all([
+        const [usersResponse, booksResponse, instancesResponse] = await Promise.all([
           fetch(`${baseUrl}/api/User`, { headers }),
           fetch(`${baseUrl}/api/books`, { headers }), // Изменено с /api/Books на /api/books
+          fetch(`${baseUrl}/api/BookInstance`, { headers }) // Получаем все экземпляры для поиска
         ])
 
         if (usersResponse.ok) {
@@ -613,6 +614,78 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               title: "Книги",
               icon: <Book className="h-4 w-4" />,
               results: bookResults,
+            })
+          }
+        }
+
+        // Добавлен поиск экземпляров книг
+        if (instancesResponse.ok) {
+          const instancesData = await instancesResponse.json()
+          const filteredInstances = instancesData.filter(
+            (instance: any) => {
+              const instanceCode = instance.instanceCode || ""
+              const status = instance.status || ""
+              const condition = instance.condition || ""
+              const location = instance.location || ""
+              const bookTitle = instance.book?.title || ""
+              const bookAuthors = instance.book?.authors || ""
+              
+              return instanceCode.toLowerCase().includes(query.toLowerCase()) ||
+                     status.toLowerCase().includes(query.toLowerCase()) ||
+                     condition.toLowerCase().includes(query.toLowerCase()) ||
+                     location.toLowerCase().includes(query.toLowerCase()) ||
+                     bookTitle.toLowerCase().includes(query.toLowerCase()) ||
+                     bookAuthors.toLowerCase().includes(query.toLowerCase())
+            }
+          )
+
+          if (filteredInstances && filteredInstances.length > 0) {
+            // Получаем резервации, чтобы правильно определить ссылку
+            let reservationsData = []
+            try {
+              const reservationsResponse = await fetch(`${baseUrl}/api/Reservation`, { headers })
+              if (reservationsResponse.ok) {
+                reservationsData = await reservationsResponse.json()
+              }
+            } catch (reservationError) {
+              console.warn("Не удалось загрузить резервации для определения ссылок:", reservationError)
+            }
+
+            const instanceResults: SearchResult[] = filteredInstances.slice(0, 5).map((instance: any) => {
+              // Определяем URL в зависимости от статуса экземпляра
+              let url = `/admin/books/${instance.bookId}/instances`
+              let subtitle = `${instance.book?.title || 'Неизвестная книга'} - ${instance.status}`
+              
+              // Если экземпляр выдан или зарезервирован, ищем активную резервацию
+              if (instance.status?.toLowerCase() === 'выдана' || instance.status?.toLowerCase() === 'зарезервирована') {
+                // Ищем активную резервацию для этого экземпляра
+                const activeReservation = reservationsData.find((reservation: any) => 
+                  reservation.bookInstanceId === instance.id && 
+                  reservation.status && 
+                  !['отменена', 'истекла', 'возвращена', 'отменена_пользователем'].includes(reservation.status.toLowerCase())
+                )
+                
+                if (activeReservation) {
+                  url = `/admin/reservations/${activeReservation.id}`
+                  subtitle = `${instance.book?.title || 'Неизвестная книга'} - ${instance.status} (Резервация)`
+                }
+              }
+
+              return {
+                id: instance.id,
+                title: `📖 ${instance.instanceCode}`,
+                subtitle: subtitle,
+                type: "book" as const, // Используем тип book для экземпляров
+                url: url,
+                icon: <Package className="h-4 w-4 text-purple-500" />,
+                previewType: 'api' as const,
+              }
+            })
+
+            categorizedResults.push({
+              title: "Экземпляры книг",
+              icon: <Package className="h-4 w-4" />,
+              results: instanceResults,
             })
           }
         }

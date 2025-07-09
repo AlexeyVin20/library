@@ -318,6 +318,7 @@ export default function StatisticsPage() {
   const returnedReservations = reservations.filter(r => r.status === "Возвращена").length;
   const overdueReservations = reservations.filter(r => r.status === "Просрочена").length;
   const totalBorrowedBooks = users.reduce((total, user) => total + user.borrowedBooksCount, 0);
+  const totalBookItems = books.reduce((sum, book) => sum + book.availableCopies, 0) + totalBorrowedBooks;
   const totalAvailableBooks = books.reduce((sum, book) => sum + book.availableCopies, 0);
   const totalFines = users.reduce((sum, user) => sum + (user.fineAmount || 0), 0);
 
@@ -611,7 +612,8 @@ export default function StatisticsPage() {
       // Добавляем данные только по выбранным категориям
       if (selectedReportCategories.has('overview')) {
         libraryData.overview = {
-          totalBooks: totalAvailableBooks + totalBorrowedBooks,
+          totalBooks: books.length,
+          totalBookItems: totalBookItems,
           totalUsers: totalUsersCount,
           totalReservations: filteredReservations.length,
           totalFines: totalFines
@@ -634,9 +636,10 @@ export default function StatisticsPage() {
 
       if (selectedReportCategories.has('books')) {
         libraryData.books = {
-          total: totalAvailableBooks + totalBorrowedBooks,
-          available: totalAvailableBooks,
-          borrowed: totalBorrowedBooks,
+          total: books.length,
+          available_copies: totalAvailableBooks,
+          borrowed_copies: totalBorrowedBooks,
+          total_copies: totalBookItems,
           categories: bookCategoriesData,
           genres: bookGenresData,
           periodBorrows: filteredReservations.filter(r => r.status === "Выдана" || r.status === "Возвращена").length
@@ -669,7 +672,7 @@ export default function StatisticsPage() {
 
       if (selectedReportCategories.has('performance')) {
         libraryData.performance = {
-          utilizationRate: (totalBorrowedBooks / (totalAvailableBooks + totalBorrowedBooks)) * 100,
+          utilizationRate: (totalBorrowedBooks / totalBookItems) * 100,
           userEngagement: (activeUsersCount / totalUsersCount) * 100,
           reservationEfficiency: ((filteredReservations.filter(r => r.status === "Выдана" || r.status === "Возвращена").length) / filteredReservations.length) * 100,
           averageProcessingTime: "2.3 дня" // Можно вычислить реально
@@ -838,7 +841,8 @@ ${includeRecommendations ? `
               generatedDate: new Date().toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })
           },
           overview: {
-              totalBooks: totalAvailableBooks + totalBorrowedBooks,
+              totalBooks: books.length,
+              totalBookItems: totalBookItems,
               totalUsers: totalUsersCount,
               totalReservations: reservations.length,
               activeUsers: activeUsersCount,
@@ -851,9 +855,10 @@ ${includeRecommendations ? `
               topUsers: topUsersData
           },
           books: {
-              total: totalAvailableBooks + totalBorrowedBooks,
-              available: totalAvailableBooks,
-              borrowed: totalBorrowedBooks,
+              total: books.length,
+              available_copies: totalAvailableBooks,
+              borrowed_copies: totalBorrowedBooks,
+              total_copies: totalBookItems,
               categories: bookCategoriesData,
               genres: bookGenresData,
           },
@@ -867,7 +872,7 @@ ${includeRecommendations ? `
               monthlyStats: monthlyFinesData
           },
           performance: {
-              utilizationRate: (totalBorrowedBooks / (totalAvailableBooks + totalBorrowedBooks)) * 100,
+              utilizationRate: (totalBorrowedBooks / totalBookItems) * 100,
               userEngagement: (activeUsersCount / totalUsersCount) * 100,
               reservationEfficiency: ((reservations.filter(r => r.status === "Выдана" || r.status === "Возвращена").length) / reservations.length) * 100,
           }
@@ -1025,6 +1030,7 @@ ${JSON.stringify(libraryData)}
           total: totalAvailableBooks + totalBorrowedBooks,
           available: totalAvailableBooks,
           borrowed: totalBorrowedBooks,
+          total_items: totalBookItems,
           categories: bookCategoriesData
         },
         reservations: {
@@ -1292,8 +1298,8 @@ ${JSON.stringify(libraryData)}
           {/* Обзор библиотеки */}
           <TabsContent value="overview" className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard title="Книги" value={totalAvailableBooks + totalBorrowedBooks} subtitle="всего в библиотеке" additionalInfo={<p className="text-blue-500">
-                    {totalAvailableBooks} доступно сейчас
+              <StatCard title="Книги" value={books.length} subtitle="всего наименований" additionalInfo={<p className="text-blue-500">
+                    {totalAvailableBooks} экз. доступно сейчас
                   </p>} icon={<BookOpen className="w-5 h-5 text-blue-500" />} color="bg-blue-500" delay={0.1} href="/admin/books" />
               <StatCard title="Пользователи" value={totalUsersCount} subtitle="зарегистрировано" additionalInfo={<p className="text-gray-500">
                     {activeUsersCount} активных ({Math.round(activeUsersCount / totalUsersCount * 100)}%)
