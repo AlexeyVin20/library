@@ -5,9 +5,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Book as BookComponent } from "@/components/ui/book"
+import Link from "next/link"
 
 interface Book {
-  id: number
+  id: string
   isbn: string
   title: string
   author: string
@@ -98,19 +99,21 @@ export default function BookCarousel({ books }: BookCarouselProps) {
             >
               {books.map((book) => (
                 <div key={`${book.title}-${book.isbn || ''}`} className="px-2" style={{ width: `${100 / books.length}%` }}>
-                  <BookComponent>
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <img
-                        src={book.cover}
-                        alt={book.title}
-                        className="w-full h-80 object-cover rounded-md"
-                      />
-                      <div className="text-center mt-2">
-                        <p className="font-semibold truncate">{book.title}</p>
-                        <p className="text-sm text-gray-400">{book.author}</p>
+                  <Link href={`/readers/books/${book.id}`} className="block h-full">
+                    <BookComponent>
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <img
+                          src={book.cover}
+                          alt={book.title}
+                          className="w-full h-80 object-cover rounded-md"
+                        />
+                        <div className="text-center mt-2">
+                          <p className="font-semibold truncate">{book.title}</p>
+                          <p className="text-sm text-gray-400">{book.author}</p>
+                        </div>
                       </div>
-                    </div>
-                  </BookComponent>
+                    </BookComponent>
+                  </Link>
                 </div>
               ))}
             </div>

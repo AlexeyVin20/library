@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Calendar } from "@/components/ui/calendar-range";
 import Link from "next/link";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { BookOpen, Users, AlertCircle, TrendingUp, CalendarIcon, ChevronRight, BarChart3, Layers, ArrowRight, Shield, ChevronDown, ChevronUp, Activity, Bookmark, PieChart, Sparkles, Clock, X, CheckCircle, XCircle } from "lucide-react";
@@ -13,6 +12,7 @@ import type { DateRange } from "react-day-picker";
 import { QuickActionsMenu } from "@/components/admin/QuickActionsMenu";
 import { ReservationsChart } from "@/components/admin/Chart_reservs";
 import { RecentActivitiesTable } from "@/components/admin/RecentActivitiesTable";
+import EventCalendar from "@/components/admin/EventCalendar";
 
 // Определение типов
 interface User {
@@ -204,27 +204,79 @@ const Section = ({
     </FadeInView>;
 };
 
-// Компонент для статуса
+// Улучшенный компонент для статуса
 const StatusBadge = ({
   status
 }: {
   status: string;
 }) => {
-  let color = "";
-  let label = "";
-  if (status === "Выполнена") {
-    color = "bg-green-100 text-green-800";
-    label = "Выполнена";
-  } else if (status === "Обрабатывается") {
-    color = "bg-blue-300 text-gray-800";
-    label = "В обработке";
-  } else {
-    color = "bg-gray-100 text-gray-800";
-    label = "Отменена";
-  }
-  return <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${color} shadow-sm`}>
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "Обрабатывается":
+        return { 
+          color: "bg-blue-500", 
+          label: "В обработке",
+          icon: <Clock className="w-3 h-3" />
+        };
+      case "Одобрена":
+        return { 
+          color: "bg-green-500", 
+          label: "Одобрена",
+          icon: <CheckCircle className="w-3 h-3" />
+        };
+      case "Отменена":
+        return { 
+          color: "bg-red-500", 
+          label: "Отменена",
+          icon: <XCircle className="w-3 h-3" />
+        };
+      case "Истекла":
+        return { 
+          color: "bg-orange-500", 
+          label: "Истекла",
+          icon: <AlertCircle className="w-3 h-3" />
+        };
+      case "Выдана":
+        return { 
+          color: "bg-blue-700", 
+          label: "Выдана",
+          icon: <CheckCircle className="w-3 h-3" />
+        };
+      case "Возвращена":
+        return { 
+          color: "bg-green-600", 
+          label: "Возвращена",
+          icon: <CheckCircle className="w-3 h-3" />
+        };
+      case "Просрочена":
+        return { 
+          color: "bg-red-600", 
+          label: "Просрочена",
+          icon: <XCircle className="w-3 h-3" />
+        };
+      case "Отменена_пользователем":
+        return { 
+          color: "bg-gray-600", 
+          label: "Отменена пользователем",
+          icon: <XCircle className="w-3 h-3" />
+        };
+      default:
+        return { 
+          color: "bg-gray-500", 
+          label: "Неизвестно",
+          icon: <AlertCircle className="w-3 h-3" />
+        };
+    }
+  };
+
+  const { color, label, icon } = getStatusConfig(status);
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white rounded-full ${color} shadow`}>
+      {icon}
       {label}
-    </span>;
+    </span>
+  );
 };
 
 // Компонент для действий
@@ -408,7 +460,7 @@ export default function DashboardPage() {
   const [monthlyBorrowedData, setMonthlyBorrowedData] = useState<MonthlyBorrowedData[]>([]);
   const [recentBooks, setRecentBooks] = useState<Book[]>([]);
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
-  const [showRangeModal, setShowRangeModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
 
   // Ref для отслеживания скролла
   const containerRef = useRef<HTMLDivElement>(null);
@@ -505,36 +557,14 @@ export default function DashboardPage() {
     id: reservation.id,
     userId: reservation.userId,
     bookId: reservation.bookId,
-    reservationDate: new Date(reservation.reservationDate).toISOString().split("T")[0],
-    expirationDate: new Date(reservation.expirationDate).toISOString().split("T")[0],
+    reservationDate: reservation.reservationDate, // Оставляем полный формат даты
+    expirationDate: reservation.expirationDate,
     status: reservation.status,
     notes: reservation.notes,
     userName: reservation.user?.fullName || "Неизвестный пользователь",
     bookTitle: reservation.book?.title || "Неизвестная книга"
   })), [reservations]);
-  const filteredEvents = useMemo(() => {
-    if (!selectedRange?.from || !selectedRange?.to) return [];
-    const fromTime = selectedRange.from.getTime();
-    const toTime = selectedRange.to.getTime();
-    return reservationEvents.filter(ev => {
-      const date = new Date(ev.reservationDate).getTime();
-      return date >= fromTime && date <= toTime;
-    });
-  }, [reservationEvents, selectedRange]);
 
-  // Получить 3 ближайших события (по дате бронирования)
-  const upcomingEvents = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Установить время на начало дня для корректного сравнения дат
-
-    return [...reservationEvents].filter(ev => {
-      const eventDate = new Date(ev.reservationDate);
-      // При сравнении дат важно убедиться, что мы не отбрасываем события сегодняшнего дня
-      // Преобразуем дату события к началу дня в локальном часовом поясе для сравнения
-      const localEventDate = new Date(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate());
-      return localEventDate >= today;
-    }).sort((a, b) => new Date(a.reservationDate).getTime() - new Date(b.reservationDate).getTime()).slice(0, 3);
-  }, [reservationEvents]);
 
   // Добавляем стиль для анимации строк таблицы
   useEffect(() => {
@@ -669,90 +699,17 @@ export default function DashboardPage() {
           </PinContainer>
         </div>
 
-        {/* Календарь и фильтр событий */}
+        {/* Улучшенный календарь событий */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="flex flex-col items-center min-h-[200px]">
-            {!showRangeModal ? <>
-                <div className="flex flex-col md:flex-row gap-2 mb-4 w-full max-w-2xl">
-                  <div className="flex flex-col gap-1 w-full md:w-56">
-                    {quickRanges.map((range, idx) => <button key={range.label} onClick={() => setSelectedRange(range.getRange())} className="text-left px-3 py-2 rounded-lg hover:bg-blue-300 text-gray-800 font-medium transition-colors" style={{
-                  width: '100%'
-                }}>
-                        {range.label}
-                      </button>)}
-                  </div>
-                  <div className="flex-1 flex justify-center">
-                    <Calendar mode="range" selected={selectedRange} onSelect={setSelectedRange} className="w-full h-[340px] max-w-xl min-w-[340px] text-gray-800" style={{
-                  fontSize: '1.08rem',
-                  color: '#1F2937'
-                }} classNames={{
-                  day_selected: "bg-blue-500 text-white hover:bg-blue-700",
-                  day_range_start: "bg-blue-500 text-white rounded-l-lg",
-                  day_range_end: "bg-blue-500 text-white rounded-r-lg",
-                  day_range_middle: "bg-blue-300 text-gray-800",
-                  nav_button_previous: "bg-blue-500 hover:bg-blue-700 text-white",
-                  nav_button_next: "bg-blue-500 hover:bg-blue-700 text-white",
-                  caption_label: "uppercase"
-                } as Record<string, string>} />
-                  </div>
-                </div>
-                {/* 3 ближайших события */}
-                <div className="w-full max-w-xl mb-4">
-                  <div className="space-y-2">
-                    <h4 className="text-gray-800 text-lg font-semibold mb-2">Ближайшие события</h4>
-                    {upcomingEvents.length > 0 ? upcomingEvents.map(ev => <div key={ev.id} className="p-3 bg-gray-100 rounded-lg shadow text-gray-800 flex flex-col border border-blue-500">
-                          <span className="text-sm font-bold">{formatDate(ev.reservationDate)}</span>
-                          <span className="text-base">{ev.bookTitle}</span>
-                          <span className="text-sm">{ev.userName}</span>
-                          <div className="mt-1">
-                            <StatusBadge status={ev.status} />
-                          </div>
-                        </div>) : <p className="text-center text-gray-500">Нет ближайших событий</p>}
-                  </div>
-                </div>
-                <button disabled={!selectedRange?.from || !selectedRange?.to} onClick={() => setShowRangeModal(true)} className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-xl px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed" style={{
-              marginTop: 0
-            }}>
-                  Просмотр
-                </button>
-              </> : <motion.div className="w-full h-full max-w-xl min-w-[340px] bg-white rounded-xl shadow-lg border-2 border-blue-500 overflow-y-auto p-6 flex flex-col flex-1" initial={{
-            opacity: 0,
-            y: 20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} exit={{
-            opacity: 0,
-            y: 20
-          }}>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">
-                    События с {selectedRange?.from?.toLocaleDateString("ru-RU")} по {selectedRange?.to?.toLocaleDateString("ru-RU")}
-                  </h3>
-                  <motion.button whileHover={{
-                scale: 1.1,
-                backgroundColor: "#93C5FD"
-              }} whileTap={{
-                scale: 0.9
-              }} onClick={() => setShowRangeModal(false)} className="p-2 rounded-full hover:bg-blue-300 text-blue-500 shadow-sm">
-                    <X className="w-5 h-5" />
-                  </motion.button>
-                </div>
-                <div className="space-y-3 flex-1 overflow-y-auto">
-                  <div className="flex flex-col space-y-3 max-h-[620px] overflow-y-auto">
-                    {filteredEvents.length > 0 ? filteredEvents.map(event => <div key={event.id} className="p-3 bg-gray-100 rounded-lg shadow text-gray-800 border border-blue-500">
-                          <Link href={`/admin/reservations/${event.id}`} className="block">
-                            <h4 className="font-medium text-gray-800">{event.bookTitle}</h4>
-                            <p className="text-sm text-gray-500">{event.userName}</p>
-                            <p className="text-xs mt-1 text-gray-500">Дата брони: {formatDate(event.reservationDate)}</p>
-                            <div className="mt-2">
-                              <StatusBadge status={event.status} />
-                            </div>
-                          </Link>
-                        </div>) : <p className="text-center text-gray-500">Нет событий за этот период</p>}
-                  </div>
-                </div>
-              </motion.div>}
+          <div className="flex flex-col min-h-[500px]">
+            <EventCalendar
+              events={reservationEvents}
+              selectedRange={selectedRange}
+              onRangeChange={setSelectedRange}
+              showStatsModal={showStatsModal}
+              onToggleStatsModal={() => setShowStatsModal(!showStatsModal)}
+              quickRanges={quickRanges}
+            />
           </div>
           <div className="space-y-3 flex-1">
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
