@@ -9,6 +9,7 @@ import "@/styles/admin.css";
 import { useAuth, User } from "@/lib/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import NewTopNavigation from "@/components/admin/New-top-navigation";
+import AIAssistantChat from "@/components/admin/AIAssistantChat";
 
 type AdminLayoutProps = {
   children: ReactNode;
@@ -62,6 +63,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         )}
         <main className="p-6 print:p-0">{children}</main>
       </div>
+      
+      {/* ИИ-Ассистент */}
+      <AIAssistantChat />
     </div>
   );
 }
