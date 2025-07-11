@@ -19,18 +19,12 @@ interface Message {
   };
 }
 
-interface SystemEndpoint {
-  controller: string;
-  action: string;
-  route: string;
-  methods: string[];
-  requiredRoles: string[];
-  isAnonymous: boolean;
-  parameters: {
-    name: string;
-    type: string;
-    isOptional: boolean;
-  }[];
+interface Tool {
+  name: string;
+  description: string;
+  parameters: any;
+  apiMethod?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  apiEndpoint?: string;
 }
 
 export default function AIAssistantChat() {
@@ -38,7 +32,7 @@ export default function AIAssistantChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [endpoints, setEndpoints] = useState<SystemEndpoint[]>([]);
+  const [tools, setTools] = useState<Tool[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLength = useRef(messages.length);
@@ -47,14 +41,41 @@ export default function AIAssistantChat() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
   useEffect(() => {
-    if (isOpen && endpoints.length === 0) {
-      loadSystemEndpoints();
-    }
-  }, [isOpen]);
+    const loadTools = async () => {
+      try {
+        setStatusMessage('Загрузка AI инструментов...');
+        const response = await fetch('/wiseOwl.json');
+        if (response.ok) {
+          const data = await response.json();
+          const enhancedTools = data.map((tool: any) => {
+            const match = tool.description.match(/Использует API эндпоинт (GET|POST|PUT|DELETE) (\S+)/);
+            if (match) {
+              return { ...tool, apiMethod: match[1], apiEndpoint: match[2] };
+            }
+            return tool;
+          });
+          setTools(enhancedTools);
+          if (enhancedTools.length === 0) {
+            setStatusMessage('Ошибка: Не удалось загрузить инструменты. Список пуст.');
+          } else {
+            setStatusMessage(null); // All good
+          }
+        } else {
+          setStatusMessage(`Ошибка загрузки AI инструментов: ${response.status}`);
+          throw new Error(`Failed to load tools: ${response.status}`);
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки wiseOwl.json:', error);
+        setStatusMessage(`Ошибка: Не удалось загрузить AI инструменты.`);
+      }
+    };
 
-  // This effect scrolls to the bottom only when a new message is added,
-  // not when a message is updated (e.g., during streaming).
-  // This prevents the view from jumping if the user has scrolled up.
+    if (isOpen && tools.length === 0) {
+      loadTools();
+    }
+  }, [isOpen, tools.length]);
+
+  // This effect scrolls to the bottom only when a new message is added.
   useEffect(() => {
     if (messages.length > prevMessagesLength.current) {
       scrollToBottom();
@@ -65,133 +86,22 @@ export default function AIAssistantChat() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
-  const loadSystemEndpoints = async () => {
-    try {
-      setStatusMessage('Загрузка системных данных...');
-      const response = await fetch(`${baseUrl}/api/system/endpoints`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const loadedEndpoints = data.endpoints || [];
-        setEndpoints(loadedEndpoints);
-        if (loadedEndpoints.length === 0) {
-          setStatusMessage('Ошибка: Не удалось загрузить эндпоинты. Список пуст.');
-        } else {
-          setStatusMessage(null); // All good
-        }
-      } else {
-        setStatusMessage(`Ошибка загрузки эндпоинтов: ${response.status}`);
-        throw new Error(`Failed to load endpoints: ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки эндпоинтов:', error);
-      setStatusMessage(`Ошибка: Не удалось загрузить системные данные.`);
-    }
-  };
   
-  // This function now handles a streaming response by aggregating all chunks
-  // and then parsing the complete response.
-  const getApiCallFromGemini = async (userMessage: string, conversationHistory: Message[]) => {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${GEMINI_API_KEY}`;
-    
-    const simplifiedEndpoints = endpoints.map(ep => ({
-      route: ep.route,
-      methods: ep.methods,
-      description: `Action: ${ep.action}, Controller: ${ep.controller}`,
-      params: ep.parameters.map(p => `${p.name} (${p.type})${p.isOptional ? ' [optional]' : ''}`).join(', ') || 'none'
-    }));
-
-    const history = conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n\n');
-
-    const prompt = `
-You are an intelligent AI assistant for a library management system called "Мудрая Сова". Your primary task is to translate a user's natural language request into a precise API call in JSON format.
-Use the conversation history for context to understand follow-up questions. For example, if the user asks "show me all books" and then "now only the ones in the psychology genre", you should use the history to understand that the second request is a refinement of the first.
-
-**Instructions:**
-1.  **Analyze the Request:** First, identify the main subject of the user's request (e.g., books, users, journals). Then, identify any filters or keywords (e.g., a specific genre, an author's name, a year).
-2.  **Select the Best Endpoint:** From the list of available endpoints, choose the one that most closely matches the user's intent. Pay close attention to the endpoint's controller and action. For a request about "books", you must choose an endpoint from the 'Books' controller, not 'Journals' or 'Articles'.
-3.  **Map Parameters:** If the chosen endpoint has parameters, extract the relevant keywords from the user's request and map them to the correct parameter names. For example, if the user asks for "книги в жанре здоровье" and the endpoint has a "genre" parameter, you should create a parameter \`{ "genre": "здоровье" }\`. Do not pass the entire user query as a single parameter unless it's a generic search.
-4.  **Format Output:** Your final output must be ONLY the JSON object for the API call. Do not add any other text, explanations, or markdown formatting like \`\`\`json.
-
-**Example 1:**
-User Request: "покажи мне все книги"
-Your JSON response:
-{
-  "method": "GET",
-  "endpoint": "api/books",
-  "params": null
-}
-
-**Example 2:**
-User Request: "книги по психологии за 2020 год"
-Your JSON response (this assumes a suitable endpoint exists):
-{
-  "method": "GET",
-  "endpoint": "api/books/search",
-  "params": {
-    "genre": "психология",
-    "year": 2020
-  }
-}
-
-**Available Endpoints:**
-${JSON.stringify(simplifiedEndpoints, null, 2)}
-
-**Conversation History:**
-${history}
-
-**User Request:** "${userMessage}"
-
-**Your JSON response:**
-`;
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    });
-
-    if (!response.ok) throw new Error(`Gemini API error (getApiCall): ${response.status}`);
-    if (!response.body) throw new Error("Response body is null");
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let fullResponseText = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      fullResponseText += decoder.decode(value, { stream: true });
-    }
-    
-    try {
-      // The stream returns a string that is a JSON array of response chunks.
-      const responseArray = JSON.parse(fullResponseText);
-      let aggregatedText = '';
-      
-      // Concatenate the 'text' part from each chunk in the array.
-      for (const chunk of responseArray) {
-          const text = chunk?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-              aggregatedText += text;
-          }
-      }
-
-      // Now, parse the final JSON object from the aggregated text content.
-      const jsonMatch = aggregatedText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-          throw new Error("No valid JSON object found in Gemini's aggregated response.");
-      }
-      return JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      console.error("Failed to parse Gemini's JSON response:", fullResponseText);
-      throw new Error("Ассистент вернул неверный формат данных для API вызова.");
-    }
+  const buildGeminiHistory = (history: Message[]) => {
+    const geminiHistory: any[] = [];
+    // This function is complex because it reconstructs the turn-by-turn
+    // conversation for the Gemini API, including prior function calls and their results.
+    // For now, we will simplify and only pass the last few text messages for context.
+    // A more robust implementation would require storing the full Gemini history separately.
+    return history
+      .filter(m => !m.apiCall) // Exclude "Thinking..." messages from history
+      .map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
   };
 
   const executeApiCall = async (apiCall: { method: string; endpoint:string; params: any }) => {
-    // Use the URL constructor for safer URL building
     const url = new URL(apiCall.endpoint, baseUrl);
     
     const options: RequestInit = {
@@ -221,87 +131,108 @@ ${history}
     return contentType?.includes("application/json") ? response.json() : response.text();
   };
 
-  const streamSummaryFromGemini = async (
-    userMessage: string, 
-    apiResponse: any, 
-    onChunk: (chunk: string) => void,
-    conversationHistory: Message[]
-  ) => {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${GEMINI_API_KEY}`;
+  const runConversation = async (conversationHistory: Message[]) => {
+      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
       
-      const history = conversationHistory
-        .map(msg => {
-          let content = msg.content;
-          if (content.startsWith('Думаю')) return null;
+      // We pass the declarations, but without our custom fields `apiMethod` and `apiEndpoint`.
+      const toolDeclarations = tools.map(({ apiMethod, apiEndpoint, ...rest }) => rest);
 
-          if (msg.apiCall) {
-            content += ` (API: ${msg.apiCall.method} ${msg.apiCall.endpoint})`;
-          }
-          return `${msg.role === 'user' ? 'User' : 'Assistant'}: ${content}`;
-        })
-        .filter(Boolean)
-        .join('\n\n');
+      let currentHistory = buildGeminiHistory(conversationHistory);
+      let maxIterations = 10; // Prevent infinite loops
       
-      const prompt = `
-You are a helpful library assistant called "Мудрая Сова". You have received data from an API call made to answer a user's request.
-Your task is to present this data to the user in a clear, friendly, and concise way in Russian.
-Use the provided conversation history to maintain context and provide relevant answers to follow-up questions.
-
-**VERY IMPORTANT:** Your response MUST be plain text. Do NOT use any markdown formatting.
-- Do NOT use asterisks (*) for lists.
-- Do NOT use asterisks for bolding (**text**).
-- Do NOT use any other markdown elements.
-Present lists as simple, un-bulleted text paragraphs.
-
-**Conversation History:**
-${history}
-
-Original User Request: "${userMessage}"
-Data Received from API:
-${JSON.stringify(apiResponse, null, 2)}
-Formulate a helpful response. If the data is a list, format it nicely as plain text paragraphs. If it's a single object, describe it. If the data is empty or the API returned no content, inform the user that nothing was found or the action was completed.
-Do not just dump the raw JSON.
-`;
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-      });
-
-      if (!response.ok) throw new Error(`Gemini API error (summarize): ${response.status}`);
-      if (!response.body) throw new Error("Response body is null");
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      // The Gemini stream sends a string that is a JSON array. We need to parse it.
-      // However, to provide a real-time streaming effect, we can't wait for the full array.
-      // We will process the stream as text and look for the 'text' fields to stream to the user.
-      while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          buffer += decoder.decode(value, { stream: true });
-
-          // This is a simplified parser for the stream. It looks for text chunks inside the buffer.
-          let textMatch;
-          const regex = /"text":\s*"((?:\\"|[^"])*)"/g;
-
-          while ((textMatch = regex.exec(buffer)) !== null) {
-              const text = JSON.parse(`"${textMatch[1]}"`); // Properly unescape the text
-              onChunk(text);
+      while (maxIterations > 0) {
+        const requestBody = {
+          contents: currentHistory,
+          tools: [{ functionDeclarations: toolDeclarations }],
+          systemInstruction: {
+            parts: [{ text: `Текущая дата и время в UTC: ${new Date().toISOString()}. Используй это значение, когда в запросе упоминается 'сегодня' или 'текущая дата'. Не спрашивай подтверждение своих действий, сразу выполняй.` }]
           }
+        };
+
+        const response = await fetch(geminiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Gemini API error: ${response.status}`);
+        }
+        
+        // Handle regular (non-streaming) response
+        const data = await response.json();
+        const part = data.candidates?.[0]?.content?.parts[0];
+        
+        if (part?.functionCall) {
+          const functionCall = part.functionCall;
+          const functionName = functionCall.name;
+          const functionArgs = functionCall.args;
           
-          // To avoid re-processing, we can clear the buffer, but a more robust solution
-          // would clear only the processed parts. For now, this is a pragmatic approach.
-          // Let's find the last fully formed JSON object in the buffer to avoid clearing partial data.
-          const lastCompleteObjectEnd = buffer.lastIndexOf('}');
-          if (lastCompleteObjectEnd !== -1) {
-            buffer = buffer.substring(lastCompleteObjectEnd + 1);
+          const toolDef = tools.find(t => t.name === functionName);
+          if (!toolDef || !toolDef.apiMethod || !toolDef.apiEndpoint) {
+            throw new Error(`Tool definition not found or is misconfigured for: ${functionName}`);
           }
+
+          // Add a "Thinking..." message to the UI
+          const thinkingMessage: Message = {
+              id: generateUniqueId(),
+              content: `Думаю, нужно вызвать инструмент: ${functionName}...`,
+              role: 'assistant',
+              timestamp: new Date(),
+              apiCall: {
+                  method: toolDef.apiMethod,
+                  endpoint: functionName,
+                  params: functionArgs
+              }
+          };
+          setMessages(prev => [...prev, thinkingMessage]);
+
+          // Execute the actual API call
+          let endpoint = toolDef.apiEndpoint;
+          const mutableArgs = { ...functionArgs };
+          Object.keys(mutableArgs).forEach(key => {
+              if (endpoint.includes(`{${key}}`)) {
+                  endpoint = endpoint.replace(`{${key}}`, mutableArgs[key]);
+                  delete mutableArgs[key];
+              }
+          });
+
+          const apiResponse = await executeApiCall({
+              method: toolDef.apiMethod,
+              endpoint: endpoint,
+              params: mutableArgs,
+          });
+
+          // Add the function call and result to history for the next iteration
+          currentHistory = [
+              ...currentHistory,
+              { role: 'model', parts: [part] }, // Add Gemini's function call request
+              { // Add our function call result
+                  role: 'function',
+                  parts: [{
+                      functionResponse: {
+                          name: functionName,
+                          response: {
+                              name: functionName,
+                              content: apiResponse,
+                          }
+                      }
+                  }]
+              }
+          ];
+          
+          maxIterations--;
+          continue; // Continue the loop to see if Gemini wants to call more functions
+
+        } else if (part?.text) {
+          // The model responded with text directly - we're done
+          return part.text;
+        } else {
+          return "Извините, я не смог обработать ваш запрос.";
+        }
       }
+      
+      return "Достигнуто максимальное количество итераций. Процесс остановлен.";
   };
 
   const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -317,41 +248,21 @@ Do not just dump the raw JSON.
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInputValue('');
     setIsLoading(true);
 
     try {
-      const apiCall = await getApiCallFromGemini(userMessageText, messages);
+      const responseText = await runConversation(newMessages);
 
-      const thinkingMessage: Message = {
-        id: generateUniqueId(),
-        content: `Думаю, нужно сделать запрос...`,
-        role: 'assistant',
-        timestamp: new Date(),
-        apiCall: apiCall
-      };
-      setMessages(prev => [...prev, thinkingMessage]);
-      
-      const apiResponse = await executeApiCall(apiCall);
-
-      const assistantMessageId = generateUniqueId();
       const assistantMessage: Message = {
-        id: assistantMessageId,
-        content: '',
+        id: generateUniqueId(),
+        content: responseText,
         role: 'assistant',
         timestamp: new Date(),
-        apiCall: apiCall
       };
       setMessages(prev => [...prev, assistantMessage]);
-
-      await streamSummaryFromGemini(userMessageText, apiResponse, (chunk) => {
-        setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId
-              ? { ...msg, content: msg.content + chunk }
-              : msg
-        ));
-      }, messages);
 
     } catch (error) {
       const errorMessage: Message = {
@@ -467,10 +378,10 @@ Do not just dump the raw JSON.
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder={statusMessage || "Спросите что-нибудь..."}
-                  disabled={isLoading || endpoints.length === 0}
+                  disabled={isLoading || tools.length === 0}
                   className="flex-1"
                 />
-                <Button onClick={handleSendMessage} disabled={isLoading || !inputValue.trim() || endpoints.length === 0} className="bg-emerald-600 hover:bg-emerald-700">
+                <Button onClick={handleSendMessage} disabled={isLoading || !inputValue.trim() || tools.length === 0} className="bg-emerald-600 hover:bg-emerald-700">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>

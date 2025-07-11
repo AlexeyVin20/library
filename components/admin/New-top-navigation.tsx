@@ -110,6 +110,13 @@ const generateBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     '/notifications': 'Уведомления',
     '/fines': 'Штрафы',
     '/books/print-formulars': 'Печать формуляров',
+    '/books/{id}/instances': 'Экземпляры книг',
+    '/books/instances/create': 'Создать экземпляр книги',
+    '/books/instances/edit': 'Редактировать экземпляр книги',
+    '/books/instances/delete': 'Удалить экземпляр книги',
+    '/books/instances/view': 'Просмотр экземпляра книги',
+    '/books/instances/list': 'Список экземпляров книг',
+    '/books/instances/search': 'Поиск экземпляров книг',
   }
 
   const segments = cleanPath.split('/').filter(Boolean)

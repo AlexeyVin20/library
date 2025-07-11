@@ -1,0 +1,998 @@
+[
+  {
+    "name": "systemContext",
+    "description": "СИСТЕМНЫЙ КОНТЕКСТ для работы с API библиотеки.\n\n**ТЕРМИНЫ:** Слова 'резервирование', 'резерв', 'бронирование', 'бронь' являются синонимами и означают одну и ту же сущность.\n\n**СТАТУСЫ РЕЗЕРВИРОВАНИЙ:** 'Обрабатывается' (новое резервирование), 'Одобрена' (резервирование одобрено), 'Отменена' (отменено), 'Истекла' (время истекло), 'Выдана' (книга выдана), 'Возвращена' (книга возвращена), 'Просрочена' (просрочено).\n\n**ВАЖНО ПРИ РАБОТЕ С ID:** Все операции с резервированиями требуют точных GUID. Всегда сначала получайте список резервирований или детали конкретного резервирования, чтобы получить правильный ID, а затем используйте его для операций обновления/удаления.\n\n**СЦЕНАРИИ РАБОТЫ С РЕЗЕРВИРОВАНИЯМИ:**\n*   **Выдача книги:** Если пользователь просит 'Дай книгу {название} пользователю {имя}', необходимо создать новое резервирование (`createReservation`) с указанием ID книги и ID пользователя со статусом 'Выдана'.\n*   **Возврат книги:** Если пользователь говорит '{имя} вернул книгу {название}' или '{имя} вернул все книги', необходимо найти все активные резервирования ('Выдана', 'Просрочена') для данного пользователя (`getUserReservations`) и изменить их статус на 'Возвращена' (`updateReservation`).\n*   **Одобрение резервирований:** При запросе 'Одобри все резервирования' или 'Одобри все резервирования для пользователя {имя}', найди все резервирования со статусом 'Обрабатывается' (`getAllReservations` или `getUserReservations`) и измени их статус на 'Одобрена' (`updateReservation`).",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "getAllUsers",
+    "description": "Получает список всех пользователей. Использует API эндпоинт GET /api/User",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "getUserById",
+    "description": "Получает пользователя по ID. Использует API эндпоинт GET /api/User/{id}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "createUser",
+    "description": "Создает нового пользователя. Использует API эндпоинт POST /api/User",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Полное имя пользователя"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email пользователя"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Телефон пользователя (опционально)"
+        },
+        "dateRegistered": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Дата регистрации в UTC формате (например: new Date().toISOString())"
+        },
+        "username": {
+          "type": "string",
+          "description": "Имя пользователя"
+        },
+        "password": {
+          "type": "string",
+          "description": "Пароль пользователя"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Активен ли пользователь"
+        },
+        "passwordResetRequired": {
+          "type": "boolean",
+          "description": "Требуется ли сброс пароля"
+        },
+        "borrowedBooksCount": {
+          "type": "integer",
+          "description": "Количество взятых книг (опционально)"
+        },
+        "maxBooksAllowed": {
+          "type": "integer",
+          "description": "Максимальное количество книг (опционально)"
+        },
+        "loanPeriodDays": {
+          "type": "integer",
+          "description": "Период займа в днях"
+        },
+        "fineAmount": {
+          "type": "number",
+          "format": "double",
+          "description": "Сумма штрафа"
+        },
+        "roleIds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Массив ID ролей (опционально)"
+        }
+      },
+      "required": ["fullName", "email", "username", "password", "isActive", "passwordResetRequired", "loanPeriodDays", "fineAmount"]
+    }
+  },
+  {
+    "name": "updateUser",
+    "description": "Обновляет данные пользователя. Использует API эндпоинт PUT /api/User/{id}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Полное имя пользователя"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email пользователя"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Телефон пользователя (опционально)"
+        },
+        "dateRegistered": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Дата регистрации в UTC формате (например: new Date().toISOString())"
+        },
+        "username": {
+          "type": "string",
+          "description": "Имя пользователя"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Активен ли пользователь"
+        },
+        "passwordResetRequired": {
+          "type": "boolean",
+          "description": "Требуется ли сброс пароля"
+        },
+        "borrowedBooksCount": {
+          "type": "integer",
+          "description": "Количество взятых книг (опционально)"
+        },
+        "maxBooksAllowed": {
+          "type": "integer",
+          "description": "Максимальное количество книг (опционально)"
+        },
+        "loanPeriodDays": {
+          "type": "integer",
+          "description": "Период займа в днях"
+        },
+        "fineAmount": {
+          "type": "number",
+          "format": "double",
+          "description": "Сумма штрафа"
+        },
+        "roleIds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Массив ID ролей (опционально)"
+        }
+      },
+      "required": ["id", "fullName", "email", "username", "isActive", "passwordResetRequired", "loanPeriodDays", "fineAmount"]
+    }
+  },
+  {
+    "name": "deleteUser",
+    "description": "Удаляет пользователя. Использует API эндпоинт DELETE /api/User/{id}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "changeUserPassword",
+    "description": "Изменяет пароль пользователя. Использует API эндпоинт POST /api/User/change-password",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "oldPassword": {
+          "type": "string",
+          "description": "Старый пароль"
+        },
+        "newPassword": {
+          "type": "string",
+          "description": "Новый пароль"
+        }
+      },
+      "required": ["id", "oldPassword", "newPassword"]
+    }
+  },
+  {
+    "name": "resetUserPassword",
+    "description": "Сбрасывает пароль пользователя. Использует API эндпоинт POST /api/User/{id}/reset-password",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "getUserReservations",
+    "description": "Получает бронирования пользователя. Использует API эндпоинт GET /api/User/{id}/reservations ВАЖНО: Все резервирования возвращают ID в виде GUID - всегда используйте полученный ID для дальнейших операций",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Фильтр по статусу бронирования. Доступные статусы: 'Обрабатывается', 'Одобрена', 'Отменена', 'Истекла', 'Выдана', 'Возвращена', 'Просрочена' (опционально)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "getAllReservations",
+    "description": "Получает список всех бронирований. Использует API эндпоинт GET /api/Reservation ВАЖНО: Результат содержит массив резервирований с их ID (GUID) - сохраняйте эти ID для дальнейших операций.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Фильтр по статусу. Доступные статусы: 'Обрабатывается', 'Одобрена', 'Отменена', 'Истекла', 'Выдана', 'Возвращена', 'Просрочена' (опционально)"
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "getReservationById",
+    "description": "Получает детальную информацию о бронировании по ID. Использует API эндпоинт GET /api/Reservation/{id} Используйте этот метод, чтобы получить полную информацию о резервировании перед его изменением.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID бронирования (Guid) - точный ID, полученный из других запросов"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "createReservation",
+    "description": "Создает новое бронирование. Использует API эндпоинт POST /api/Reservation",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID бронирования (Guid)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "reservationDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Дата бронирования в UTC формате (например: new Date().toISOString()). Использовать текущую дату"
+        },
+        "expirationDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Дата истечения бронирования в UTC формате (например: new Date(Date.now() + 30*24*60*60*1000).toISOString()). Текущая дата + 30 дней"
+        },
+        "status": {
+          "type": "string",
+          "description": "Статус бронирования. Доступные статусы: 'Обрабатывается', 'Одобрена', 'Выдана', 'Возвращена'. При создании статус ставь 'Обрабатывается'"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Заметки (опционально). Например: 'Книга забронирована с помощью ИИ-ассистента'"
+        }
+      },
+      "required": ["id", "userId", "bookId", "reservationDate", "expirationDate", "status"]
+    }
+  },
+  {
+    "name": "updateReservation",
+    "description": "Обновляет данные бронирования. Использует API эндпоинт PUT /api/Reservation/{id} ВАЖНО: Для изменения статуса резервирования (например, одобрения) используйте этот метод с новым статусом.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID бронирования (Guid) - точный ID из предыдущих запросов"
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "reservationDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Дата бронирования в UTC формате (например: new Date().toISOString())"
+        },
+        "expirationDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Дата истечения бронирования в UTC формате (например: new Date().toISOString())"
+        },
+        "status": {
+          "type": "string",
+          "description": "Новый статус бронирования. Доступные статусы: 'Обрабатывается', 'Одобрена', 'Отменена', 'Истекла', 'Выдана', 'Возвращена', 'Просрочена'"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Заметки (опционально)"
+        }
+      },
+      "required": ["id", "userId", "bookId", "reservationDate", "expirationDate", "status"]
+    }
+  },
+  {
+    "name": "deleteReservation",
+    "description": "Удаляет бронирование. Использует API эндпоинт DELETE /api/Reservation/{id}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID бронирования (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "getReservationDatesByBookId",
+    "description": "Получает даты бронирований для книги. Использует API эндпоинт GET /api/Reservation/book/{bookId}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        }
+      },
+      "required": ["bookId"]
+    }
+  },
+  {
+    "name": "getReservationsByUserId",
+    "description": "Получает бронирования по ID пользователя. Использует API эндпоинт GET /api/Reservation/user/{userId}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        }
+      },
+      "required": ["userId"]
+    }
+  },
+  {
+    "name": "getAllBooks",
+    "description": "Получает список всех книг в библиотеке. Использует API эндпоинт GET /api/Books",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "getBookById",
+    "description": "Получает подробную информацию о книге по ID. Использует API эндпоинт GET /api/Books/{id}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "createBook",
+    "description": "Создает новую книгу в библиотеке. Использует API эндпоинт POST /api/Books",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Название книги"
+        },
+        "authors": {
+          "type": "string",
+          "description": "Авторы книги"
+        },
+        "genre": {
+          "type": "string",
+          "description": "Жанр книги (опционально)"
+        },
+        "categorization": {
+          "type": "string",
+          "description": "Категоризация книги (опционально)"
+        },
+        "udk": {
+          "type": "string",
+          "description": "УДК код (опционально)"
+        },
+        "bbk": {
+          "type": "string",
+          "description": "ББК код (опционально)"
+        },
+        "isbn": {
+          "type": "string",
+          "description": "ISBN книги (опционально)"
+        },
+        "cover": {
+          "type": "string",
+          "description": "URL обложки книги (опционально)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Описание книги (опционально)"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Краткое содержание (опционально)"
+        },
+        "publicationYear": {
+          "type": "integer",
+          "description": "Год публикации (опционально)"
+        },
+        "publisher": {
+          "type": "string",
+          "description": "Издательство (опционально)"
+        },
+        "pageCount": {
+          "type": "integer",
+          "description": "Количество страниц (опционально)"
+        },
+        "language": {
+          "type": "string",
+          "description": "Язык книги (опционально)"
+        },
+        "availableCopies": {
+          "type": "integer",
+          "description": "Количество доступных экземпляров"
+        },
+        "edition": {
+          "type": "string",
+          "description": "Издание (опционально)"
+        },
+        "price": {
+          "type": "number",
+          "format": "double",
+          "description": "Цена книги (опционально)"
+        },
+        "format": {
+          "type": "string",
+          "description": "Формат книги (опционально)"
+        },
+        "originalTitle": {
+          "type": "string",
+          "description": "Оригинальное название (опционально)"
+        },
+        "originalLanguage": {
+          "type": "string",
+          "description": "Оригинальный язык (опционально)"
+        },
+        "isEbook": {
+          "type": "boolean",
+          "description": "Является ли электронной книгой"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Состояние книги (опционально)"
+        },
+        "shelfId": {
+          "type": "integer",
+          "description": "ID полки (опционально)"
+        },
+        "position": {
+          "type": "string",
+          "description": "Позиция на полке (опционально)"
+        }
+      },
+      "required": ["title", "authors", "availableCopies", "isEbook"]
+    }
+  },
+  {
+    "name": "updateBook",
+    "description": "Обновляет информацию о книге. Использует API эндпоинт PUT /api/Books/{id}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Название книги"
+        },
+        "authors": {
+          "type": "string",
+          "description": "Авторы книги"
+        },
+        "genre": {
+          "type": "string",
+          "description": "Жанр книги (опционально)"
+        },
+        "categorization": {
+          "type": "string",
+          "description": "Категоризация книги (опционально)"
+        },
+        "udk": {
+          "type": "string",
+          "description": "УДК код (опционально)"
+        },
+        "bbk": {
+          "type": "string",
+          "description": "ББК код (опционально)"
+        },
+        "isbn": {
+          "type": "string",
+          "description": "ISBN книги (опционально)"
+        },
+        "cover": {
+          "type": "string",
+          "description": "URL обложки книги (опционально)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Описание книги (опционально)"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Краткое содержание (опционально)"
+        },
+        "publicationYear": {
+          "type": "integer",
+          "description": "Год публикации (опционально)"
+        },
+        "publisher": {
+          "type": "string",
+          "description": "Издательство (опционально)"
+        },
+        "pageCount": {
+          "type": "integer",
+          "description": "Количество страниц (опционально)"
+        },
+        "language": {
+          "type": "string",
+          "description": "Язык книги (опционально)"
+        },
+        "availableCopies": {
+          "type": "integer",
+          "description": "Количество доступных экземпляров"
+        },
+        "edition": {
+          "type": "string",
+          "description": "Издание (опционально)"
+        },
+        "price": {
+          "type": "number",
+          "format": "double",
+          "description": "Цена книги (опционально)"
+        },
+        "format": {
+          "type": "string",
+          "description": "Формат книги (опционально)"
+        },
+        "originalTitle": {
+          "type": "string",
+          "description": "Оригинальное название (опционально)"
+        },
+        "originalLanguage": {
+          "type": "string",
+          "description": "Оригинальный язык (опционально)"
+        },
+        "isEbook": {
+          "type": "boolean",
+          "description": "Является ли электронной книгой"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Состояние книги (опционально)"
+        },
+        "shelfId": {
+          "type": "integer",
+          "description": "ID полки (опционально)"
+        },
+        "position": {
+          "type": "string",
+          "description": "Позиция на полке (опционально)"
+        }
+      },
+      "required": ["id", "title", "authors", "availableCopies", "isEbook"]
+    }
+  },
+  {
+    "name": "deleteBook",
+    "description": "Удаляет книгу из библиотеки. Использует API эндпоинт DELETE /api/Books/{id}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "updateBookGenre",
+    "description": "Обновляет жанр книги. Использует API эндпоинт POST /api/Books/{id}/genre",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "genre": {
+          "type": "string",
+          "description": "Новый жанр книги"
+        }
+      },
+      "required": ["id", "genre"]
+    }
+  },
+  {
+    "name": "updateBookCategorization",
+    "description": "Обновляет категоризацию книги. Использует API эндпоинт POST /api/Books/{id}/categorization",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "categorization": {
+          "type": "string",
+          "description": "Новая категоризация книги"
+        }
+      },
+      "required": ["id", "categorization"]
+    }
+  },
+  {
+    "name": "addBookToFavorites",
+    "description": "Добавляет книгу в избранное пользователя. Использует API эндпоинт POST /api/Books/{id}/favorite",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        }
+      },
+      "required": ["id", "userId"]
+    }
+  },
+  {
+    "name": "removeBookFromFavorites",
+    "description": "Удаляет книгу из избранного пользователя. Использует API эндпоинт DELETE /api/Books/{id}/favorite/{userId}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        }
+      },
+      "required": ["id", "userId"]
+    }
+  },
+  {
+    "name": "getAllBookInstances",
+    "description": "Получает список всех экземпляров книг с возможностью фильтрации. Использует API эндпоинт GET /api/BookInstance. СТАТУСЫ ЭКЗЕМПЛЯРОВ: 'Доступен', 'Выдан', 'В ремонте', 'Списан', 'В обработке'",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "Фильтр по ID книги (Guid, опционально)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Фильтр по статусу экземпляра. Доступные статусы: 'Доступен', 'Выдан', 'В ремонте', 'Списан', 'В обработке' (опционально)"
+        },
+        "shelfId": {
+          "type": "integer",
+          "description": "Фильтр по ID полки (опционально)"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Фильтр по активности экземпляра (опционально)"
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "getBookInstanceById",
+    "description": "Получает подробную информацию об экземпляре книги по ID. Использует API эндпоинт GET /api/BookInstance/{id}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID экземпляра книги (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "getBookInstancesByBookId",
+    "description": "Получает все активные экземпляры конкретной книги. Использует API эндпоинт GET /api/BookInstance/book/{bookId}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        }
+      },
+      "required": ["bookId"]
+    }
+  },
+  {
+    "name": "createBookInstance",
+    "description": "Создает новый экземпляр книги. Использует API эндпоинт POST /api/BookInstance. Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "instanceCode": {
+          "type": "string",
+          "description": "Код экземпляра (если не указан, генерируется автоматически)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Статус экземпляра. Доступные статусы: 'Доступен', 'Выдан', 'В ремонте', 'Списан', 'В обработке'"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Состояние экземпляра (опционально)"
+        },
+        "purchasePrice": {
+          "type": "number",
+          "format": "double",
+          "description": "Цена покупки (опционально)"
+        },
+        "dateAcquired": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Дата приобретения в UTC формате (например: new Date().toISOString())"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Заметки (опционально)"
+        },
+        "shelfId": {
+          "type": "integer",
+          "description": "ID полки (опционально)"
+        },
+        "position": {
+          "type": "string",
+          "description": "Позиция на полке (опционально)"
+        },
+        "location": {
+          "type": "string",
+          "description": "Местоположение (опционально)"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Активен ли экземпляр"
+        }
+      },
+      "required": ["bookId", "status", "dateAcquired", "isActive"]
+    }
+  },
+  {
+    "name": "updateBookInstance",
+    "description": "Обновляет информацию об экземпляре книги. Использует API эндпоинт PUT /api/BookInstance/{id}. Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID экземпляра книги (Guid)"
+        },
+        "instanceCode": {
+          "type": "string",
+          "description": "Код экземпляра"
+        },
+        "status": {
+          "type": "string",
+          "description": "Статус экземпляра. Доступные статусы: 'Доступен', 'Выдан', 'В ремонте', 'Списан', 'В обработке'"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Состояние экземпляра (опционально)"
+        },
+        "purchasePrice": {
+          "type": "number",
+          "format": "double",
+          "description": "Цена покупки (опционально)"
+        },
+        "dateAcquired": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Дата приобретения в UTC формате (например: new Date().toISOString())"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Заметки (опционально)"
+        },
+        "shelfId": {
+          "type": "integer",
+          "description": "ID полки (опционально)"
+        },
+        "position": {
+          "type": "string",
+          "description": "Позиция на полке (опционально)"
+        },
+        "location": {
+          "type": "string",
+          "description": "Местоположение (опционально)"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Активен ли экземпляр"
+        }
+      },
+      "required": ["id", "instanceCode", "status", "dateAcquired", "isActive"]
+    }
+  },
+  {
+    "name": "deleteBookInstance",
+    "description": "Удаляет экземпляр книги. Использует API эндпоинт DELETE /api/BookInstance/{id}. Требует роль администратора.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID экземпляра книги (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "updateBookInstanceStatus",
+    "description": "Обновляет статус экземпляра книги. Использует API эндпоинт PUT /api/BookInstance/{id}/status. Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID экземпляра книги (Guid)"
+        },
+        "newStatus": {
+          "type": "string",
+          "description": "Новый статус экземпляра. Доступные статусы: 'Доступен', 'Выдан', 'В ремонте', 'Списан', 'В обработке'"
+        }
+      },
+      "required": ["id", "newStatus"]
+    }
+  },
+  {
+    "name": "getBestAvailableBookInstance",
+    "description": "Получает лучший доступный экземпляр книги для выдачи. Использует API эндпоинт GET /api/BookInstance/best-available/{bookId}. Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        }
+      },
+      "required": ["bookId"]
+    }
+  },
+  {
+    "name": "getBookInstanceStats",
+    "description": "Получает статистику по экземплярам книги. Использует API эндпоинт GET /api/BookInstance/stats/{bookId}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        }
+      },
+      "required": ["bookId"]
+    }
+  },
+  {
+    "name": "createMultipleBookInstances",
+    "description": "Создает несколько экземпляров одной книги. Использует API эндпоинт POST /api/BookInstance/create-multiple/{bookId}. Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        },
+        "count": {
+          "type": "integer",
+          "description": "Количество экземпляров для создания"
+        }
+      },
+      "required": ["bookId", "count"]
+    }
+  },
+  {
+    "name": "autoCreateBookInstances",
+    "description": "Автоматически создает экземпляры книги на основе количества доступных копий. Использует API эндпоинт POST /api/BookInstance/auto-create/{bookId}. Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        }
+      },
+      "required": ["bookId"]
+    }
+  },
+  {
+    "name": "getBookInstanceReservation",
+    "description": "Получает информацию о резервировании экземпляра книги. Использует API эндпоинт GET /api/BookInstance/{id}/reservation. Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID экземпляра книги (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "getInstanceStatusSummary",
+    "description": "Получает сводку по статусам всех экземпляров книг. Использует API эндпоинт GET /api/BookInstance/status-summary. Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  }
+] 
