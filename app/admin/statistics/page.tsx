@@ -295,6 +295,7 @@ export default function StatisticsPage() {
   const [customDateTo, setCustomDateTo] = useState('');
   const [reportPriority, setReportPriority] = useState<string>('mixed');
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(new Set(['active_users', 'borrowed_books', 'fines', 'reservations']));
+  const [htmlReportLoading, setHtmlReportLoading] = useState(false);
 
   // Ref для отслеживания скролла
   const containerRef = useRef<HTMLDivElement>(null);
@@ -317,6 +318,7 @@ export default function StatisticsPage() {
   const returnedReservations = reservations.filter(r => r.status === "Возвращена").length;
   const overdueReservations = reservations.filter(r => r.status === "Просрочена").length;
   const totalBorrowedBooks = users.reduce((total, user) => total + user.borrowedBooksCount, 0);
+  const totalBookItems = books.reduce((sum, book) => sum + book.availableCopies, 0) + totalBorrowedBooks;
   const totalAvailableBooks = books.reduce((sum, book) => sum + book.availableCopies, 0);
   const totalFines = users.reduce((sum, user) => sum + (user.fineAmount || 0), 0);
 
@@ -610,7 +612,8 @@ export default function StatisticsPage() {
       // Добавляем данные только по выбранным категориям
       if (selectedReportCategories.has('overview')) {
         libraryData.overview = {
-          totalBooks: totalAvailableBooks + totalBorrowedBooks,
+          totalBooks: books.length,
+          totalBookItems: totalBookItems,
           totalUsers: totalUsersCount,
           totalReservations: filteredReservations.length,
           totalFines: totalFines
@@ -633,9 +636,10 @@ export default function StatisticsPage() {
 
       if (selectedReportCategories.has('books')) {
         libraryData.books = {
-          total: totalAvailableBooks + totalBorrowedBooks,
-          available: totalAvailableBooks,
-          borrowed: totalBorrowedBooks,
+          total: books.length,
+          available_copies: totalAvailableBooks,
+          borrowed_copies: totalBorrowedBooks,
+          total_copies: totalBookItems,
           categories: bookCategoriesData,
           genres: bookGenresData,
           periodBorrows: filteredReservations.filter(r => r.status === "Выдана" || r.status === "Возвращена").length
@@ -668,7 +672,7 @@ export default function StatisticsPage() {
 
       if (selectedReportCategories.has('performance')) {
         libraryData.performance = {
-          utilizationRate: (totalBorrowedBooks / (totalAvailableBooks + totalBorrowedBooks)) * 100,
+          utilizationRate: (totalBorrowedBooks / totalBookItems) * 100,
           userEngagement: (activeUsersCount / totalUsersCount) * 100,
           reservationEfficiency: ((filteredReservations.filter(r => r.status === "Выдана" || r.status === "Возвращена").length) / filteredReservations.length) * 100,
           averageProcessingTime: "2.3 дня" // Можно вычислить реально
@@ -823,6 +827,181 @@ ${includeRecommendations ? `
     }
   };
 
+  // Функция для генерации HTML-отчета в новой вкладке
+  const generateHtmlReport = async () => {
+    setHtmlReportLoading(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+      if (!apiKey) {
+        throw new Error("API ключ Gemini не настроен");
+      }
+
+      const libraryData = {
+          reportSettings: {
+              generatedDate: new Date().toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })
+          },
+          overview: {
+              totalBooks: books.length,
+              totalBookItems: totalBookItems,
+              totalUsers: totalUsersCount,
+              totalReservations: reservations.length,
+              activeUsers: activeUsersCount,
+              pendingReservations: pendingReservations,
+          },
+          users: {
+              total: totalUsersCount,
+              active: activeUsersCount,
+              inactive: totalUsersCount - activeUsersCount,
+              topUsers: topUsersData
+          },
+          books: {
+              total: books.length,
+              available_copies: totalAvailableBooks,
+              borrowed_copies: totalBorrowedBooks,
+              total_copies: totalBookItems,
+              categories: bookCategoriesData,
+              genres: bookGenresData,
+          },
+          reservations: {
+              statusDistribution: statusDistribution,
+              monthlyStats: monthlyBorrowedData
+          },
+          fines: {
+              total: totalFines,
+              usersWithFines: users.filter(u => (u.fineAmount || 0) > 0).length,
+              monthlyStats: monthlyFinesData
+          },
+          performance: {
+              utilizationRate: (totalBorrowedBooks / totalBookItems) * 100,
+              userEngagement: (activeUsersCount / totalUsersCount) * 100,
+              reservationEfficiency: ((reservations.filter(r => r.status === "Выдана" || r.status === "Возвращена").length) / reservations.length) * 100,
+          }
+      };
+
+      const prompt = `
+Отвечать по-русски. Ты - эксперт-веб-разработчик, специализирующийся на создании аналитических отчетов в формате HTML.
+Твоя задача - сгенерировать ЕДИНЫЙ, САМОСТОЯТЕЛЬНЫЙ HTML-файл, который представляет статистику для библиотеки "СИНАПС".
+
+**СТРОГИЕ ТРЕБОВАНИЯ К HTML-ФАЙЛУ:**
+
+1.  **Полностью самодостаточный:** Весь код (HTML, CSS, JavaScript) должен быть в одном файле. Используй теги \`<style>\` и \`<script>\`. Никаких внешних ссылок на файлы, за исключением CDN для Chart.js и Google Fonts.
+2.  **Интерактивные графики:**
+    *   **ОБЯЗАТЕЛЬНО** используй библиотеку **Chart.js**. Подключи ее через CDN: \`<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>\`.
+    *   Создай подходящие графики для данных: круговые (Pie/Doughnut), столбчатые (Bar), линейные (Line).
+    *   Графики должны быть интерактивными (всплывающие подсказки).
+    *   Скрипты для графиков должны быть в теге \`<script>\`.
+3.  **Структура и контент:**
+    *   Используй семантические теги HTML5.
+    *   Вверху страницы размести карточки с ключевыми метриками.
+    *   Логически раздели отчет на секции (Обзор, Книги, Пользователи и т.д.).
+    *   В каждой секции должен быть как минимум один график и краткое текстовое резюме.
+    *   Заголовок отчета: **Аналитический отчет библиотеки «СИНАПС»**.
+    *   Язык контента - **Русский**.
+
+**ТРЕБОВАНИЯ К СТИЛЮ (CSS):**
+
+Создай красивый, чистый и профессиональный дизайн, следуя этим указаниям. Весь CSS должен быть внутри тега \`<style>\`.
+
+*   **Шрифты:**
+    *   Подключи шрифт 'Roboto' из Google Fonts: \`@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');\`
+    *   Установи для \`body\`: \`font-family: 'Roboto', sans-serif;\`.
+
+*   **Цветовая палитра (светлая тема):**
+    *   **Фон страницы:** \`background-color:rgb(117, 200, 255);\`
+    *   **Контейнеры/Карточки:** \`background-color:rgb(117, 200, 255);\`
+    *   **Основной текст:** \`color: #333333;\`
+    *   **Заголовки (h1, h2, h3):** \`color:rgb(117, 200, 255);\`
+    *   **Акцентный цвет (графики, ссылки, ключевые элементы):** \`#3498db;\` (синий)
+    *   **Вторичный акцентный цвет (для графиков):** \`#5a67d8;\` (фиолетовый)
+    *   **Цвет для позитивных изменений:** \`#2ecc71;\` (зеленый)
+    *   **Цвет для негативных моментов (штрафы):** \`#e74c3c;\` (красный)
+
+*   **Макет и компоненты:**
+    *   **Основной контейнер:** \`max-width: 1200px; margin: 0 auto; padding: 20px;\`
+    *   **Заголовок (Header):** Должен содержать название "Аналитический отчет библиотеки «СИНАПС»" и дату генерации. Сделай его заметным.
+    *   **Карточки (Cards):**
+        *   \`border-radius: 8px;\`
+        *   \`box-shadow: 0 4px 6px rgba(0,0,0,0.1);\`
+        *   \`padding: 20px;\`
+        *   \`margin-bottom: 20px;\`
+        *   Используй Flexbox или Grid для расположения карточек в ряды.
+    *   **Графики:** Должны быть внутри карточек, чтобы выглядеть аккуратно. Убедись, что контейнер для графика адаптивный.
+
+**ДАННЫЕ ДЛЯ ОТЧЕТА:**
+Вот JSON-объект с данными библиотеки. Используй его для всех цифр, текста и графиков.
+\`\`\`json
+${JSON.stringify(libraryData)}
+\`\`\`
+
+**ЗАДАЧА:**
+Сгенерируй полный HTML-код для этого отчета. Не добавляй никаких объяснений или \`\`\`html\`\`\` оберток. Твой ответ должен быть **ТОЛЬКО** HTML-кодом, начиная с \`<!DOCTYPE html>\` и заканчивая \`</html>\`.
+`;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 65536,
+            topK: 40,
+            topP: 0.95
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка API Gemini: ${response.status} ${await response.text()}`);
+      }
+
+      const result = await response.json();
+      console.log('Gemini API Response:', result);
+
+      let aiResponse = '';
+      if (result.candidates && result.candidates.length > 0) {
+        const candidate = result.candidates[0];
+        if (candidate?.content?.parts) {
+          aiResponse = candidate.content.parts.map((p: any) => p.text || '').join('');
+        }
+        // Проверяем, был ли ответ заблокирован системой безопасности
+        if (candidate.finishReason === 'SAFETY') {
+          throw new Error('Ответ был заблокирован системой безопасности Gemini. Попробуйте сократить или упростить запрос.');
+        }
+      }
+
+      if (!aiResponse || aiResponse.trim().length === 0) {
+        // Выводим подробную информацию для отладки
+        console.warn('AI response is empty. Full result:', result);
+        throw new Error('Пустой ответ от ИИ. Проверьте ограничения безопасности или параметры запроса.');
+      }
+
+      const blob = new Blob([aiResponse], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+
+    } catch (err) {
+      console.error("Ошибка при генерации HTML отчета:", err);
+      // Можно будет заменить на toast-уведомление
+      alert(`Произошла ошибка при генерации HTML отчета: ${err instanceof Error ? err.message : "Неизвестная ошибка"}`);
+    } finally {
+      setHtmlReportLoading(false);
+    }
+  };
+
   // Функция для запроса сводки через ИИ
   const generateSummary = async () => {
     setSummaryLoading(true);
@@ -851,6 +1030,7 @@ ${includeRecommendations ? `
           total: totalAvailableBooks + totalBorrowedBooks,
           available: totalAvailableBooks,
           borrowed: totalBorrowedBooks,
+          total_items: totalBookItems,
           categories: bookCategoriesData
         },
         reservations: {
@@ -1086,6 +1266,10 @@ ${includeRecommendations ? `
                 <FileText className="w-5 h-5" />
                 {summaryLoading ? "Генерация..." : "Быстрый отчет"}
               </Button>
+              <Button onClick={generateHtmlReport} className="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2" disabled={htmlReportLoading}>
+                <Download className="w-5 h-5" />
+                {htmlReportLoading ? "Генерация HTML..." : "HTML-отчет"}
+              </Button>
             </motion.div>
           </div>
           
@@ -1114,8 +1298,8 @@ ${includeRecommendations ? `
           {/* Обзор библиотеки */}
           <TabsContent value="overview" className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard title="Книги" value={totalAvailableBooks + totalBorrowedBooks} subtitle="всего в библиотеке" additionalInfo={<p className="text-blue-500">
-                    {totalAvailableBooks} доступно сейчас
+              <StatCard title="Книги" value={books.length} subtitle="всего наименований" additionalInfo={<p className="text-blue-500">
+                    {totalAvailableBooks} экз. доступно сейчас
                   </p>} icon={<BookOpen className="w-5 h-5 text-blue-500" />} color="bg-blue-500" delay={0.1} href="/admin/books" />
               <StatCard title="Пользователи" value={totalUsersCount} subtitle="зарегистрировано" additionalInfo={<p className="text-gray-500">
                     {activeUsersCount} активных ({Math.round(activeUsersCount / totalUsersCount * 100)}%)

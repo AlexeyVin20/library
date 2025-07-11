@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Loader2, AlertCircle, Mouse, Users, Tag, BookText, Calendar, Building, Info, GripVertical, Package, CheckCircle, XCircle, BookOpen, Heart, Clock, Home, TrendingUp, Search, Filter, Star, Shield, Bookmark, BarChart2, Bell } from 'lucide-react';
+import { ExternalLink, Loader2, AlertCircle, Mouse, Users, Tag, BookText, Calendar, Building, Info, GripVertical, Package, CheckCircle, XCircle, BookOpen, Heart, Clock, Home, TrendingUp, Search, Filter, Star, Shield, Bookmark, BarChart2, Bell, Plus, Eye, Edit3, Copy, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BookInstance } from '@/lib/types';
 import { useAuth } from '@/lib/auth';
+import { toast } from '@/hooks/use-toast';
 
 const getStatusIcon = (status: string) => {
   switch (status.toLowerCase()) {
@@ -246,6 +247,33 @@ const usePagePreview = (route: string, isVisible: boolean): PreviewData => {
   return data;
 };
 
+function isAvailableInstance(status: string) {
+  if (!status) return false;
+  const s = status.trim().toLowerCase();
+  return [
+    'доступна',
+    'available',
+    'в наличии',
+    'свободна',
+    'free',
+    'готова к выдаче',
+  ].includes(s);
+}
+
+function isIssuedInstance(status: string) {
+  if (!status) return false;
+  const s = status.trim().toLowerCase();
+  return [
+    'выдана',
+    'выдан',
+    'issued',
+    'выдана читателю',
+    'занята',
+    'занят',
+    'checked out',
+  ].includes(s);
+}
+
 export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps> = ({
   route,
   isVisible,
@@ -375,14 +403,14 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
           transition={{ duration: 0.3, ease: 'easeOut' }}
           style={{
             position: 'fixed',
-            top: coords.top,
-            left: coords.left,
+            top: coords?.top || 0,
+            left: coords?.left || 0,
           }}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
           className={cn(
             'z-[9999] transform-gpu',
-            displayMode === 'iframe' ? 'w-[800px] h-[750px]' : 'w-[320px] h-[400px]',
+            displayMode === 'iframe' ? 'w-[800px] h-[750px]' : 'w-[500px] h-[800px]',
             className
           )}
         >
@@ -469,7 +497,40 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
                           <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
                             <BookOpen className="h-5 w-5 text-white" />
                           </div>
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 line-clamp-2">{bookData.title}</h3>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 line-clamp-2">{bookData.title}</h3>
+                          </div>
+                        </div>
+                        
+                        {/* Быстрые действия с экземплярами */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <a
+                            href={`/admin/books/${bookData.id}/instances`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Все экземпляры
+                          </a>
+                          <a
+                            href={`/admin/books/${bookData.id}/instances/create`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Добавить экземпляр
+                          </a>
+                          <a
+                            href={`/admin/books/${bookData.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-xs font-medium transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Редактировать
+                          </a>
                         </div>
                       
                                               <div className="space-y-2">
@@ -479,6 +540,30 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
                           </div>
                           <p className="text-sm text-gray-800 dark:text-gray-200">{Array.isArray(bookData.authors) ? bookData.authors.join(', ') : bookData.authors}</p>
                         </div>
+                        
+                        {/* Статистика по экземплярам */}
+                        {bookData.instances && bookData.instances.length > 0 && (
+                          <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg p-3 mt-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Package className="w-4 h-4 text-blue-600" />
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Статистика экземпляров</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                              <div className="text-center">
+                                <div className="font-bold text-lg text-blue-600">{bookData.instances.length}</div>
+                                <div className="text-gray-500">Всего</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="font-bold text-lg text-green-600">{bookData.instances.filter(inst => isAvailableInstance(inst.status)).length}</div>
+                                <div className="text-gray-500">Доступно</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="font-bold text-lg text-red-600">{bookData.instances.filter(inst => isIssuedInstance(inst.status)).length}</div>
+                                <div className="text-gray-500">Выдано</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       
                       {bookData.genre && (<div className="flex items-start gap-3">
@@ -523,10 +608,20 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
 
                       {bookData.instances && bookData.instances.length > 0 && (
                         <div>
-                          <h4 className="font-semibold text-gray-600 mt-4 border-t pt-3">Экземпляры ({bookData.instances.length}):</h4>
+                          <h4 className="font-semibold text-gray-600 mt-4 border-t pt-3 flex items-center justify-between">
+                            <span>Экземпляры ({bookData.instances.length}):</span>
+                            <div className="flex gap-1">
+                              <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                                Доступно: {bookData.instances.filter(inst => isAvailableInstance(inst.status)).length}
+                              </span>
+                              <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">
+                                Выдано: {bookData.instances.filter(inst => isIssuedInstance(inst.status)).length}
+                              </span>
+                            </div>
+                          </h4>
                           <div className="max-h-64 overflow-y-auto mt-2 space-y-2 pr-2">
                             {bookData.instances.map(inst => (
-                              <div key={inst.id} className="text-sm p-2 bg-gray-50 rounded-lg border border-gray-200">
+                              <div key={inst.id} className="text-sm p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
                                 <div className="flex items-center justify-between font-mono text-base mb-2">
                                     <span className="font-bold text-gray-800">{inst.instanceCode}</span>
                                     <div className="flex items-center gap-1.5">
@@ -536,7 +631,8 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
                                         </span>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+                                
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 mb-2">
                                     <div className="flex items-center gap-1.5">
                                         <Info className="w-3 h-3 text-gray-400" />
                                         <span>Состояние: <strong>{inst.condition}</strong></span>
@@ -547,13 +643,53 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
                                     </div>
                                     {inst.location && (
                                         <div className="flex items-center gap-1.5 col-span-2">
-                                            <Tag className="w-3 h-3 text-gray-400" />
+                                            <MapPin className="w-3 h-3 text-gray-400" />
                                             <span>Расположение: <strong>{inst.location}</strong></span>
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Быстрые действия для экземпляра */}
+                                <div className="flex gap-1 pt-2 border-t border-gray-200">
+                                  <a
+                                    href={`/admin/books/${bookData.id}/instances/${inst.id}/update`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs transition-colors"
+                                    title="Редактировать экземпляр"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                    Ред.
+                                  </a>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(inst.instanceCode);
+                                      toast({
+                                        title: "Скопировано!",
+                                        description: `Код экземпляра "${inst.instanceCode}" скопирован в буфер обмена.`,
+                                      });
+                                    }}
+                                    className="flex items-center gap-1 px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs transition-colors"
+                                    title="Скопировать код экземпляра"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                    Код
+                                  </button>
+                                  <a
+                                    href={`/admin/books/${bookData.id}/instances/${inst.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded text-xs transition-colors"
+                                    title="Посмотреть подробности"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    Детали
+                                  </a>
+                                </div>
+
                                 {inst.notes && (
-                                    <div className="mt-1.5 pt-1.5 border-t border-gray-200 text-xs text-gray-500 italic">
+                                    <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 italic">
+                                        <Info className="w-3 h-3 inline mr-1" />
                                         "{inst.notes}"
                                     </div>
                                 )}
@@ -565,7 +701,24 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
 
                       {!bookData.instances || bookData.instances.length === 0 && (
                         <div className="mt-4 border-t pt-3">
-                            <p className="text-sm text-gray-500">Нет доступных экземпляров для этой книги.</p>
+                          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 border border-orange-200 dark:border-orange-700">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertCircle className="w-4 h-4 text-orange-600" />
+                              <span className="text-sm font-medium text-orange-800 dark:text-orange-300">Нет экземпляров</span>
+                            </div>
+                            <p className="text-sm text-orange-700 dark:text-orange-400 mb-3">
+                              У этой книги пока нет экземпляров. Создайте экземпляр для добавления физических копий в библиотеку.
+                            </p>
+                            <a
+                              href={`/admin/books/${bookData.id}/instances/create`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Создать первый экземпляр
+                            </a>
+                          </div>
                         </div>
                       )}
                     </div>

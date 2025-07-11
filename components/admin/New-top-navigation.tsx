@@ -8,7 +8,7 @@ import { cn, getInitials } from "@/lib/utils"
 import { adminSideBarLinks } from "@/constants"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
-import { Bell, Search, Menu, Moon, Sun, UserIcon, Book, FileText, ExternalLink, Clock, LogOut, Settings, ChevronDown, X, BookOpen, Users, Calendar, BarChart2, Bookmark, CheckCircle2, AlertCircle, PlusCircle, ScrollText, LayoutGrid, Shield, PieChart, Home, HelpCircle, FileQuestion, Mail, Command, Zap, ChevronRight, Eye } from 'lucide-react'
+import { Bell, Search, Menu, Moon, Sun, UserIcon, Book, FileText, ExternalLink, Clock, LogOut, Settings, ChevronDown, X, BookOpen, Users, Calendar, BarChart2, Bookmark, CheckCircle2, AlertCircle, PlusCircle, ScrollText, LayoutGrid, Shield, PieChart, Home, HelpCircle, FileQuestion, Mail, Command, Zap, ChevronRight, Eye, Package } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,6 +110,13 @@ const generateBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     '/notifications': 'Уведомления',
     '/fines': 'Штрафы',
     '/books/print-formulars': 'Печать формуляров',
+    '/books/{id}/instances': 'Экземпляры книг',
+    '/books/instances/create': 'Создать экземпляр книги',
+    '/books/instances/edit': 'Редактировать экземпляр книги',
+    '/books/instances/delete': 'Удалить экземпляр книги',
+    '/books/instances/view': 'Просмотр экземпляра книги',
+    '/books/instances/list': 'Список экземпляров книг',
+    '/books/instances/search': 'Поиск экземпляров книг',
   }
 
   const segments = cleanPath.split('/').filter(Boolean)
@@ -540,9 +547,10 @@ const TopNavigation = ({ user }: { user: User | null }) => {
         }
 
         // Используем правильные эндпоинты - оба должны быть в нижнем регистре
-        const [usersResponse, booksResponse] = await Promise.all([
+        const [usersResponse, booksResponse, instancesResponse] = await Promise.all([
           fetch(`${baseUrl}/api/User`, { headers }),
           fetch(`${baseUrl}/api/books`, { headers }), // Изменено с /api/Books на /api/books
+          fetch(`${baseUrl}/api/BookInstance`, { headers }) // Получаем все экземпляры для поиска
         ])
 
         if (usersResponse.ok) {
@@ -613,6 +621,78 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               title: "Книги",
               icon: <Book className="h-4 w-4" />,
               results: bookResults,
+            })
+          }
+        }
+
+        // Добавлен поиск экземпляров книг
+        if (instancesResponse.ok) {
+          const instancesData = await instancesResponse.json()
+          const filteredInstances = instancesData.filter(
+            (instance: any) => {
+              const instanceCode = instance.instanceCode || ""
+              const status = instance.status || ""
+              const condition = instance.condition || ""
+              const location = instance.location || ""
+              const bookTitle = instance.book?.title || ""
+              const bookAuthors = instance.book?.authors || ""
+              
+              return instanceCode.toLowerCase().includes(query.toLowerCase()) ||
+                     status.toLowerCase().includes(query.toLowerCase()) ||
+                     condition.toLowerCase().includes(query.toLowerCase()) ||
+                     location.toLowerCase().includes(query.toLowerCase()) ||
+                     bookTitle.toLowerCase().includes(query.toLowerCase()) ||
+                     bookAuthors.toLowerCase().includes(query.toLowerCase())
+            }
+          )
+
+          if (filteredInstances && filteredInstances.length > 0) {
+            // Получаем резервации, чтобы правильно определить ссылку
+            let reservationsData = []
+            try {
+              const reservationsResponse = await fetch(`${baseUrl}/api/Reservation`, { headers })
+              if (reservationsResponse.ok) {
+                reservationsData = await reservationsResponse.json()
+              }
+            } catch (reservationError) {
+              console.warn("Не удалось загрузить резервации для определения ссылок:", reservationError)
+            }
+
+            const instanceResults: SearchResult[] = filteredInstances.slice(0, 5).map((instance: any) => {
+              // Определяем URL в зависимости от статуса экземпляра
+              let url = `/admin/books/${instance.bookId}/instances`
+              let subtitle = `${instance.book?.title || 'Неизвестная книга'} - ${instance.status}`
+              
+              // Если экземпляр выдан или зарезервирован, ищем активную резервацию
+              if (instance.status?.toLowerCase() === 'выдана' || instance.status?.toLowerCase() === 'зарезервирована') {
+                // Ищем активную резервацию для этого экземпляра
+                const activeReservation = reservationsData.find((reservation: any) => 
+                  reservation.bookInstanceId === instance.id && 
+                  reservation.status && 
+                  !['отменена', 'истекла', 'возвращена', 'отменена_пользователем'].includes(reservation.status.toLowerCase())
+                )
+                
+                if (activeReservation) {
+                  url = `/admin/reservations/${activeReservation.id}`
+                  subtitle = `${instance.book?.title || 'Неизвестная книга'} - ${instance.status} (Резервация)`
+                }
+              }
+
+              return {
+                id: instance.id,
+                title: `📖 ${instance.instanceCode}`,
+                subtitle: subtitle,
+                type: "book" as const, // Используем тип book для экземпляров
+                url: url,
+                icon: <Package className="h-4 w-4 text-purple-500" />,
+                previewType: 'api' as const,
+              }
+            })
+
+            categorizedResults.push({
+              title: "Экземпляры книг",
+              icon: <Package className="h-4 w-4" />,
+              results: instanceResults,
             })
           }
         }
@@ -1422,8 +1502,8 @@ const TopNavigation = ({ user }: { user: User | null }) => {
             </NavigationMenu>
           </div>
 
-          {/* Right side actions */}
-          <div className="flex items-center gap-3">
+          {/* Right side actions (поиск, уведомления, профиль, меню) */}
+          <div className="flex items-center gap-3 absolute right-0 top-0 h-full pr-2 z-10">
             {/* Theme Toggler */}
             <TooltipProvider>
               <Tooltip>
@@ -1473,266 +1553,50 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               </Tooltip>
             </TooltipProvider>
 
-            {/* Enhanced Search with Backslash Hotkey */}
-            <div className="relative">
-              <motion.div
-                variants={searchVariants as unknown as Variants}
-                animate={isSearchOpen ? "open" : "closed"}
-                className="flex items-center"
-              >
-                <AnimatePresence>
-                  {isSearchOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: "100%" }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="w-full"
-                    >
-                      <div className="relative">
-                        <Input
-                          ref={searchInputRef}
-                          placeholder="Поиск... (нажмите \ для быстрого доступа)"
-                          className="pr-10 h-10 focus:ring-2 focus:ring-blue-300 text-sm border-white/30 bg-white/25 backdrop-blur-sm text-white placeholder:text-white/70 rounded-lg"
-                          autoFocus
-                          value={searchQuery}
-                          onChange={handleSearchChange}
-                          onClick={() => setIsSearchOpen(true)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && searchQuery.trim()) {
-                              router.push(`/admin/search?q=${encodeURIComponent(searchQuery)}`)
-                              setIsSearchOpen(false)
-                            }
-                          }}
-                        />
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                          {searchQuery && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-white/70 hover:text-white hover:bg-white/25 rounded-lg"
-                              onClick={() => {
-                                setSearchQuery("")
-                                searchInputRef.current?.focus()
-                              }}
-                            >
-                              <X size={12} />
-                            </Button>
-                          )}
-                          <div className="text-xs text-white/50 bg-white/15 px-1.5 py-0.5 rounded border border-white/20">
-                            \
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <motion.div 
-                        whileHover={{ scale: 1.1 }} 
-                        whileTap={{ scale: 0.9 }} 
-                        className="flex-shrink-0"
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="relative h-10 w-10 text-white hover:text-white hover:bg-white/25 rounded-lg backdrop-blur-sm transition-all duration-300"
-                          onClick={() => {
-                            setIsSearchOpen(!isSearchOpen)
-                            if (!isSearchOpen) {
-                              setTimeout(() => {
-                                searchInputRef.current?.focus()
-                              }, 100)
-                            } else {
-                              setSearchQuery("")
-                              setSearchResults([])
-                            }
-                          }}
-                        >
-                          <motion.div
-                            animate={{ rotate: isSearchOpen ? 90 : 0 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <Search size={20} />
-                          </motion.div>
-                        </Button>
-                      </motion.div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="bg-blue-700/90 text-white border-blue-600">
-                      <div className="flex items-center gap-2">
-                        Поиск
-                        <kbd className="px-1.5 py-0.5 text-xs bg-white/20 rounded border">
-                          \
-                        </kbd>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </motion.div>
-
-              {/* Enhanced Search Results */}
-              <AnimatePresence>
-                {isSearchOpen && (
-                  <motion.div
-                    ref={searchResultsRef}
-                    variants={searchResultsVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="absolute right-0 mt-3 w-96 max-h-[70vh] overflow-hidden rounded-xl bg-white/95 backdrop-blur-xl shadow-xl border border-gray-200 z-50"
+            {/* Только иконка поиска */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.div 
+                    whileHover={{ scale: 1.1 }} 
+                    whileTap={{ scale: 0.9 }} 
+                    className="flex-shrink-0"
                   >
-                    <div className="overflow-y-auto max-h-[70vh] p-3">
-                      {isSearching ? (
-                        <div className="flex items-center justify-center py-8">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="w-6 h-6 border-2 border-blue-300 border-t-blue-500 rounded-full mr-3"
-                          />
-                          <span className="text-sm text-gray-800">Поиск...</span>
-                        </div>
-                      ) : searchResults.length > 0 ? (
-                        <>
-                          {searchResults.map((category, index) => (
-                            <motion.div
-                              key={index}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              className="mb-4"
-                            >
-                              <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-blue-700 uppercase tracking-wider">
-                                {category.icon}
-                                <span>{category.title}</span>
-                              </div>
-                              <div className="space-y-1">
-                                {category.results.map((result, idx) => (
-                                  <motion.div
-                                    key={`${result.type}-${result.id}`}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: (index * 0.1) + (idx * 0.05) }}
-                                    whileHover={{
-                                      backgroundColor: "rgba(59, 130, 246, 0.1)",
-                                      x: 4,
-                                      transition: { duration: 0.2 },
-                                    }}
-                                    className="flex items-center gap-3 px-3 py-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-all duration-200"
-                                    onClick={() => handleSearchResultClick(result)}
-                                  >
-                                    <div className="flex-shrink-0">{result.icon}</div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium truncate text-gray-800">{result.title}</p>
-                                      {result.subtitle && (
-                                        <p className="text-xs text-gray-500 truncate">{result.subtitle}</p>
-                                      )}
-                                    </div>
-                                    <motion.div
-                                      whileHover={{ x: 3, scale: 1.1 }}
-                                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                                    >
-                                      <ExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                    </motion.div>
-                                  </motion.div>
-                                ))}
-                              </div>
-                            </motion.div>
-                          ))}
-                        </>
-                      ) : searchQuery ? (
-                        <div className="text-center py-8 px-4">
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <Search className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                            <p className="text-sm text-gray-800 mb-2">Ничего не найдено по запросу "{searchQuery}"</p>
-                            <p className="text-xs text-gray-500">
-                              Попробуйте изменить запрос или выбрать из истории поиска
-                            </p>
-                          </motion.div>
-                        </div>
-                      ) : recentSearches.length > 0 ? (
-                        <div>
-                          <div className="flex items-center justify-between px-3 py-2">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 uppercase tracking-wider">
-                              <Clock className="h-4 w-4" />
-                              <span>Недавние поиски</span>
-                            </div>
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => {
-                                setRecentSearches([])
-                                localStorage.setItem("recentSearches", JSON.stringify([]))
-                              }}
-                              className="text-xs text-gray-500 hover:text-red-500 transition-colors"
-                            >
-                              Очистить
-                            </motion.button>
-                          </div>
-                          <div className="space-y-1">
-                            {recentSearches.map((query, idx) => (
-                              <motion.div
-                                key={idx}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                whileHover={{
-                                  backgroundColor: "rgba(59, 130, 246, 0.1)",
-                                  x: 4,
-                                  transition: { duration: 0.2 },
-                                }}
-                                onClick={() => selectRecentSearch(query)}
-                                className="flex items-center gap-3 px-3 py-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-all duration-200"
-                              >
-                                <Clock className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm text-gray-800">{query}</span>
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <div className="flex items-center justify-center gap-2 mb-3">
-                              <Search className="h-6 w-6 text-gray-400" />
-                              <Zap className="h-4 w-4 text-blue-500" />
-                            </div>
-                            <p className="text-sm text-gray-800 mb-2">Введите запрос для поиска</p>
-                            <p className="text-xs text-gray-500">
-                              Используйте <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">\</kbd> для быстрого доступа
-                            </p>
-                          </motion.div>
-                        </div>
-                      )}
-                    </div>
-
-                    {searchQuery.trim() !== "" && (
-                      <div className="p-3 border-t border-gray-200">
-                        <Button
-                          variant="ghost"
-                          className="w-full text-sm text-gray-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                          onClick={() => { handleMenuLinkClick(`/admin/search?q=${encodeURIComponent(searchQuery)}`) }}
-                        >
-                          <Search className="h-4 w-4 mr-2" />
-                          Расширенный поиск по "{searchQuery}"
-                        </Button>
-                      </div>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="relative h-10 w-10 text-white hover:text-white hover:bg-white/25 rounded-lg backdrop-blur-sm transition-all duration-300"
+                      onClick={() => {
+                        setIsSearchOpen(!isSearchOpen)
+                        if (!isSearchOpen) {
+                          setTimeout(() => {
+                            searchInputRef.current?.focus()
+                          }, 100)
+                        } else {
+                          setSearchQuery("")
+                          setSearchResults([])
+                        }
+                      }}
+                    >
+                      <motion.div
+                        animate={{ rotate: isSearchOpen ? 90 : 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Search size={20} />
+                      </motion.div>
+                    </Button>
                   </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-blue-700/90 text-white border-blue-600">
+                  <div className="flex items-center gap-2">
+                    Поиск
+                    <kbd className="px-1.5 py-0.5 text-xs bg-white/20 rounded border">
+                      \
+                    </kbd>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             {/* Enhanced Notifications */}
             <DropdownMenu>
@@ -2092,6 +1956,205 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           onMouseLeave={handleHidePreview}
         />
       )}
+      {/* Overlay Search (оверлей поверх всей шапки) */}
+      <AnimatePresence>
+        {isSearchOpen && (
+          <motion.div
+            ref={searchResultsRef}
+            variants={searchResultsVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute left-0 top-0 w-full z-50 bg-white/95 backdrop-blur-xl shadow-xl border-b border-gray-200"
+            style={{ minHeight: '80px' }}
+          >
+            <div className="container mx-auto px-4 pt-4 pb-2">
+              <div className="relative max-w-xl mx-auto">
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Поиск... (нажмите \\ для быстрого доступа)"
+                  className="pr-10 h-12 focus:ring-2 focus:ring-blue-300 text-lg border-white/30 bg-white/80 backdrop-blur-sm text-gray-900 placeholder:text-gray-500 rounded-xl shadow"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onClick={() => setIsSearchOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchQuery.trim()) {
+                      router.push(`/admin/search?q=${encodeURIComponent(searchQuery)}`)
+                      setIsSearchOpen(false)
+                    }
+                  }}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg"
+                      onClick={() => {
+                        setSearchQuery("")
+                        searchInputRef.current?.focus()
+                      }}
+                    >
+                      <X size={14} />
+                    </Button>
+                  )}
+                  <div className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                    \
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="container mx-auto px-4 pb-4">
+              <div className="max-w-xl mx-auto">
+                <div className="overflow-y-auto max-h-[60vh]">
+                  {isSearching ? (
+                    <div className="flex items-center justify-center py-8">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-6 h-6 border-2 border-blue-300 border-t-blue-500 rounded-full mr-3"
+                      />
+                      <span className="text-sm text-gray-800">Поиск...</span>
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <>
+                      {searchResults.map((category, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="mb-4"
+                        >
+                          <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                            {category.icon}
+                            <span>{category.title}</span>
+                          </div>
+                          <div className="space-y-1">
+                            {category.results.map((result, idx) => (
+                              <motion.div
+                                key={`${result.type}-${result.id}`}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: (index * 0.1) + (idx * 0.05) }}
+                                whileHover={{
+                                  backgroundColor: "rgba(59, 130, 246, 0.1)",
+                                  x: 4,
+                                  transition: { duration: 0.2 },
+                                }}
+                                className="flex items-center gap-3 px-3 py-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-all duration-200"
+                                onClick={() => handleSearchResultClick(result)}
+                              >
+                                <div className="flex-shrink-0">{result.icon}</div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate text-gray-800">{result.title}</p>
+                                  {result.subtitle && (
+                                    <p className="text-xs text-gray-500 truncate">{result.subtitle}</p>
+                                  )}
+                                </div>
+                                <motion.div
+                                  whileHover={{ x: 3, scale: 1.1 }}
+                                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                >
+                                  <ExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                </motion.div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </>
+                  ) : searchQuery ? (
+                    <div className="text-center py-8 px-4">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Search className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                        <p className="text-sm text-gray-800 mb-2">Ничего не найдено по запросу "{searchQuery}"</p>
+                        <p className="text-xs text-gray-500">
+                          Попробуйте изменить запрос или выбрать из истории поиска
+                        </p>
+                      </motion.div>
+                    </div>
+                  ) : recentSearches.length > 0 ? (
+                    <div>
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                          <Clock className="h-4 w-4" />
+                          <span>Недавние поиски</span>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setRecentSearches([])
+                            localStorage.setItem("recentSearches", JSON.stringify([]))
+                          }}
+                          className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+                        >
+                          Очистить
+                        </motion.button>
+                      </div>
+                      <div className="space-y-1">
+                        {recentSearches.map((query, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            whileHover={{
+                              backgroundColor: "rgba(59, 130, 246, 0.1)",
+                              x: 4,
+                              transition: { duration: 0.2 },
+                            }}
+                            onClick={() => selectRecentSearch(query)}
+                            className="flex items-center gap-3 px-3 py-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-all duration-200"
+                          >
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-800">{query}</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                          <Search className="h-6 w-6 text-gray-400" />
+                          <Zap className="h-4 w-4 text-blue-500" />
+                        </div>
+                        <p className="text-sm text-gray-800 mb-2">Введите запрос для поиска</p>
+                        <p className="text-xs text-gray-500">
+                          Используйте <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">\\</kbd> для быстрого доступа
+                        </p>
+                      </motion.div>
+                    </div>
+                  )}
+                </div>
+                {searchQuery.trim() !== "" && (
+                  <div className="p-3 border-t border-gray-200">
+                    <Button
+                      variant="ghost"
+                      className="w-full text-sm text-gray-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                      onClick={() => { handleMenuLinkClick(`/admin/search?q=${encodeURIComponent(searchQuery)}`) }}
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Расширенный поиск по "{searchQuery}"
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   )
 }

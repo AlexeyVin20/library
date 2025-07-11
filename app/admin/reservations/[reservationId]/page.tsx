@@ -578,6 +578,15 @@ export default function ReservationDetailsPage({
     if (reservationId) {
       fetchReservation();
     }
+    // Добавляем слушатель событий для обновления экземпляров книги
+    const handleInstancesUpdate = (event) => {
+      // Можно добавить фильтрацию по bookId, если потребуется
+      fetchReservation();
+    };
+    window.addEventListener('bookInstancesUpdated', handleInstancesUpdate);
+    return () => {
+      window.removeEventListener('bookInstancesUpdated', handleInstancesUpdate);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservationId]);
 

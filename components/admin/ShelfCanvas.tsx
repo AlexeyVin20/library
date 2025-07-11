@@ -43,6 +43,7 @@ interface ShelfCanvasProps {
   aiArrangedBooks?: string[]
   onItemHoverStart?: (item: Book | Journal, isJournal: boolean, event: React.MouseEvent<HTMLDivElement>) => void
   onItemHoverEnd?: () => void
+  isReaderMode?: boolean
 }
 
 const ShelfCanvas = ({
@@ -72,6 +73,7 @@ const ShelfCanvas = ({
   aiArrangedBooks = [],
   onItemHoverStart,
   onItemHoverEnd,
+  isReaderMode = false,
 }: ShelfCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -230,39 +232,55 @@ const ShelfCanvas = ({
             }
 
             if (item) {
-              if (book) {
-                // Check if this book was arranged by AI
-                const isAiArranged = aiArrangedBooks.includes(book.id)
-                
-                // Highlight the book if it matches the highlighted ID
-                const isHighlighted = book.id === highlightedBookId
-                if (isHighlighted) {
-                  return "bg-yellow-400 border-2 border-yellow-600 shadow-lg animate-pulse"
+              // Check if this item was arranged by AI
+              const isAiArranged = aiArrangedBooks.includes(item.id)
+              
+              // Highlight the item if it matches the highlighted ID
+              const isHighlighted = (book && book.id === highlightedBookId)
+              if (isHighlighted) {
+                return "bg-yellow-400 border-2 border-yellow-600 shadow-lg animate-pulse"
+              }
+              
+              // Special styling for AI-arranged items
+              if (isAiArranged) {
+                return "bg-gradient-to-br from-green-400 to-blue-500 border-2 border-purple-400 shadow-lg hover:scale-105 hover:shadow-md animate-pulse"
+              }
+              
+              // Определяем цвет в зависимости от режима
+              if (isReaderMode) {
+                // В режиме читателя используем статус пользователя
+                if (book) {
+                  const userStatus = (book as any).userStatus;
+                  if (userStatus === 'borrowed') {
+                    return "bg-blue-500 hover:scale-105 hover:shadow-md" // Выданные книги - синий
+                  } else if (userStatus === 'approved') {
+                    return "bg-green-500 hover:scale-105 hover:shadow-md" // Одобренные книги - зеленый
+                  }
+                  return "bg-gray-400 hover:scale-105 hover:shadow-md" // Недоступные книги
+                } else if (journal) {
+                  const userStatus = (journal as any).userStatus;
+                  if (userStatus === 'borrowed') {
+                    return "bg-blue-500 hover:scale-105 hover:shadow-md" // Выданные журналы - синий
+                  } else if (userStatus === 'approved') {
+                    return "bg-green-500 hover:scale-105 hover:shadow-md" // Одобренные журналы - зеленый
+                  }
+                  return "bg-blue-500 hover:scale-105 hover:shadow-md" // По умолчанию журналы - синий
                 }
-                
-                // Special styling for AI-arranged books
-                if (isAiArranged) {
-                  return book.availableCopies && book.availableCopies > 0
-                    ? "bg-gradient-to-br from-green-400 to-blue-500 border-2 border-purple-400 shadow-lg hover:scale-105 hover:shadow-md animate-pulse"
-                    : "bg-gradient-to-br from-red-400 to-blue-500 border-2 border-purple-400 shadow-lg hover:scale-105 hover:shadow-md animate-pulse"
-                }
-                
-                return book.availableCopies && book.availableCopies > 0
-                  ? "bg-green-500 hover:scale-105 hover:shadow-md"
-                  : "bg-red-500 hover:scale-105 hover:shadow-md"
               } else {
-                // Check if this journal was arranged by AI (journals can also be arranged)
-                const isAiArranged = aiArrangedBooks.includes(journal!.id)
-                if (isAiArranged) {
-                  return "bg-gradient-to-br from-blue-400 to-purple-500 border-2 border-purple-400 shadow-lg hover:scale-105 hover:shadow-md animate-pulse"
+                // В административном режиме используем доступность
+                if (book) {
+                  const hasAvailableInstances = book.availableCopies && book.availableCopies > 0;
+                  return hasAvailableInstances 
+                    ? "bg-green-500 hover:scale-105 hover:shadow-md" // Доступные книги - зеленый
+                    : "bg-red-500 hover:scale-105 hover:shadow-md"; // Недоступные книги - красный
+                } else if (journal) {
+                  // Журналы всегда синие в административном режиме
+                  return "bg-blue-500 hover:scale-105 hover:shadow-md"
                 }
-                return "bg-blue-500 hover:scale-105 hover:shadow-md" // Journals
               }
             }
             return "bg-gray-200 hover:bg-gray-300"
           }
-
-          const hasInstances = book && (book.instancesOnShelf ?? 0) > 1
 
           return (
             <div
@@ -291,8 +309,8 @@ const ShelfCanvas = ({
               onMouseEnter={(e) => item && onItemHoverStart?.(item, !!journal, e)}
               onMouseLeave={() => item && onItemHoverEnd?.()}
             >
-              {/* Отображение количества экземпляров для книг */}
-              {hasInstances && (
+              {/* Отображение количества экземпляров для книг только для админов */}
+              {!isReaderMode && book && (book.instancesOnShelf ?? 0) > 1 && (
                 <div className="absolute -top-1 -right-1 bg-white text-black text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center border border-gray-300 shadow-md">
                   {book.instancesOnShelf}
                 </div>
@@ -477,26 +495,28 @@ const ShelfCanvas = ({
 
                     {renderShelfContent(shelf)}
 
-                    <div className="mt-3 flex space-x-2">
-                      <motion.button
-                        onClick={() => onShelfEdit(shelf)}
-                        className="bg-yellow-400 hover:bg-yellow-600 text-gray-800 rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        Изменить
-                      </motion.button>
-                      <motion.button
-                        onClick={() => {
-                          if (confirm("Вы уверены, что хотите удалить эту полку?")) onShelfDelete(shelf.id)
-                        }}
-                        className="bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        Удалить
-                      </motion.button>
-                    </div>
+                    {!isReaderMode && (
+                      <div className="mt-3 flex space-x-2">
+                        <motion.button
+                          onClick={() => onShelfEdit(shelf)}
+                          className="bg-yellow-400 hover:bg-yellow-600 text-gray-800 rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Изменить
+                        </motion.button>
+                        <motion.button
+                          onClick={() => {
+                            if (confirm("Вы уверены, что хотите удалить эту полку?")) onShelfDelete(shelf.id)
+                          }}
+                          className="bg-red-500 hover:bg-red-700 text-white rounded-lg shadow-sm hover:shadow-md px-2 py-1 text-xs flex items-center gap-1"
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Удалить
+                        </motion.button>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )

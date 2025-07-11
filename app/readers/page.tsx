@@ -36,7 +36,7 @@ interface Book {
 }
 
 interface CarouselBook {
-  id: number
+  id: string
   title: string
   author: string
   cover: string
@@ -47,7 +47,7 @@ interface CarouselBook {
 }
 
 const toCarouselBook = (book: Book): CarouselBook => ({
-  id: parseInt(book.id, 10) || 0, // Fallback to 0 if NaN
+  id: book.id, // теперь строка из БД
   title: book.title,
   author: book.authors || "Неизвестный автор",
   cover: book.cover || "/placeholder.svg",
