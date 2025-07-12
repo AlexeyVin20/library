@@ -11,10 +11,10 @@ interface UserRoleCheck {
 }
 
 // Константы для ролей
-const SHELF_ACCESS_ROLES = ['Admin', 'Librarian', 'Employee', 'Библиотекарь', 'Сотрудник', 'Админ']
-const ADMIN_ROLES = ['Admin', 'Админ']
-const LIBRARIAN_ROLES = ['Librarian', 'Библиотекарь']
-const EMPLOYEE_ROLES = ['Employee', 'Сотрудник']
+const SHELF_ACCESS_ROLES = ['Библиотекарь', 'Сотрудник', 'Администратор']
+const ADMIN_ROLES = ['Администратор']
+const LIBRARIAN_ROLES = ['Библиотекарь']
+const EMPLOYEE_ROLES = ['Сотрудник']
 
 export const useUserRoles = (): UserRoleCheck => {
   const { user } = useAuth()

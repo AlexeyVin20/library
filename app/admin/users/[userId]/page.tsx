@@ -198,7 +198,24 @@ export default function UserDetailPage() {
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
-      const [userResponse, borrowedBooksResponse, reservationsResponse, userRolesResponse, rolesResponse] = await Promise.all([fetch(`${baseUrl}/api/User/${userId}`), fetch(`${baseUrl}/api/User/${userId}`), fetch(`${baseUrl}/api/Reservation?userId=${userId}`), fetch(`${baseUrl}/api/User/${userId}/roles`), fetch(`${baseUrl}/api/User/roles`)]);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error("Токен авторизации не найден");
+      }
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+
+      const [userResponse, borrowedBooksResponse, reservationsResponse, userRolesResponse, rolesResponse] = await Promise.all([
+        fetch(`${baseUrl}/api/User/${userId}`, { headers }), 
+        fetch(`${baseUrl}/api/User/${userId}`, { headers }), 
+        fetch(`${baseUrl}/api/Reservation?userId=${userId}`, { headers }), 
+        fetch(`${baseUrl}/api/User/${userId}/roles`, { headers }), 
+        fetch(`${baseUrl}/api/User/roles`, { headers })
+      ]);
+
       if (!userResponse.ok) throw new Error("Ошибка при загрузке пользователя");
       const userData = await userResponse.json();
       setUser(userData);
@@ -214,7 +231,7 @@ export default function UserDetailPage() {
             };
             if (bookToUpdate.id) {
               try {
-                const bookDetailsRes = await fetch(`${baseUrl}/api/books/${bookToUpdate.id}`);
+                const bookDetailsRes = await fetch(`${baseUrl}/api/books/${bookToUpdate.id}`, { headers });
                 if (bookDetailsRes.ok) {
                   const detailedBookData = await bookDetailsRes.json();
                   const coverUrl = detailedBookData.cover || detailedBookData.coverImage || detailedBookData.coverImageUrl || detailedBookData.image || detailedBookData.coverUrl || detailedBookData.imageUrl || bookToUpdate.cover || "";
@@ -243,7 +260,7 @@ export default function UserDetailPage() {
           let enrichedBookDetails = res.book;
           if (res.bookId) {
             try {
-              const bookDetailsRes = await fetch(`${baseUrl}/api/books/${res.bookId}`);
+              const bookDetailsRes = await fetch(`${baseUrl}/api/books/${res.bookId}`, { headers });
               if (bookDetailsRes.ok) {
                 const detailedBookData = await bookDetailsRes.json();
                 const coverUrl = detailedBookData.cover || detailedBookData.coverImage || detailedBookData.coverImageUrl || detailedBookData.image || detailedBookData.coverUrl || detailedBookData.imageUrl || "";
@@ -255,7 +272,7 @@ export default function UserDetailPage() {
                 };
               }
             } catch (bookErr) {
-              console.warn(`Не удалось загрузить детали для книги ${res.bookId} в резервации ${res.id}`);
+              console.warn(`Не удалось загрузить детали для книги ${res.bookId} в резервировании ${res.id}`);
             }
           }
           let displayStatus = res.status;
@@ -287,9 +304,7 @@ export default function UserDetailPage() {
         try {
           const updateResponse = await fetch(`${baseUrl}/api/User/${userId}/update-borrowed-count`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
+            headers,
             body: JSON.stringify({
               borrowedBooksCount: allBooksOnHold.length
             })
@@ -327,8 +342,11 @@ export default function UserDetailPage() {
   }, [userId, fetchUserData]);
   const handleDeleteUser = async () => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error("Токен авторизации не найден");
       const response = await fetch(`${baseUrl}/api/User/${userId}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error("Ошибка при удалении пользователя");
       router.push("/admin/users");
@@ -343,11 +361,16 @@ export default function UserDetailPage() {
       return;
     }
     try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error("Токен авторизации не найден");
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+
       const response = await fetch(`${baseUrl}/api/User/assign-role`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers,
         body: JSON.stringify({
           userId: userId,
           roleId: selectedRoleId
@@ -355,7 +378,7 @@ export default function UserDetailPage() {
       });
       if (!response.ok) throw new Error("Ошибка при назначении роли");
       // Получаем свежие данные пользователя
-      const userRes = await fetch(`${baseUrl}/api/User/${userId}`);
+      const userRes = await fetch(`${baseUrl}/api/User/${userId}`, { headers });
       if (userRes.ok) {
         const userData = await userRes.json();
         // Найти лимиты для выбранной роли
@@ -372,7 +395,7 @@ export default function UserDetailPage() {
           };
           await fetch(`${baseUrl}/api/User/${userId}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify(updateDto),
           });
         }
@@ -387,10 +410,13 @@ export default function UserDetailPage() {
   const handleRemoveRole = async (roleId: number) => {
     if (!confirm("Вы уверены, что хотите удалить эту роль у пользователя?")) return;
     try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error("Токен авторизации не найден");
       const response = await fetch(`${baseUrl}/api/User/remove-role`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId: userId,
@@ -630,7 +656,7 @@ export default function UserDetailPage() {
             </div> : <p className="text-gray-500 text-center py-4">Пользователь не имеет книг на руках</p>}
         </Section>
 
-        <Section title="Резервации пользователя" delay={0.5}>
+        <Section title="Резервирования пользователя" delay={0.5}>
           {reservations.filter(r => r.userId === userId).length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {reservations.filter(r => r.userId === userId).sort((a, b) => {
             const activeStatuses = ['Обрабатывается', 'Выдана'];
@@ -660,7 +686,7 @@ export default function UserDetailPage() {
                     <motion.button whileHover={{
                 scale: 1.05
               }} className="mt-3 w-full bg-blue-500 hover:bg-blue-700 text-white text-sm font-medium rounded-lg py-1.5 shadow-md">
-                      К резервации
+                      К резервированию
                     </motion.button>
                   </Link>
                 </motion.div>)}

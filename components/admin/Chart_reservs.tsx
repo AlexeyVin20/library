@@ -856,7 +856,7 @@ export function ReservationsChart({ reservations }: ReservationsChartProps) {
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Успешность</p>
                 <p className="text-lg font-semibold text-green-600">
-                  {((totalStats.issued / totalReservations) * 100).toFixed(1)}%
+                  {(((totalStats.issued ?? 0) + (totalStats.returned ?? 0)) / totalReservations * 100).toFixed(1)}%
                 </p>
               </div>
             )}

@@ -93,6 +93,22 @@ interface Book {
   instances?: BookInstance[];
 }
 
+interface UserData {
+  id: string;
+  fullName: string;
+  email: string;
+  username: string;
+  borrowedBooksCount: number;
+  maxBooksAllowed: number;
+  fineAmount: number;
+  isActive: boolean;
+  phone?: string;
+  role?: string;
+  userRoles?: { roleId: number; roleName: string }[];
+  reservations?: any[];
+  avatarUrl?: string;
+}
+
 // Интерфейс для данных предварительного просмотра API
 interface PreviewData {
   title: string;
@@ -290,10 +306,11 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
   const [hasError, setHasError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [bookData, setBookData] = useState<Book | null>(null);
-  const [isFetchingBook, setIsFetchingBook] = useState(true);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const dragControls = useDragControls();
 
-  const bookId = route.split('/').pop();
+  const entityId = route.split('/').pop();
   
   // Данные для разных режимов
   const quickContent = getQuickPreviewContent(route);
@@ -337,8 +354,8 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
   }, [isVisible, delay, displayMode]);
 
   useEffect(() => {
-    if (displayMode === 'api' && isVisible && bookId && route.includes('/books/')) {
-      setIsFetchingBook(true);
+    if (displayMode === 'api' && isVisible && entityId && route.includes('/books/')) {
+      setIsFetchingData(true);
       const fetchBookWithInstances = async () => {
         try {
           const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
@@ -352,8 +369,8 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
           }
 
           const [bookResponse, instancesResponse] = await Promise.all([
-            fetch(`${baseUrl}/api/books/${bookId}`, { headers }),
-            fetch(`${baseUrl}/api/BookInstance?bookId=${bookId}`, { headers })
+            fetch(`${baseUrl}/api/books/${entityId}`, { headers }),
+            fetch(`${baseUrl}/api/BookInstance?bookId=${entityId}`, { headers })
           ]);
 
           if (bookResponse.ok) {
@@ -370,15 +387,51 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
           console.error("Failed to fetch book data for preview:", error);
           setBookData(null);
         } finally {
-          setIsFetchingBook(false);
+          setIsFetchingData(false);
         }
       };
       fetchBookWithInstances();
     } else if (displayMode !== 'api' || !route.includes('/books/')) {
-      setIsFetchingBook(false);
+      setIsFetchingData(false);
       setBookData(null);
     }
-  }, [displayMode, isVisible, bookId, route]);
+  }, [displayMode, isVisible, entityId, route]);
+
+  useEffect(() => {
+    if (displayMode === 'api' && isVisible && entityId && route.includes('/users/') && !route.includes('quick-overview')) {
+      setIsFetchingData(true);
+      const fetchUserData = async () => {
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+          const token = localStorage.getItem('token');
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          const [userResponse, reservationsResponse] = await Promise.all([
+            fetch(`${baseUrl}/api/User/${entityId}`, { headers }),
+            fetch(`${baseUrl}/api/Reservation?userId=${entityId}`, { headers })
+          ]);
+
+          if (userResponse.ok) {
+            const fetchedUserData = await userResponse.json();
+            const userReservations = reservationsResponse.ok ? await reservationsResponse.json() : [];
+            setUserData({ ...fetchedUserData, reservations: userReservations });
+          } else {
+            setUserData(null);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user data for preview:", error);
+          setUserData(null);
+        } finally {
+          setIsFetchingData(false);
+        }
+      };
+      fetchUserData();
+    } else {
+        setUserData(null);
+    }
+  }, [displayMode, isVisible, entityId, route]);
+
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -486,7 +539,7 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
               {/* API Preview Mode for Books */}
               {displayMode === 'api' && route.includes('/books/') && (
                 <div className="h-full overflow-y-auto bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-900/20 dark:via-teal-900/20 dark:to-cyan-900/20">
-                  {isFetchingBook ? (
+                  {isFetchingData ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                     </div>
@@ -731,8 +784,75 @@ export const IframePagePreviewCentered: React.FC<IframePagePreviewCenteredProps>
                 </div>
               )}
 
+              {/* API Preview Mode for Users */}
+              {displayMode === 'api' && route.includes('/users/') && !route.includes('quick-overview') && (
+                 <div className="h-full overflow-y-auto bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-900/20 dark:via-purple-900/20 dark:to-pink-900/20">
+                  {isFetchingData ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                    </div>
+                  ) : userData ? (
+                    <div className="p-4 space-y-3">
+                       <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-indigo-200/50 dark:border-indigo-700/50">
+                        <div className="flex items-center gap-4 mb-3">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
+                            {userData.avatarUrl ? <img src={userData.avatarUrl} alt={userData.fullName} className="w-full h-full rounded-full object-cover" /> : userData.fullName?.charAt(0)}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 line-clamp-2">{userData.fullName}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{userData.email}</p>
+                          </div>
+                        </div>
+                         <div className="flex flex-wrap gap-2 mb-4">
+                           <a href={`/admin/users/${userData.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-xs font-medium transition-colors">
+                            <Eye className="w-3.5 h-3.5" />
+                            Профиль
+                          </a>
+                           <a href={`/admin/users/${userData.id}/update`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition-colors">
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Редактировать
+                          </a>
+                        </div>
+                         <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg">
+                            <div className="text-xs text-indigo-800 dark:text-indigo-300 font-medium">Телефон</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">{userData.phone || 'Не указан'}</div>
+                          </div>
+                          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg">
+                            <div className="text-xs text-indigo-800 dark:text-indigo-300 font-medium">Почта</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">{userData.email || 'Не указан'}</div>
+                          </div>
+                          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg">
+                            <div className="text-xs text-indigo-800 dark:text-indigo-300 font-medium">Роль</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">{userData.userRoles?.[0]?.roleName || 'Не указана'}</div>
+                          </div>
+                          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg">
+                            <div className="text-xs text-indigo-800 dark:text-indigo-300 font-medium">Статус</div>
+                            <div className={`font-semibold ${userData.isActive ? 'text-green-600' : 'text-red-600'}`}>{userData.isActive ? 'Активен' : 'Не активен'}</div>
+                          </div>
+                          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg">
+                            <div className="text-xs text-indigo-800 dark:text-indigo-300 font-medium">Книг на руках</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">{userData.borrowedBooksCount} / {userData.maxBooksAllowed}</div>
+                          </div>
+                          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-lg">
+                            <div className="text-xs text-indigo-800 dark:text-indigo-300 font-medium">Штраф</div>
+                            <div className="font-semibold text-red-500">{userData.fineAmount > 0 ? `${userData.fineAmount} ₽` : 'Нет'}</div>
+                          </div>
+                          
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-red-500">
+                        <AlertCircle className="w-6 h-6 mr-2" />
+                        <span>Не удалось загрузить информацию о пользователе.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* API Preview Mode for Other Pages */}
-              {displayMode === 'api' && !route.includes('/books/') && (
+              {displayMode === 'api' && !route.includes('/books/') && !route.includes('/users/') && (
                 <div className="h-full overflow-y-auto bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-red-900/20 p-4">
                   {apiData.loading ? (
                     <div className="flex items-center justify-center h-full">

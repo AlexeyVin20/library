@@ -86,6 +86,13 @@ export default function CreateUserPage() {
     setError(null);
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error("Токен авторизации не найден");
+      const headers = { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      };
+
       // Подготавливаем данные для отправки
       const dataToSend = {
         ...formData,
@@ -102,7 +109,7 @@ export default function CreateUserPage() {
       // Создаём пользователя без ролей
       const response = await fetch(`${baseUrl}/api/User`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(dataToSend),
       });
       
@@ -116,7 +123,7 @@ export default function CreateUserPage() {
       // Назначаем роль "Сотрудник" после создания пользователя
       const assignRoleResponse = await fetch(`${baseUrl}/api/User/assign-role`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           userId: newUser.id,
           roleId: USER_ROLES.EMPLOYEE.id

@@ -25,7 +25,17 @@ import { Input } from "@/components/ui/input";
 import { Book } from "@/components/ui/book";
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Токен аутентификации не найден.");
+  }
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
   if (!res.ok) {
     const error = new Error("Произошла ошибка при загрузке данных");
     try {

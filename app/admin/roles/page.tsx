@@ -80,9 +80,17 @@ function UsersRolesTable() {
     const fetchData = async () => {
       setLoading(true);
       try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("Токен авторизации не найден");
+        }
+        const headers = {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        };
         const [usersRes, rolesRes] = await Promise.all([
-          fetch(`${baseUrl}/api/User/users-with-roles`),
-          fetch(`${baseUrl}/api/User/roles`)
+          fetch(`${baseUrl}/api/User/users-with-roles`, { headers }),
+          fetch(`${baseUrl}/api/User/roles`, { headers })
         ]);
         if (!usersRes.ok) throw new Error("Ошибка при загрузке пользователей");
         if (!rolesRes.ok) throw new Error("Ошибка при загрузке ролей");
@@ -110,6 +118,14 @@ function UsersRolesTable() {
   const handleAssignRole = async () => {
     if (!selectedRoleId || selectedUserIds.length === 0) return;
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден");
+      }
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
       const response = await fetch(`${baseUrl}/api/User/assign-roles`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -117,7 +133,7 @@ function UsersRolesTable() {
       });
       if (!response.ok) throw new Error("Ошибка при присвоении роли");
       // обновить пользователей
-      const usersRes = await fetch(`${baseUrl}/api/User/users-with-roles`);
+      const usersRes = await fetch(`${baseUrl}/api/User/users-with-roles`, { headers });
       if (!usersRes.ok) throw new Error("Ошибка при обновлении пользователей");
       const usersData = await usersRes.json();
       setUsers(usersData);
@@ -232,7 +248,15 @@ export default function RolesPage() {
   const fetchRoles = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${baseUrl}/api/User/roles`);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден");
+      }
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+      const response = await fetch(`${baseUrl}/api/User/roles`, { headers });
       if (!response.ok) throw new Error("Ошибка при загрузке ролей");
       const rolesData = await response.json();
       setRoles(rolesData);
@@ -251,6 +275,14 @@ export default function RolesPage() {
       return;
     }
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден");
+      }
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
       const response = await fetch(`${baseUrl}/api/User/roles`, {
         method: "POST",
         headers: {
@@ -279,6 +311,14 @@ export default function RolesPage() {
       return;
     }
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден");
+      }
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
       const response = await fetch(`${baseUrl}/api/User/roles/${editingRole.id}`, {
         method: "PUT",
         headers: {

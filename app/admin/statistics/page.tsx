@@ -299,15 +299,35 @@ export default function StatisticsPage() {
 
   // Ref для отслеживания скролла
   const containerRef = useRef<HTMLDivElement>(null);
-  const {
-    scrollYProgress
-  } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"]
-  });
-  const opacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.1], [1, 0.95]);
-  const y = useTransform(scrollYProgress, [0, 0.1], [0, -20]);
+
+  // Исправление ошибки hydration для useScroll
+  const [opacity, setOpacity] = useState(1);
+  const [scale, setScale] = useState(1);
+  const [y, setY] = useState(0);
+
+  useEffect(() => {
+    // Динамически импортируем useScroll/useTransform только на клиенте
+    let unsub = null;
+    import('framer-motion').then(({ useScroll, useTransform }) => {
+      if (containerRef.current) {
+        const { scrollYProgress } = useScroll({
+          target: containerRef,
+          offset: ["start start", "end end"]
+        });
+        const update = () => {
+          setOpacity(useTransform(scrollYProgress, [0, 0.1], [1, 0]).get());
+          setScale(useTransform(scrollYProgress, [0, 0.1], [1, 0.95]).get());
+          setY(useTransform(scrollYProgress, [0, 0.1], [0, -20]).get());
+        };
+        unsub = scrollYProgress.on("change", update);
+        update();
+      }
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, []);
+
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
   // Расчет базовой статистики
@@ -403,7 +423,15 @@ export default function StatisticsPage() {
         });
 
         // Загрузка пользователей
-        const usersResponse = await fetch(`${baseUrl}/api/User`);
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("Токен авторизации не найден");
+        }
+        const headers = {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        };
+        const usersResponse = await fetch(`${baseUrl}/api/User`, { headers });
         if (!usersResponse.ok) throw new Error("Ошибка при загрузке пользователей");
         const usersData = await usersResponse.json();
         setUsers(usersData);
@@ -1161,6 +1189,7 @@ ${JSON.stringify(libraryData)}
       console.error('Ошибка при копировании: ', err);
     });
   };
+
   if (loading) return <LoadingSpinner />;
   if (error) return <motion.div initial={{
     opacity: 0

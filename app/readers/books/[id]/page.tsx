@@ -12,8 +12,6 @@ import { Calendar as CalendarIcon, BookOpen, Heart, Share2, Calendar, User, Book
 import { useAuth } from "@/lib/auth";
 import { getHighestPriorityRole } from "@/lib/types";
 import { Calendar as UiCalendar } from "@/components/ui/calendar";
-import QueuePosition from "@/components/ui/queue-position";
-import QueueDisplay from "@/components/admin/QueueDisplay";
 import { format, addDays } from "date-fns";
 import { ru } from 'date-fns/locale';
 
@@ -476,33 +474,6 @@ export default function BookDetailsPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Компонент очереди для пользователя */}
-                {currentUserId && (
-                  <div key={queueUpdateKey} className="mt-6">
-                    <QueuePosition
-                      bookId={book.id}
-                      userId={currentUserId}
-                      bookTitle={book.title}
-                      availableCopies={book.availableCopies}
-                      isReserved={isBookEffectivelyReservedByCurrentUser}
-                      onQueueUpdate={handleQueueUpdate}
-                      maxReservationDays={maxReservationDays}
-                    />
-                  </div>
-                )}
-
-                                 {/* Отображение очереди на книгу (без персональных данных для обычных пользователей) */}
-                 <div className="mt-6">
-                   <QueueDisplay
-                     bookId={book.id}
-                     bookTitle={book.title}
-                     showControls={false} // Обычные пользователи не могут управлять очередью
-                     onQueueUpdate={handleQueueUpdate}
-                     maxVisibleItems={3}
-                     showUserNames={false} // Скрываем имена пользователей для обычных читателей
-                   />
-                 </div>
               </div>
             </FadeInView>
           </div>

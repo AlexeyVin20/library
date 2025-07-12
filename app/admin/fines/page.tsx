@@ -26,7 +26,13 @@ import { Input } from "@/components/ui/input";
 import { CreateFineDialog } from "@/components/ui/fine-creation-modal";
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Токен аутентификации не найден.");
+  }
+  const res = await fetch(url, {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
   if (!res.ok) {
     const error = new Error("Произошла ошибка при загрузке данных");
     try {
@@ -192,7 +198,7 @@ const UserFineCard = ({
     isLoading: loading 
   } = useSWR<UserFineData>(
     expanded ? `${baseUrl}/api/User/${user.id}/fines` : null, 
-    fetcherWithToken
+    fetcherWithToken 
   );
 
   const handleToggleExpand = () => {

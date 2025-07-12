@@ -3,13 +3,15 @@
 import type React from "react";
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Users, UserPlus, ChevronRight, ArrowRight, ChevronLeft, Shield, BookOpen } from "lucide-react";
+import { Users, UserPlus, ChevronRight, ArrowRight, ChevronLeft, Shield, BookOpen, LucideUser, LucideUserRound, LucideBook } from "lucide-react";
 
 import { CreateUserDialog } from "@/components/ui/user-creation-modal";
 import { USER_ROLES } from "@/lib/types";
+import GlassCard from "@/components/glass-card";
+import IframePagePreviewCentered from "@/components/ui/iframe-page-preview-centered";
 
 // CSS для анимации строк таблицы
 const fadeInAnimation = `
@@ -68,47 +70,6 @@ const FadeInView = ({
 }}>
     {children}
   </motion.div>;
-const StatCard = ({
-  title,
-  value,
-  subtitle,
-  icon,
-  color,
-  delay = 0
-}: {
-  title: string;
-  value: number;
-  subtitle: string;
-  icon: React.ReactNode;
-  color: string;
-  delay?: number;
-}) => <FadeInView delay={delay}>
-    <motion.div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-gray-200 relative overflow-hidden" whileHover={{
-    y: -5,
-    boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05)"
-  }}>
-      <div className={`absolute top-0 left-0 w-1.5 h-full ${color}`}></div>
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-          {icon}
-          {title}
-        </h3>
-        <div className={`w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shadow-inner`}>
-          {icon}
-        </div>
-      </div>
-      <div>
-        <p className={`text-4xl font-bold mb-2 ${color.replace("bg-", "text-")}`}>{value}</p>
-        <p className="text-sm text-gray-500">{subtitle}</p>
-      </div>
-      <Link href="/admin/statistics" className="mt-4">
-        <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center">
-          Подробная статистика
-          <ArrowRight className="w-4 h-4 ml-1" />
-        </span>
-      </Link>
-    </motion.div>
-  </FadeInView>;
 const LoadingSpinner = () => <div className="flex flex-col justify-center items-center h-screen">
     <motion.div animate={{
     rotate: 360
@@ -174,6 +135,11 @@ export default function AllUsersPage() {
   const [isAssigningRole, setIsAssigningRole] = useState(false);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
+  const [hoverState, setHoverState] = useState<{ id: string | null; position: "left" | "right" | "top" | "bottom"; coords: { top: number; left: number } }>({ id: null, position: "right", coords: { top: 0, left: 0 } });
+  const [previewState, setPreviewState] = useState<{ id: string | null; position: "left" | "right" | "top" | "bottom"; coords: { top: number; left: number } }>({ id: null, position: "right", coords: { top: 0, left: 0 } });
+  const [isPreviewHovered, setIsPreviewHovered] = useState(false);
+  const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
+
   // Вставка CSS анимации в DOM
   useEffect(() => {
     const styleElement = document.createElement("style");
@@ -197,7 +163,20 @@ export default function AllUsersPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [usersResponse, reservationsResponse] = await Promise.all([fetch(`${baseUrl}/api/User`), fetch(`${baseUrl}/api/Reservation`)]);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден");
+      }
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      const [usersResponse, reservationsResponse] = await Promise.all([
+        fetch(`${baseUrl}/api/User`, { headers }),
+        fetch(`${baseUrl}/api/Reservation`, { headers }),
+      ]);
+
       if (!usersResponse.ok) throw new Error("Ошибка при загрузке пользователей");
       if (!reservationsResponse.ok) throw new Error("Ошибка при загрузке резерваций");
       const usersData = await usersResponse.json();
@@ -213,6 +192,83 @@ export default function AllUsersPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleMouseEnter = (event: React.MouseEvent<HTMLTableCellElement>, userId: string) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const previewWidth = 500; // Ширина превью
+    const previewHeight = 900; // Высота превью
+    const previewMargin = 16; // Отступ
+
+    const hasSpaceOnRight = rect.right + previewMargin + previewWidth <= window.innerWidth;
+    const hasSpaceOnLeft = rect.left - previewMargin - previewWidth >= 0;
+    const hasSpaceOnBottom = rect.bottom + previewMargin + previewHeight <= window.innerHeight;
+    const hasSpaceOnTop = rect.top - previewMargin - previewHeight >= 0;
+
+    // Определяем наилучшую позицию и координаты
+    let position: "left" | "right" | "top" | "bottom" = "right";
+    let top = rect.top;
+    let left = rect.right + previewMargin;
+
+    if (hasSpaceOnRight) {
+      position = "right";
+      left = rect.right + previewMargin;
+      top = Math.max(previewMargin, Math.min(rect.top, window.innerHeight - previewHeight - previewMargin));
+    } else if (hasSpaceOnLeft) {
+      position = "left";
+      left = rect.left - previewWidth - previewMargin;
+      top = Math.max(previewMargin, Math.min(rect.top, window.innerHeight - previewHeight - previewMargin));
+    } else if (hasSpaceOnBottom) {
+      position = "bottom";
+      top = rect.bottom + previewMargin;
+      left = Math.max(previewMargin, Math.min(rect.left, window.innerWidth - previewWidth - previewMargin));
+    } else if (hasSpaceOnTop) {
+      position = "top";
+      top = rect.top - previewHeight - previewMargin;
+      left = Math.max(previewMargin, Math.min(rect.left, window.innerWidth - previewWidth - previewMargin));
+    } else {
+      // Если нигде не помещается полностью, показываем справа с корректировкой по краям
+      position = "right";
+      left = Math.min(rect.right + previewMargin, window.innerWidth - previewWidth - previewMargin);
+      top = Math.max(previewMargin, Math.min(rect.top, window.innerHeight - previewHeight - previewMargin));
+    }
+
+    setHoverState({ id: userId, position, coords: { top, left } });
+  };
+
+  const handleMouseLeave = () => {
+    // Задержка скрытия, чтобы дать время мыши перейти на превью
+    if (hoverTimeout.current) {
+      clearTimeout(hoverTimeout.current);
+    }
+    hoverTimeout.current = setTimeout(() => {
+      if (!isPreviewHovered) {
+        setPreviewState({ id: null, position: "right", coords: { top: 0, left: 0 } });
+      }
+    }, 200);
+  };
+  
+  useEffect(() => {
+    if (hoverTimeout.current) {
+      clearTimeout(hoverTimeout.current);
+    }
+    if (hoverState.id) {
+      hoverTimeout.current = setTimeout(() => {
+        setPreviewState(hoverState);
+      }, 700);
+    }
+    return () => {
+      if (hoverTimeout.current) {
+        clearTimeout(hoverTimeout.current);
+      }
+    };
+  }, [hoverState]);
+  
+  useEffect(() => {
+    if (!isPreviewHovered && previewState.id === null) {
+      setHoverState({ id: null, position: "right", coords: { top: 0, left: 0 } });
+    }
+  }, [isPreviewHovered, previewState.id]);
+
   const usersWithNextReturn = useMemo(() => users.map(user => {
     const userReservations = reservations.filter(r => r.userId === user.id && r.status === "Выполнена");
     const nextReservation = userReservations.length > 0 ? userReservations.sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime())[0] : null;
@@ -242,8 +298,13 @@ export default function AllUsersPage() {
   }), [users, reservations, totalBorrowed]);
   const handleDeleteUser = useCallback(async (id: string) => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Токен авторизации не найден");
       const response = await fetch(`${baseUrl}/api/User/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (!response.ok) throw new Error("Ошибка при удалении пользователя");
       setUsers(users.filter(user => user.id !== id));
@@ -256,12 +317,16 @@ export default function AllUsersPage() {
     try {
       // Убираем флаг назначения роли из данных пользователя
       const { _assignEmployeeRole, ...userDataToSend } = userData;
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Токен авторизации не найден");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
       
       const response = await fetch(`${baseUrl}/api/User`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(userDataToSend),
       });
 
@@ -277,7 +342,7 @@ export default function AllUsersPage() {
         try {
           const assignRoleResponse = await fetch(`${baseUrl}/api/User/assign-role`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               userId: newUser.id,
               roleId: USER_ROLES.EMPLOYEE.id
@@ -307,11 +372,15 @@ export default function AllUsersPage() {
       return;
     }
     try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Токен авторизации не найден");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
       const response = await fetch(`${baseUrl}/api/User/assign-role`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers,
         body: JSON.stringify({
           userId: user.id,
           roleId: selectedRoleId
@@ -323,7 +392,7 @@ export default function AllUsersPage() {
       if (roleObj) {
         await fetch(`${baseUrl}/api/User/${user.id}/update-limits`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             maxBooksAllowed: roleObj.maxBooksAllowed,
             loanPeriodDays: roleObj.loanPeriodDays
@@ -428,9 +497,23 @@ export default function AllUsersPage() {
           </div>
         </FadeInView>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <StatCard title="Активные пользователи" value={activeUsersCount} subtitle={`из ${users.length} пользователей`} icon={<Users className="w-5 h-5 text-blue-500" />} color="bg-blue-500" delay={0.1} />
-          <StatCard title="Взято книг" value={totalBorrowed} subtitle="всего на руках" icon={<Users className="w-5 h-5 text-blue-500" />} color="bg-blue-500" delay={0.2} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Link href="/admin/statistics">
+            <GlassCard
+              title="Активные пользователи"
+              value={activeUsersCount}
+              subtitle={`из ${users.length} пользователей`}
+              icon={<LucideUserRound />}
+            />
+          </Link>
+          <Link href="/admin/users/quick-overview">
+            <GlassCard
+              title="Взято книг"
+              value={totalBorrowed}
+              subtitle="всего на руках"
+              icon={<LucideBook />}
+            />
+          </Link>
         </div>
 
         
@@ -475,7 +558,10 @@ export default function AllUsersPage() {
                         animation: `fadeIn 0.5s ease-out ${0.1 * index}s forwards`,
                         height: 56 // фиксированная высота строки
                       }}>
-                        <td className="px-6 py-4 text-gray-800 align-middle">{user.fullName}</td>
+                        <td className="px-6 py-4 text-gray-800 align-middle cursor-pointer"
+                          onMouseEnter={(e) => handleMouseEnter(e, user.id)}
+                          onMouseLeave={handleMouseLeave}
+                        >{user.fullName}</td>
                         <td className="px-6 py-4 text-gray-800 align-middle">{user.email}</td>
                         <td className="px-6 py-4 text-gray-800 align-middle">{user.borrowedBooksCount}/{user.maxBooksAllowed}</td>
                         <td className="px-6 py-4 text-gray-800 align-middle">
@@ -520,6 +606,18 @@ export default function AllUsersPage() {
         open={createUserDialogOpen}
         onOpenChange={setCreateUserDialogOpen}
         onCreateUser={handleCreateUser}
+      />
+      <IframePagePreviewCentered 
+        route={previewState.id ? `/admin/users/${previewState.id}` : ''}
+        isVisible={!!previewState.id}
+        delay={0}
+        displayMode="api"
+        coords={previewState.coords || { top: 0, left: 0 }}
+        onMouseEnter={() => setIsPreviewHovered(true)}
+        onMouseLeave={() => {
+            setIsPreviewHovered(false);
+            setPreviewState({ id: null, position: "right", coords: { top: 0, left: 0 } });
+        }}
       />
     </div>;
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { BookOpen, Users, AlertCircle, TrendingUp, CalendarIcon, ChevronRight, BarChart3, Layers, ArrowRight, Shield, ChevronDown, ChevronUp, Activity, Bookmark, PieChart, Sparkles, Clock, X, CheckCircle, XCircle } from "lucide-react";
+import { BookOpen, Users, AlertCircle, TrendingUp, CalendarIcon, ChevronRight, BarChart3, Layers, ArrowRight, Shield, ChevronDown, ChevronUp, Activity, Bookmark, PieChart, Sparkles, Clock, X, CheckCircle, XCircle, LucideWallet, LucideBook, LucideCircleUser } from "lucide-react";
 import React from "react";
 import { FloatingActionPanelRoot, FloatingActionPanelTrigger, FloatingActionPanelContent, FloatingActionPanelButton } from "@/components/ui/floating-action-panel";
 import { PinContainer } from "@/components/ui/3d-pin";
@@ -11,8 +11,8 @@ import { PixelCanvas } from "@/components/ui/pixel-canvas";
 import type { DateRange } from "react-day-picker";
 import { QuickActionsMenu } from "@/components/admin/QuickActionsMenu";
 import { ReservationsChart } from "@/components/admin/Chart_reservs";
-import { RecentActivitiesTable } from "@/components/admin/RecentActivitiesTable";
-import EventCalendar from "@/components/admin/EventCalendar";
+import InteractiveCalendar from "@/components/visualize-booking";
+import GlassCard from "@/components/glass-card";
 
 // Определение типов
 interface User {
@@ -464,10 +464,7 @@ export default function DashboardPage() {
 
   // Ref для отслеживания скролла
   const containerRef = useRef<HTMLDivElement>(null);
-  const {
-    scrollYProgress
-  } = useScroll({
-    target: containerRef,
+  const { scrollYProgress } = useScroll({
     offset: ["start start", "end end"]
   });
   const opacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
@@ -485,7 +482,21 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [usersResponse, booksResponse, journalsResponse, reservationsResponse] = await Promise.all([fetch(`${baseUrl}/api/User`), fetch(`${baseUrl}/api/Books`), fetch(`${baseUrl}/api/Journals`), fetch(`${baseUrl}/api/Reservation`)]);
+        const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации не найден");
+      }
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      const [usersResponse, reservationsResponse, booksResponse, journalsResponse] = await Promise.all([
+        fetch(`${baseUrl}/api/User`, { headers }),
+        fetch(`${baseUrl}/api/Reservation`, { headers }),
+        fetch(`${baseUrl}/api/Books`, { headers }),
+        fetch(`${baseUrl}/api/Journals`, { headers }),
+      ]);
         if (!usersResponse.ok) throw new Error("Ошибка при загрузке пользователей");
         const usersData = await usersResponse.json();
         setUsers(usersData);
@@ -609,124 +620,56 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto space-y-8 relative z-10 p-6">
         {/* Статистические карточки */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-stretch">
-          <PinContainer title="Книги" href="/admin/books" containerClassName="h-full w-full" className="h-full w-full">
-            <Link href="/admin/books" className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500 hover:shadow-xl transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <BookOpen className="text-blue-500 w-7 h-7" />
-                  Книги
-                </h3>
-                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center shadow-inner">
-                  <BookOpen className="text-white w-7 h-7" />
-                </div>
-              </div>
-              <div>
-                <p className="text-4xl font-bold mb-2 text-gray-800">
-                  <CountUp end={totalAvailableBooks} />
-                </p>
-                <p className="text-sm text-gray-500">доступных ресурсов</p>
-                <div className="mt-3 text-sm text-gray-500 flex items-center">
+          <Link href="/admin/books">
+            <GlassCard
+              title="Книги"
+              icon={< LucideBook/>}
+              value={<CountUp end={totalAvailableBooks} />}
+              subtitle="доступных ресурсов"
+              details={
+                <div className="flex items-center">
                   <span className="mr-1">+</span>
                   {recentBorrowed} <span className="ml-1">за последний месяц</span>
                 </div>
-              </div>
-            </Link>
-            <Link href="/admin/statistics" className="mt-4 block">
-              <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
-                Подробная статистика
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </span>
-            </Link>
-          </PinContainer>
-          <PinContainer title="Пользователи" href="/admin/users" containerClassName="h-full w-full" className="h-full w-full">
-            <Link href="/admin/users" className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500 hover:shadow-xl transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <Users className="text-blue-500 w-7 h-7" />
-                  Пользователи
-                </h3>
-                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center shadow-inner">
-                  <Users className="text-white w-7 h-7" />
-                </div>
-              </div>
-              <div>
-                <p className="text-4xl font-bold mb-2 text-gray-800">
-                  <CountUp end={activeUsersCount} />
-                </p>
-                <p className="text-sm text-gray-500">взяли книги</p>
-                <div className="mt-3 text-sm text-gray-500">
-                  {totalUsersCount ? Math.round(activeUsersCount / totalUsersCount * 100) : 0}% от общего числа
-                </div>
-              </div>
-            </Link>
-            <Link href="/admin/statistics" className="mt-4 block">
-              <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
-                Подробная статистика
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </span>
-            </Link>
-          </PinContainer>
-          <PinContainer title="Резервирования" href="/admin/reservations" containerClassName="h-full w-full" className="h-full w-full">
-            <Link href="/admin/reservations" className="flex flex-col justify-between h-full w-full bg-white rounded-xl p-6 border-2 border-blue-500 hover:shadow-xl transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <CalendarIcon className="text-blue-500 w-7 h-7" />
-                  Резервирования
-                </h3>
-                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center shadow-inner">
-                  <CalendarIcon className="text-white w-7 h-7" />
-                </div>
-              </div>
-              <div>
-                <p className="text-4xl font-bold mb-2 text-gray-800">
-                  <CountUp end={reservations.length} />
-                </p>
-                <p className="text-sm text-gray-500">всего заявок</p>
-                <div className="mt-3 text-sm text-gray-500 flex items-center">
+              }
+            />
+          </Link>
+          <Link href="/admin/users">
+             <GlassCard
+              title="Пользователи"
+              icon={<LucideCircleUser />}
+              value={<CountUp end={activeUsersCount} />}
+              subtitle="взяли книги"
+              details={
+                <>{totalUsersCount ? Math.round(activeUsersCount / totalUsersCount * 100) : 0}% от общего числа</>
+              }
+            />
+          </Link>
+          <Link href="/admin/reservations">
+            <GlassCard
+              title="Резервирования"
+              icon={<CalendarIcon />}
+              value={<CountUp end={reservations.length} />}
+              subtitle="всего заявок"
+              details={
+                <div className="flex items-center">
                   <span className="inline-block px-2 py-0.5 text-xs font-medium text-green-800 rounded-full bg-green-100">
                     {pendingReservations}
                   </span>
                   <span className="ml-2">в обработке</span>
                 </div>
-              </div>
-            </Link>
-            <Link href="/admin/statistics" className="mt-4 block">
-              <span className="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center cursor-pointer">
-                Подробная статистика
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </span>
-            </Link>
-          </PinContainer>
+              }
+            />
+          </Link>
         </div>
 
         {/* Улучшенный календарь событий */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="flex flex-col min-h-[500px]">
-            <EventCalendar
-              events={reservationEvents}
-              selectedRange={selectedRange}
-              onRangeChange={setSelectedRange}
-              showStatsModal={showStatsModal}
-              onToggleStatsModal={() => setShowStatsModal(!showStatsModal)}
-              quickRanges={quickRanges}
-            />
-          </div>
-          <div className="space-y-3 flex-1">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-blue-500" />
-              Недавно добавленные книги
-            </h3>
-            <div className="relative">
-              {recentBooks.length > 0 ? recentBooks.map((book, index) => <BookCard key={book.id} book={book} index={index} />) : <p className="text-gray-500">Нет доступных книг</p>}
-            </div>
-          </div>
+        <div className="w-full">
+          <InteractiveCalendar events={reservationEvents} />
         </div>
 
         {/* Последние активности с виртуализацией через react-virtuoso */}
         <ReservationsChart reservations={reservations} />
-        <Section title="Последние активности" delay={1.0}>
-          <RecentActivitiesTable data={recentActivities} />
-        </Section>
       </main>
     </div>;
 }

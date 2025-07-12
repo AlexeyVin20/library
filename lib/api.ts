@@ -268,10 +268,26 @@ const statistics = {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
       const [booksResponse, usersResponse, journalsResponse, reservationsResponse] = await Promise.all([
-        fetch(`${baseUrl}/api/Books`),
-        fetch(`${baseUrl}/api/User`),
-        fetch(`${baseUrl}/api/Journals`),
-        fetch(`${baseUrl}/api/Reservation`)
+        fetch(`${baseUrl}/api/Books`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        }),
+        fetch(`${baseUrl}/api/User`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        }),
+        fetch(`${baseUrl}/api/Journals`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        }),
+        fetch(`${baseUrl}/api/Reservation`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        })
       ]);
 
       // Проверяем успешность запросов

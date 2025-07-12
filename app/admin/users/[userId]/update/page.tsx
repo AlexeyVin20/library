@@ -86,7 +86,11 @@ export default function UpdateUserPage() {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${baseUrl}/api/User/${userId}`);
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error("Токен авторизации не найден");
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        const response = await fetch(`${baseUrl}/api/User/${userId}`, { headers });
         if (!response.ok) throw new Error("Ошибка загрузки данных пользователя");
         
         const userData = await response.json();
@@ -156,6 +160,9 @@ export default function UpdateUserPage() {
     setSubmitting(true);
     setError(null);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error("Токен авторизации не найден");
+
       const dataToSend = {
         ...formData,
         // Преобразуем даты в ISO строки для API
@@ -171,7 +178,10 @@ export default function UpdateUserPage() {
       };
       const response = await fetch(`${baseUrl}/api/User/${userId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(dataToSend),
       });
       if (!response.ok) throw new Error("Ошибка при обновлении пользователя");

@@ -70,6 +70,8 @@ interface MegaMenuItem {
   description: string
   icon: React.ReactElement
   previewType: PreviewType
+  gradientFrom: string
+  gradientTo: string
 }
 
 interface MegaMenuSection {
@@ -173,7 +175,144 @@ const generateBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
   return breadcrumbs
 }
 
-// --- Мега-меню структура с изображениями (перемещено выше) ---
+// Оптимизированный компонент AnimatedNavigationButton
+interface AnimatedNavigationButtonProps {
+  icon: React.ReactElement;
+  title: string;
+  description: string;
+  href: string;
+  gradientFrom: string;
+  gradientTo: string;
+  delay?: number;
+  onClick: (href: string) => void;
+  onIconHover?: (event: React.MouseEvent<HTMLDivElement>, href: string) => void;
+  onIconLeave?: () => void;
+}
+
+const AnimatedNavigationButton: React.FC<AnimatedNavigationButtonProps> = React.memo(({
+  icon,
+  title,
+  description,
+  href,
+  gradientFrom,
+  gradientTo,
+  delay = 0,
+  onClick,
+  onIconHover,
+  onIconLeave
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Упрощенные варианты анимации для лучшей производительности
+  const buttonVariants: Variants = {
+    hidden: {
+      opacity: 0,
+      y: 10,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.3,
+        delay,
+        ease: "easeOut",
+      },
+    },
+  };
+
+  // Мемоизированные стили для предотвращения пересчета
+  const buttonStyle = React.useMemo(() => ({
+    background: `linear-gradient(135deg, 
+      color-mix(in srgb, white 95%, ${gradientFrom}) 0%, 
+      color-mix(in srgb, white 90%, ${gradientTo}) 100%)`,
+    boxShadow: `
+      0 2px 8px color-mix(in srgb, ${gradientFrom} 8%, transparent),
+      inset 0 1px 0 rgba(255,255,255,0.4)
+    `,
+  }), [gradientFrom, gradientTo]);
+
+  const iconStyle = React.useMemo(() => ({
+    background: `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientTo} 100%)`,
+    boxShadow: `0 2px 6px color-mix(in srgb, ${gradientFrom} 20%, transparent)`,
+  }), [gradientFrom, gradientTo]);
+
+  const hoverOverlayStyle = React.useMemo(() => ({
+    background: `linear-gradient(135deg, ${gradientFrom}10 0%, ${gradientTo}5 100%)`,
+  }), [gradientFrom, gradientTo]);
+
+  return (
+    <motion.div
+      className="relative"
+      variants={buttonVariants}
+      initial="hidden"
+      animate="visible"
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      {/* Упрощенный основной кнопка */}
+      <motion.button
+        className="relative w-full h-24 bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 overflow-hidden group transition-all duration-200 hover:shadow-lg"
+        onClick={() => onClick(href)}
+        style={buttonStyle}
+        whileHover={{ y: -2, scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+      >
+        {/* Простой оверлей при наведении */}
+        <div
+          className={`absolute inset-0 rounded-xl transition-opacity duration-200 ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={hoverOverlayStyle}
+        />
+
+        {/* Контент */}
+        <div className="relative z-10 flex items-start space-x-3 h-full">
+          {/* Упрощенный контейнер иконки */}
+          <motion.div
+            className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer relative group"
+            style={iconStyle}
+            onMouseEnter={(e) => {
+              e.stopPropagation();
+              onIconHover?.(e, href);
+            }}
+            onMouseLeave={(e) => {
+              e.stopPropagation();
+              onIconLeave?.();
+            }}
+            whileHover={{ 
+              scale: 1.1,
+              transition: { duration: 0.15 }
+            }}
+          >
+            <div className="text-white text-lg">
+              {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-5 h-5' })}
+            </div>
+            {/* Упрощенный индикатор превью */}
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <div className="w-full h-full bg-blue-300 rounded-full animate-pulse" />
+            </div>
+          </motion.div>
+
+          {/* Текстовый контент */}
+          <div className="flex-1 text-left">
+            <h3 className="text-sm font-semibold text-gray-800 mb-1 leading-tight">
+              {title}
+            </h3>
+            <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">
+              {description}
+            </p>
+          </div>
+        </div>
+
+        {/* Упрощенная декорация угла */}
+        <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-gray-300/40" />
+      </motion.button>
+    </motion.div>
+  );
+});
+
+// Обновляем megaMenuSections с градиентами
 const megaMenuSections: MegaMenuSection[] = [
   {
     title: "Управление фондом",
@@ -184,6 +323,8 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Просмотр и управление каталогом книг",
         icon: <BookOpen className="h-5 w-5" />,
         previewType: 'iframe',
+        gradientFrom: "#4f46e5",
+        gradientTo: "#7c3aed",
       },
       {
         title: "Добавить книгу",
@@ -191,6 +332,8 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Добавить новую книгу в каталог",
         icon: <PlusCircle className="h-5 w-5" />,
         previewType: 'quick',
+        gradientFrom: "#059669",
+        gradientTo: "#0d9488",
       },
       {
         title: "Полки",
@@ -198,6 +341,8 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Организация и управление полками",
         icon: <Bookmark className="h-5 w-5" />,
         previewType: 'iframe',
+        gradientFrom: "#dc2626",
+        gradientTo: "#ea580c",
       },
     ],
   },
@@ -210,13 +355,17 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Управление пользователями системы",
         icon: <Users className="h-5 w-5" />,
         previewType: 'iframe',
+        gradientFrom: "#7c2d12",
+        gradientTo: "#a16207",
       },
       {
         title: "Быстрый просмотр",
         href: "/admin/users/quick-overview",
         description: "Быстрый обзор пользователей",
-        icon: <Users className="h-5 w-5" />,
+        icon: <Eye className="h-5 w-5" />,
         previewType: 'api',
+        gradientFrom: "#be185d",
+        gradientTo: "#c2410c",
       },
       {
         title: "Управление ролями",
@@ -224,6 +373,8 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Настройка ролей и разрешений",
         icon: <Shield className="h-5 w-5" />,
         previewType: 'quick',
+        gradientFrom: "#1e40af",
+        gradientTo: "#1e3a8a",
       },
     ],
   },
@@ -236,6 +387,8 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Управление резервациями книг",
         icon: <Calendar className="h-5 w-5" />,
         previewType: 'iframe',
+        gradientFrom: "#9333ea",
+        gradientTo: "#7e22ce",
       },
       {
         title: "Статистика",
@@ -243,6 +396,8 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Аналитика и отчеты системы",
         icon: <PieChart className="h-5 w-5" />,
         previewType: 'iframe',
+        gradientFrom: "#166534",
+        gradientTo: "#15803d",
       },
       {
         title: "Уведомления",
@@ -250,6 +405,8 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Просмотр и управление уведомлениями",
         icon: <Bell className="h-5 w-5" />,
         previewType: 'quick',
+        gradientFrom: "#374151",
+        gradientTo: "#4b5563",
       },
     ],
   },
@@ -262,25 +419,13 @@ const megaMenuSections: MegaMenuSection[] = [
         description: "Документация и руководства",
         icon: <HelpCircle className="h-5 w-5" />,
         previewType: 'quick',
-      },
-      {
-        title: "FAQ",
-        href: "/admin/faq",
-        description: "Часто задаваемые вопросы",
-        icon: <FileQuestion className="h-5 w-5" />,
-        previewType: 'quick',
-      },
-      {
-        title: "Связаться с нами",
-        href: "/admin/contact",
-        description: "Техническая поддержка",
-        icon: <Mail className="h-5 w-5" />,
-        previewType: 'quick',
-      },
+        gradientFrom: "#0f766e",
+        gradientTo: "#0d9488",
+      }
+      
     ],
   },
 ];
-// --- конец блока megaMenuSections ---
 
 const TopNavigation = ({ user }: { user: User | null }) => {
   const { logout } = useAuth()
@@ -345,59 +490,54 @@ const TopNavigation = ({ user }: { user: User | null }) => {
     }
   }, [isConnected])
 
-  // handleShowPreview теперь принимает индекс пункта
-  const handleShowPreview = (href: string, type: PreviewType, btnIndex?: number) => {
+  // Новая логика для обработки наведения на иконку
+  const handleIconHover = (event: React.MouseEvent<HTMLDivElement>, href: string, type: PreviewType) => {
     if (previewTimer.current) {
       clearTimeout(previewTimer.current);
     }
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    const previewWidth = 800;
+    const previewHeight = 750;
+    const previewMargin = 16;
+
+    const hasSpaceOnRight = rect.right + previewMargin + previewWidth <= window.innerWidth;
+    const hasSpaceOnLeft = rect.left - previewMargin - previewWidth >= 0;
+    const hasSpaceOnBottom = rect.bottom + previewMargin + previewHeight <= window.innerHeight;
+    const hasSpaceOnTop = rect.top - previewMargin - previewHeight >= 0;
+
+    // Определяем наилучшую позицию и координаты
+    let top = rect.top;
+    let left = rect.right + previewMargin;
+
+    if (hasSpaceOnRight) {
+      left = rect.right + previewMargin;
+      top = Math.max(previewMargin, Math.min(rect.top, window.innerHeight - previewHeight - previewMargin));
+    } else if (hasSpaceOnLeft) {
+      left = rect.left - previewWidth - previewMargin;
+      top = Math.max(previewMargin, Math.min(rect.top, window.innerHeight - previewHeight - previewMargin));
+    } else if (hasSpaceOnBottom) {
+      top = rect.bottom + previewMargin;
+      left = Math.max(previewMargin, Math.min(rect.left, window.innerWidth - previewWidth - previewMargin));
+    } else if (hasSpaceOnTop) {
+      top = rect.top - previewHeight - previewMargin;
+      left = Math.max(previewMargin, Math.min(rect.left, window.innerWidth - previewWidth - previewMargin));
+    } else {
+      // Если нигде не помещается полностью, показываем справа с корректировкой по краям
+      left = Math.min(rect.right + previewMargin, window.innerWidth - previewWidth - previewMargin);
+      top = Math.max(previewMargin, Math.min(rect.top, window.innerHeight - previewHeight - previewMargin));
+    }
+
     previewTimer.current = setTimeout(() => {
-      let coords = { top: 0, left: 0 };
-      if (typeof btnIndex === 'number' && megaMenuButtonRefs.current[btnIndex]?.current) {
-        const btnRect = megaMenuButtonRefs.current[btnIndex].current!.getBoundingClientRect();
-        const previewWidth = 800;
-        const previewHeight = 750;
-        const gap = 12;
-        let left = btnRect.left - previewWidth - gap;
-        // Если не помещается слева — прижимаем к левому краю
-        if (left < gap) left = gap;
-        let top = btnRect.top;
-        // Если не помещается снизу — прижимаем выше
-        if (top + previewHeight > window.innerHeight - gap) {
-          top = window.innerHeight - previewHeight - gap;
-        }
-        if (top < gap) top = gap;
-        coords = { top, left };
-      } else if (megaMenuContentRef.current) {
-        // fallback: старое поведение
-        const rect = megaMenuContentRef.current.getBoundingClientRect();
-        const previewWidth = 800;
-        const previewHeight = 750;
-        const gap = 16;
-        let left = rect.left - previewWidth - gap;
-        if (left < gap) {
-          left = rect.right + gap;
-          if (left + previewWidth > window.innerWidth - gap) {
-            left = window.innerWidth - previewWidth - gap;
-          }
-        }
-        let top = rect.top;
-        if (top + previewHeight > window.innerHeight - gap) {
-          top = window.innerHeight - previewHeight - gap;
-        }
-        if (top < gap) {
-          top = gap;
-        }
-        coords = { top, left };
-      }
       setActivePreview({
         href,
         type,
-        coords,
+        coords: { top, left },
       });
     }, 700);
   };
 
-  const handleHidePreview = () => {
+  const handleIconLeave = () => {
     if (previewTimer.current) {
       clearTimeout(previewTimer.current);
     }
@@ -1396,7 +1536,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                   </motion.div>
                   <NavigationMenuContent
                     ref={megaMenuContentRef}
-                    onMouseLeave={handleHidePreview}
+                    onMouseLeave={handleIconLeave}
                   >
                     <motion.div
                       onMouseEnter={cancelHidePreview}
@@ -1430,38 +1570,18 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                   >
-                                    <a
-                                      ref={megaMenuButtonRefs.current[flatIndex]}
+                                    <AnimatedNavigationButton
+                                      icon={item.icon}
+                                      title={item.title}
+                                      description={item.description}
                                       href={item.href}
-                                      onClick={e => { e.preventDefault(); handleMenuLinkClick(item.href) }}
-                                      className="group flex items-start gap-4 p-4 rounded-lg hover:bg-blue-50 transition-all duration-300 border border-transparent hover:border-blue-200 text-gray-800 relative"
-                                    >
-                                      <div className="flex-shrink-0 mt-1">
-                                        <motion.div
-                                          onMouseEnter={() => handleShowPreview(item.href, item.previewType, flatIndex)}
-                                          onMouseLeave={handleHidePreview}
-                                          animate={{
-                                            rotate: activePreview?.href === item.href ? 360 : 0,
-                                            scale: activePreview?.href === item.href ? 1.2 : 1,
-                                          }}
-                                          transition={{ duration: 0.3 }}
-                                          className="text-blue-500 cursor-pointer"
-                                        >
-                                          {React.cloneElement(
-                                            item.icon as React.ReactElement<any>,
-                                            { ...(item.icon.props as any), className: 'w-5 h-5 text-blue-400' }
-                                          )}
-                                        </motion.div>
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
-                                          {item.title}
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 group-hover:text-blue-600 transition-colors">
-                                          {item.description}
-                                        </div>
-                                      </div>
-                                    </a>
+                                      gradientFrom={item.gradientFrom}
+                                      gradientTo={item.gradientTo}
+                                      delay={itemIndex * 0.05}
+                                      onClick={() => handleMenuLinkClick(item.href)}
+                                      onIconHover={(e, href) => handleIconHover(e, href, item.previewType)}
+                                      onIconLeave={handleIconLeave}
+                                    />
                                   </motion.div>
                                 );
                               })}
@@ -1953,7 +2073,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
           coords={activePreview.coords}
           displayMode={activePreview.type === 'iframe-enhanced' ? 'iframe' : activePreview.type as 'quick' | 'api' | 'iframe'}
           onMouseEnter={cancelHidePreview}
-          onMouseLeave={handleHidePreview}
+          onMouseLeave={handleIconLeave}
         />
       )}
       {/* Overlay Search (оверлей поверх всей шапки) */}

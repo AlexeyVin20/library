@@ -196,7 +196,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
     }
   })
   // Переключатель ИИ модели
-  const [aiModel, setAiModel] = useState<'openrouter' | 'gemini'>('openrouter')
+  const [aiModel, setAiModel] = useState<'openrouter' | 'gemini'>('gemini')
 
   // Хук для загрузки изображений
   const imageUpload = useImageUpload({
@@ -1101,7 +1101,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
                   </p>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-gray-700 select-none">
-                      {aiModel === 'openrouter' ? 'OpenRouter' : 'Google Gemini'}
+                      {aiModel === 'gemini' ? 'Google Gemini' : 'OpenRouter'}
                     </span>
                     <Switch
                       checked={aiModel === 'gemini'}
@@ -1110,7 +1110,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
                   </div>
                 </div>
                 <div className="text-xs text-gray-600 mb-3 p-2 bg-gray-50 rounded-lg border">
-                  <strong>Выбранная модель:</strong> {aiModel === 'openrouter' ? 'OpenRouter (Gemini 2.0 Flash)' : 'Google Gemini 2.5 Flash'}
+                  <strong>Выбранная модель:</strong> {aiModel === 'gemini' ? 'Google Gemini 2.5 Flash' : 'OpenRouter (Gemini 2.0 Flash)'}
                 </div>
                 <GeminiFileUpload />
                 {geminiLoading && (

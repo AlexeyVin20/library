@@ -29,7 +29,6 @@ import { useAuth } from "@/lib/auth"
 import dynamic from "next/dynamic"
 import { formatNumber } from "@/lib/utils"
 import { PinContainer } from "@/components/ui/3d-pin"
-import { useLibraryStats } from "@/hooks/use-library-stats"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -236,7 +235,6 @@ export default function Home() {
 
   const { user, isLoading } = useAuth()
   const router = useRouter()
-  const { stats: libraryStats, loading: statsLoading, error: statsError } = useLibraryStats()
 
   // Эффект для предотвращения гидратационных ошибок
   useEffect(() => {
@@ -286,58 +284,6 @@ export default function Home() {
       }
     }
   }, [userRole, mounted, router])
-
-  // Формируем карточки статистики из реальных данных
-  const getStatCards = (): StatCard[] => {
-    if (!libraryStats) return []
-
-    return [
-      {
-        label: "Всего книг",
-        value: formatNumber(libraryStats.totalBooks),
-        icon: BookOpen,
-        color: "text-blue-600",
-        bgGradient: "from-blue-500 to-cyan-500",
-      },
-      {
-        label: "Всего читателей",
-        value: formatNumber(libraryStats.totalUsers),
-        icon: Users2,
-        color: "text-emerald-600",
-        bgGradient: "from-emerald-500 to-teal-500",
-      },
-      {
-        label: "Книг в каталоге",
-        value: formatNumber(libraryStats.totalAvailableBooks),
-        icon: TrendingUp,
-        color: "text-purple-600",
-        bgGradient: "from-purple-500 to-pink-500",
-      },
-    ]
-  }
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring" as const,
-        stiffness: 100,
-      },
-    },
-  }
 
   // Если компонент еще не смонтирован, показываем базовую структуру без анимаций
   if (!mounted) {
@@ -473,87 +419,7 @@ export default function Home() {
               </motion.div>
             )}
           </motion.div>
-
-          {/* Улучшенная статистика */}
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 max-w-6xl mx-auto"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {statsLoading ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <motion.div key={index} variants={itemVariants}>
-                  <Card className="bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 rounded-3xl overflow-hidden">
-                    <CardContent className="flex items-center justify-center p-12">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                      >
-                        <Loader2 className="w-12 h-12 text-blue-500" />
-                      </motion.div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))
-            ) : statsError ? (
-              <motion.div variants={itemVariants} className="col-span-full">
-                <Card className="bg-red-50/80 backdrop-blur-xl border-red-200 shadow-2xl rounded-3xl">
-                  <CardContent className="p-8">
-                    <p className="text-red-600 text-center text-lg">{statsError}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ) : (
-              getStatCards().map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  variants={itemVariants}
-                  whileHover={{
-                    scale: 1.05,
-                    y: -10,
-                    rotateY: 5,
-                  }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  className="group"
-                >
-                  <Card className="bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden rounded-3xl relative">
-                    {/* Gradient background */}
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-5 group-hover:opacity-10 transition-opacity duration-500`}
-                    />
-
-                    <CardContent className="p-8 relative">
-                      <div className="flex items-center justify-center mb-6">
-                        <motion.div
-                          className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${stat.bgGradient} flex items-center justify-center shadow-lg`}
-                          whileHover={{ rotate: 360, scale: 1.1 }}
-                          transition={{ duration: 0.6 }}
-                        >
-                          <stat.icon className="w-8 h-8 text-white" />
-                        </motion.div>
-                      </div>
-                      <motion.div
-                        className={`text-4xl font-bold ${stat.color} mb-3 group-hover:scale-110 transition-transform duration-300`}
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 200,
-                          delay: 0.3 + index * 0.1,
-                        }}
-                      >
-                        {stat.value}
-                      </motion.div>
-                      <div className="text-gray-600 dark:text-gray-400 text-lg font-medium">{stat.label}</div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))
-            )}
-          </motion.div>
         </motion.div>
-
         {/* Секция возможностей */}
         <motion.div
           style={{ y: y2 }}

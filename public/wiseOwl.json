@@ -1,7 +1,7 @@
 [
   {
     "name": "systemContext",
-    "description": "СИСТЕМНЫЙ КОНТЕКСТ для работы с API библиотеки.\n\n**ТЕРМИНЫ:** Слова 'резервирование', 'резерв', 'бронирование', 'бронь' являются синонимами и означают одну и ту же сущность.\n\n**СТАТУСЫ РЕЗЕРВИРОВАНИЙ:** 'Обрабатывается' (новое резервирование), 'Одобрена' (резервирование одобрено), 'Отменена' (отменено), 'Истекла' (время истекло), 'Выдана' (книга выдана), 'Возвращена' (книга возвращена), 'Просрочена' (просрочено).\n\n**ВАЖНО ПРИ РАБОТЕ С ID:** Все операции с резервированиями требуют точных GUID. Всегда сначала получайте список резервирований или детали конкретного резервирования, чтобы получить правильный ID, а затем используйте его для операций обновления/удаления.\n\n**СЦЕНАРИИ РАБОТЫ С РЕЗЕРВИРОВАНИЯМИ:**\n*   **Выдача книги:** Если пользователь просит 'Дай книгу {название} пользователю {имя}', необходимо создать новое резервирование (`createReservation`) с указанием ID книги и ID пользователя со статусом 'Выдана'.\n*   **Возврат книги:** Если пользователь говорит '{имя} вернул книгу {название}' или '{имя} вернул все книги', необходимо найти все активные резервирования ('Выдана', 'Просрочена') для данного пользователя (`getUserReservations`) и изменить их статус на 'Возвращена' (`updateReservation`).\n*   **Одобрение резервирований:** При запросе 'Одобри все резервирования' или 'Одобри все резервирования для пользователя {имя}', найди все резервирования со статусом 'Обрабатывается' (`getAllReservations` или `getUserReservations`) и измени их статус на 'Одобрена' (`updateReservation`).",
+    "description": "СИСТЕМНЫЙ КОНТЕКСТ для работы с API библиотеки.\n\n**ТЕРМИНЫ:** Слова 'резервирование', 'резерв', 'бронирование', 'бронь' являются синонимами и означают одну и ту же сущность.\n\n**СТАТУСЫ РЕЗЕРВИРОВАНИЙ:** 'Обрабатывается' (новое резервирование), 'Одобрена' (резервирование одобрено), 'Отменена' (отменено), 'Истекла' (время истекло), 'Выдана' (книга выдана), 'Возвращена' (книга возвращена), 'Просрочена' (просрочено).\n\n**ВАЖНО ПРИ РАБОТЕ С ID:** Все операции с резервированиями требуют точных GUID. Всегда сначала получайте список резервирований или детали конкретного резервирования, чтобы получить правильный ID, а затем используйте его для операций обновления/удаления. Если ID резерва указано в сокращенном виде (первые 8 символов), то нужно сначала найти все резервирования (`getAllReservations`) и определить те, что начинаются на эти восемь символов. Если у тебя нет четкой инструкции по работе с полем, получи всё, и работай с этими данными.\n\n**СЦЕНАРИИ РАБОТЫ С РЕЗЕРВИРОВАНИЯМИ:**\n*   **Выдача книги:** Если пользователь просит 'Дай(Выдай) книгу {название} пользователю {имя}', необходимо создать новое резервирование (`createReservation`) с указанием ID книги и ID пользователя со статусом 'Выдана'.\n*   **Возврат книги:** Если пользователь говорит '{имя} вернул книгу {название}' или '{имя} вернул все книги', необходимо найти все активные резервирования ('Выдана', 'Просрочена') для данного пользователя (`getUserReservations`) и изменить их статус на 'Возвращена' (`updateReservation`).\n*   **Одобрение резервирований:** При запросе 'Одобри все резервирования' или 'Одобри все резервирования для пользователя {имя}', найди все резервирования со статусом 'Обрабатывается' (`getAllReservations` или `getUserReservations`) и измени их статус на 'Одобрена' (`updateReservation`).",
     "parameters": {
       "type": "object",
       "properties": {},
@@ -39,7 +39,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "ID пользователя (Guid)"
+          "description": "ID пользователя (Guid). Не заполняй, генерируется сервером автоматически."
         },
         "fullName": {
           "type": "string",
@@ -147,11 +147,11 @@
         },
         "maxBooksAllowed": {
           "type": "integer",
-          "description": "Максимальное количество книг (опционально)"
+          "description": "Максимальное количество книг (опционально). По умолчанию 30 книг"
         },
         "loanPeriodDays": {
           "type": "integer",
-          "description": "Период займа в днях"
+          "description": "Период займа в днях. По умолчанию 60 дней"
         },
         "fineAmount": {
           "type": "number",
@@ -163,7 +163,7 @@
           "items": {
             "type": "integer"
           },
-          "description": "Массив ID ролей (опционально)"
+          "description": "Массив ID ролей (опционально). id роли 1 - Администратор, id роли 2 - Библиотекарь, id роли 3 - Сотрудник, id роли 4 - Гость"
         }
       },
       "required": ["id", "fullName", "email", "username", "isActive", "passwordResetRequired", "loanPeriodDays", "fineAmount"]
@@ -220,6 +220,115 @@
     }
   },
   {
+    "name": "assignRoleToUser",
+    "description": "Назначает роль пользователю. Использует API эндпоинт POST /api/User/assign-role. Требует роль администратора.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "roleId": {
+          "type": "integer",
+          "description": "ID роли. 1 - Администратор, 2 - Библиотекарь, 3 - Сотрудник, 4 - Гость"
+        }
+      },
+      "required": ["userId", "roleId"]
+    }
+  },
+  {
+    "name": "assignRoleToMultipleUsers",
+    "description": "Назначает роль нескольким пользователям. Использует API эндпоинт POST /api/User/assign-roles. Требует роль администратора.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Массив ID пользователей (Guid)"
+        },
+        "roleId": {
+          "type": "integer",
+          "description": "ID роли. 1 - Администратор, 2 - Библиотекарь, 3 - Сотрудник, 4 - Гость"
+        }
+      },
+      "required": ["userIds", "roleId"]
+    }
+  },
+  {
+    "name": "updateUserRole",
+    "description": "Обновляет роль пользователя. Использует API эндпоинт PUT /api/User/update-role. Требует роль администратора.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "oldRoleId": {
+          "type": "integer",
+          "description": "Старый ID роли"
+        },
+        "newRoleId": {
+          "type": "integer",
+          "description": "Новый ID роли"
+        }
+      },
+      "required": ["userId", "oldRoleId", "newRoleId"]
+    }
+  },
+  {
+    "name": "removeRoleFromUser",
+    "description": "Удаляет роль у пользователя. Использует API эндпоинт POST /api/User/remove-role. Требует роль администратора.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "roleId": {
+          "type": "integer",
+          "description": "ID роли для удаления"
+        }
+      },
+      "required": ["userId", "roleId"]
+    }
+  },
+  {
+    "name": "removeRoleFromMultipleUsers",
+    "description": "Удаляет роль у нескольких пользователей. Использует API эндпоинт POST /api/User/remove-roles. Требует роль администратора.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Массив ID пользователей (Guid)"
+        },
+        "roleId": {
+          "type": "integer",
+          "description": "ID роли для удаления"
+        }
+      },
+      "required": ["userIds", "roleId"]
+    }
+  },
+  {
+    "name": "getAllRoles",
+    "description": "Получает список всех ролей в системе с количеством пользователей в каждой роли. Использует API эндпоинт GET /api/User/roles",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
     "name": "getUserReservations",
     "description": "Получает бронирования пользователя. Использует API эндпоинт GET /api/User/{id}/reservations ВАЖНО: Все резервирования возвращают ID в виде GUID - всегда используйте полученный ID для дальнейших операций",
     "parameters": {
@@ -253,7 +362,7 @@
   },
   {
     "name": "getReservationById",
-    "description": "Получает детальную информацию о бронировании по ID. Использует API эндпоинт GET /api/Reservation/{id} Используйте этот метод, чтобы получить полную информацию о резервировании перед его изменением.",
+    "description": "Получает детальную информацию о бронировании по ID из 16 символов. Если пользователь указывает ID в сокращенном виде (8 символов), то нужно сначала найти все резервирования (`getAllReservations`) и определить те, что начинаются на эти восемь символов. Использует API эндпоинт GET /api/Reservation/{id} Используйте этот метод, чтобы получить полную информацию о резервировании перед его изменением.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -273,7 +382,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "ID бронирования (Guid)"
+          "description": "ID бронирования (Guid). Не заполняй, генерируется сервером автоматически."
         },
         "userId": {
           "type": "string",
@@ -302,7 +411,7 @@
           "description": "Заметки (опционально). Например: 'Книга забронирована с помощью ИИ-ассистента'"
         }
       },
-      "required": ["id", "userId", "bookId", "reservationDate", "expirationDate", "status"]
+      "required": ["userId", "bookId", "reservationDate", "expirationDate", "status"]
     }
   },
   {
@@ -993,6 +1102,195 @@
       "type": "object",
       "properties": {},
       "required": []
+    }
+  },
+  {
+    "name": "getUsersWithBooks",
+    "description": "Получает список пользователей, у которых есть взятые на руки книги со статусом 'Одобрена' или 'Выдана'. Использует API эндпоинт GET /api/User/with-books",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "getUsersWithFines",
+    "description": "Получает список пользователей, у которых есть штрафы или просроченные книги. Использует API эндпоинт GET /api/User/with-fines",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "getUserActiveReservations",
+    "description": "Получает активные резервирования (статус 'Одобрена' или 'Выдана') для пользователя по ID. Использует API эндпоинт GET /api/User/{id}/active-reservations",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "getUserOverdueReservations",
+    "description": "Получает просроченные резервирования для пользователя по ID. Использует API эндпоинт GET /api/User/{id}/overdue-reservations",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "sendCustomPushNotification",
+    "description": "Отправляет одиночное PUSH-уведомление конкретному пользователю с указанными параметрами. Требует роль администратора или библиотекаря. Использует API эндпоинт POST /api/Notification/send-custom-push",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid), которому отправляется уведомление"
+        },
+        "title": {
+          "type": "string",
+          "description": "Заголовок уведомления"
+        },
+        "message": {
+          "type": "string",
+          "description": "Текст сообщения уведомления"
+        },
+        "type": {
+          "type": "string",
+          "description": "Тип уведомления (например, 'GeneralInfo', 'BookUpdate', 'SystemAlert', 'BookDueSoon')"
+        },
+        "priority": {
+          "type": "string",
+          "description": "Приоритет уведомления (например, 'Low', 'Medium', 'High')"
+        }
+      },
+      "required": ["userId", "title", "message", "type"]
+    }
+  },
+  {
+    "name": "sendCustomSingleEmail",
+    "description": "Отправляет одиночное Email-уведомление с простым текстом конкретному пользователю. Требует роль администратора или библиотекаря. Использует API эндпоинт POST /api/Notification/send-custom-single-email",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid), которому отправляется email"
+        },
+        "title": {
+          "type": "string",
+          "description": "Тема (заголовок) email"
+        },
+        "message": {
+          "type": "string",
+          "description": "Текст сообщения в email"
+        },
+        "type": {
+          "type": "string",
+          "description": "Тип уведомления (например, 'GeneralInfo', 'BookUpdate', 'SystemAlert', 'BookDueSoon')"
+        }
+      },
+      "required": ["userId", "title", "message", "type"]
+    }
+  },
+  {
+    "name": "sendCustomEmailWithTemplate",
+    "description": "Отправляет кастомизированное email-уведомление с использованием HTML-шаблона. Требует роль администратора или библиотекаря. Использует API эндпоинт POST /api/Notification/send-custom-email",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID пользователя (Guid), которому отправляется email"
+        },
+        "title": {
+          "type": "string",
+          "description": "Тема (заголовок) email"
+        },
+        "type": {
+          "type": "string",
+          "description": "Тип уведомления 'GeneralEmail'"
+        },
+        "templateData": {
+          "type": "object",
+          "description": "Объект с данными для подстановки в HTML-шаблон. Ключи - это имена переменных в шаблоне, значения - их содержимое. Например: {\"BookTitle\": \"Война и мир\", \"FineAmount\": 100}"
+        }
+      },
+      "required": ["userId", "title", "type", "templateData"]
+    }
+  },
+  {
+    "name": "stopAgent",
+    "description": "Останавливает текущую генерацию ответа ИИ и завершает текущий диалог. Фронтовый инструмент, не использует API эндпоинт.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "cancelCurrentAction",
+    "description": "Отменяет текущее выполняемое действие (вызов инструмента) агента. Фронтовый инструмент, не использует API эндпоинт.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "navigateToPage",
+    "description": "Перенаправляет пользователя на указанную страницу приложения. Фронтовый инструмент, не использует API эндпоинт. Если просьба открыть несколько страниц, то открывай в новых вкладках несколько страниц.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Путь внутри приложения, например '/admin/books'.",
+          "enum": [
+            "/admin",
+            "/admin/books",
+            "/admin/books/create",
+            "/admin/books/{bookId}",
+            "/admin/books/{bookId}/update",
+            "/admin/books/{bookId}/instances",
+            "/admin/reservations",
+            "/admin/reservations/create",
+            "/admin/reservations/{reservationId}",
+            "/admin/users",
+            "/admin/users/create",
+            "/admin/users/{userId}",
+            "/admin/users/{userId}/update",
+            "/admin/notifications",
+            "/admin/requests",
+            "/admin/requests/books",
+            "/admin/requests/users",
+            "/admin/roles",
+            "/admin/shelfs",
+            "/admin/statistics",
+            "/admin/fines",
+            "/admin/fines/create",
+            "/admin/help"
+          ]
+        }
+      },
+      "required": ["path"]
     }
   }
 ] 
