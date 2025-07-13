@@ -440,8 +440,12 @@ export default function UpdateInstancePage({
                   </label>
                   <input
                     type="date"
-                    value={formData.dateAcquired}
-                    onChange={(e) => handleInputChange('dateAcquired', e.target.value)}
+                    value={formData.dateAcquired ? formData.dateAcquired.split('T')[0] : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const isoString = value ? new Date(value + 'T00:00:00Z').toISOString() : undefined;
+                      handleInputChange('dateAcquired', isoString);
+                    }}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 ${
                       errors.dateAcquired ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -458,8 +462,12 @@ export default function UpdateInstancePage({
                   </label>
                   <input
                     type="date"
-                    value={formData.dateLastChecked || ''}
-                    onChange={(e) => handleInputChange('dateLastChecked', e.target.value || undefined)}
+                    value={formData.dateLastChecked ? formData.dateLastChecked.split('T')[0] : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const isoString = value ? new Date(value + 'T00:00:00Z').toISOString() : undefined;
+                      handleInputChange('dateLastChecked', isoString);
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                   />
                 </div>

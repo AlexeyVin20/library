@@ -1292,5 +1292,28 @@
       },
       "required": ["path"]
     }
+  },
+  {
+    "name": "getAllDialogHistory",
+    "description": "Получает всю историю вызовов инструментов ИИ-ассистента. Использует API эндпоинт GET /api/dialoghistory",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "getDialogHistoryByConversationId",
+    "description": "Получает историю вызовов инструментов по conversationId. Использует API эндпоинт GET /api/dialoghistory?conversationId=",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "description": "Уникальный идентификатор диалога (conversationId)"
+        }
+      },
+      "required": ["conversationId"]
+    }
   }
 ] 
