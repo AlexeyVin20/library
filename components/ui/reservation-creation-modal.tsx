@@ -144,7 +144,13 @@ export function CreateReservationDialog({
       if (selectedBook.availableCopies === 0) {
         try {
           const res = await fetch(
-            `${baseUrl}/api/Reservation/book/${selectedBook.id}`
+            `${baseUrl}/api/Reservation/book/${selectedBook.id}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+              }
+            }
           );
           if (res.ok) {
             const reservations = await res.json();
@@ -195,8 +201,18 @@ export function CreateReservationDialog({
     try {
       setLoadingData(true);
       const [uRes, bRes] = await Promise.all([
-        fetch(`${baseUrl}/api/User`),
-        fetch(`${baseUrl}/api/Books`),
+        fetch(`${baseUrl}/api/User`, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        }),
+        fetch(`${baseUrl}/api/Books`, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        }),
       ]);
       if (!uRes.ok || !bRes.ok) throw new Error("Fetch error");
 
@@ -264,7 +280,12 @@ export function CreateReservationDialog({
   const handleUserSelect = async (user: UserType) => {
     try {
       // Загружаем полную информацию о пользователе для получения loanPeriodDays
-      const response = await fetch(`${baseUrl}/api/User/${user.id}`);
+      const response = await fetch(`${baseUrl}/api/User/${user.id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        }
+      });
       if (response.ok) {
         const fullUserData = await response.json();
         const userWithLoanPeriod = {

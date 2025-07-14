@@ -1177,7 +1177,7 @@ export default function ReservationHistoryPage() {
                     История бронирований
                   </h1>
                   <p className="text-xl text-gray-600 mt-2">
-                    Управляйте своими резервациями и отслеживайте статус книг
+                    Управляйте своими резервированиями и отслеживайте статус книг
                   </p>
                 </div>
               </div>

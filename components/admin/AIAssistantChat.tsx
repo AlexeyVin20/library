@@ -1781,98 +1781,65 @@ export default function EnhancedAIAssistantChat() {
                                       {/* Инструменты для этого сообщения */}
                                       <div className="ml-8 space-y-3">
                                         {group.tools.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((item: any) => (
-                                          <details key={item.id} className="bg-gray-50 rounded-lg border" open={false}>
-                                            <summary className="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-gray-100">
-                                              <div className="flex items-center gap-3">
-                                                <div className={`w-3 h-3 rounded-full ${
-                                                  hasDataChanges(item) ? "bg-orange-400" : "bg-green-400"
-                                                }`} />
-                                                <span className="font-medium text-gray-800">
-                                                  {getActionDescription(item)}
-                                                </span>
-                                                {hasDataChanges(item) && (
-                                                  <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
-                                                    Изменение
-                                                  </Badge>
-                                                )}
+                                          <div key={item.id} className="bg-gray-50 rounded-lg border">
+                                            {/* Заголовок с кнопкой откат/восстановление */}
+                                            <div className="p-3 border-b bg-gray-100">
+                                              <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                  <div className={`w-3 h-3 rounded-full ${
+                                                    hasDataChanges(item) ? "bg-orange-400" : "bg-green-400"
+                                                  }`} />
+                                                  <span className="font-medium text-gray-800">
+                                                    {getActionDescription(item)}
+                                                  </span>
+                                                  {hasDataChanges(item) && (
+                                                    <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                                                      Изменение
+                                                    </Badge>
+                                                  )}
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                  <span className="text-sm text-gray-500">
+                                                    {new Date(item.timestamp).toLocaleTimeString("ru-RU")}
+                                                  </span>
+                                                  {/* Кнопка откат/восстановление прямо в заголовке */}
+                                                  {hasDataChanges(item) && (
+                                                    <UndoManager
+                                                      historyItem={item}
+                                                      onUndoComplete={() => {
+                                                        setIsHistoryOpen(false);
+                                                        setTimeout(() => setIsHistoryOpen(true), 100);
+                                                      }}
+                                                    />
+                                                  )}
+                                                </div>
                                               </div>
-                                              <span className="text-sm text-gray-500">
-                                                {new Date(item.timestamp).toLocaleTimeString("ru-RU")}
-                                              </span>
-                                            </summary>
+                                            </div>
                                             
-                                            <div className="p-3 border-t bg-white">
-                                              {/* Параметры */}
-                                              {item.parameters && item.parameters !== "null" && (
-                                                <div className="mb-3">
-                                                  <div className="flex items-center gap-2 mb-2">
-                                                    <Settings className="w-4 h-4 text-blue-500" />
-                                                    <span className="text-sm font-medium text-gray-700">Параметры</span>
-                                                  </div>
-                                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                                                    {(() => {
-                                                      const params = getReadableParameters(item.parameters);
-                                                      if (typeof params === "object") {
-                                                        return (
-                                                          <div className="space-y-1">
-                                                            {Object.entries(params).map(([key, value]) => (
-                                                              <div key={key} className="flex items-start gap-2">
-                                                                <span className="font-mono text-blue-700 min-w-0 font-medium">
-                                                                  {key}:
-                                                                </span>
-                                                                <span className="text-gray-800 break-all">
-                                                                  {String(value)}
-                                                                </span>
-                                                              </div>
-                                                            ))}
-                                                          </div>
-                                                        );
-                                                      }
-                                                      return <span className="text-gray-600">{String(params)}</span>;
-                                                    })()}
-                                                  </div>
-                                                </div>
-                                              )}
+                                            {/* Содержимое - скрываемое под details */}
+                                            <details className="bg-white" open={false}>
+                                              <summary className="p-3 cursor-pointer select-none hover:bg-gray-50 text-sm text-gray-600 flex items-center gap-2">
+                                                <Code className="w-4 h-4" />
+                                                Показать детали операции
+                                              </summary>
                                               
-                                              {/* До изменения */}
-                                              {item.beforeState && item.beforeState !== "null" && hasDataChanges(item) && (
-                                                <div className="mb-3">
-                                                  <div className="flex items-center gap-2 mb-2">
-                                                    <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                                    <span className="text-sm font-medium text-gray-700">До изменения</span>
-                                                  </div>
-                                                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm font-mono max-h-32 overflow-y-auto">
-                                                    <pre className="whitespace-pre-wrap text-gray-700">{item.beforeState}</pre>
-                                                  </div>
-                                                </div>
-                                              )}
-                                              
-                                              {/* Результат */}
-                                              {item.afterState && item.afterState !== "null" && (
-                                                <div className="mb-3">
-                                                  <div className="flex items-center gap-2 mb-2">
-                                                    <Check className="w-4 h-4 text-green-500" />
-                                                    <span className="text-sm font-medium text-gray-700">
-                                                      {hasDataChanges(item) ? "После изменения" : "Результат"}
-                                                    </span>
-                                                  </div>
-                                                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
-                                                    {(() => {
-                                                      try {
-                                                        const result = JSON.parse(item.afterState);
-                                                        if (typeof result === "object" && result !== null) {
-                                                          const keyFields = ["id", "fullName", "email", "title", "name", "status"];
-                                                          const summary = keyFields.reduce((acc, field) => {
-                                                            if (result[field] !== undefined) {
-                                                              acc[field] = result[field];
-                                                            }
-                                                            return acc;
-                                                          }, {} as any);
-                                                          return Object.keys(summary).length > 0 ? (
+                                              <div className="p-3 border-t bg-white">
+                                                {/* Параметры */}
+                                                {item.parameters && item.parameters !== "null" && (
+                                                  <div className="mb-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                      <Settings className="w-4 h-4 text-blue-500" />
+                                                      <span className="text-sm font-medium text-gray-700">Параметры</span>
+                                                    </div>
+                                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                                                      {(() => {
+                                                        const params = getReadableParameters(item.parameters);
+                                                        if (typeof params === "object") {
+                                                          return (
                                                             <div className="space-y-1">
-                                                              {Object.entries(summary).map(([key, value]) => (
+                                                              {Object.entries(params).map(([key, value]) => (
                                                                 <div key={key} className="flex items-start gap-2">
-                                                                  <span className="font-mono text-green-700 min-w-0 font-medium">
+                                                                  <span className="font-mono text-blue-700 min-w-0 font-medium">
                                                                     {key}:
                                                                   </span>
                                                                   <span className="text-gray-800 break-all">
@@ -1881,52 +1848,97 @@ export default function EnhancedAIAssistantChat() {
                                                                 </div>
                                                               ))}
                                                             </div>
-                                                          ) : (
-                                                            <span className="text-green-700 font-medium">
-                                                              ✅ Операция выполнена успешно
-                                                            </span>
                                                           );
                                                         }
-                                                        return <span className="text-green-700">{String(result)}</span>;
-                                                      } catch {
-                                                        return <span className="text-green-700">{item.afterState}</span>;
-                                                      }
-                                                    })()}
+                                                        return <span className="text-gray-600">{String(params)}</span>;
+                                                      })()}
+                                                    </div>
                                                   </div>
-                                                </div>
-                                              )}
-                                              
-                                              {/* Undo component - только для изменений */}
-                                              {hasDataChanges(item) && (
-                                                <UndoManager
-                                                  historyItem={item}
-                                                  onUndoComplete={() => {
-                                                    setIsHistoryOpen(false);
-                                                    setTimeout(() => setIsHistoryOpen(true), 100);
-                                                  }}
-                                                />
-                                              )}
-                                              
-                                              {/* Technical details */}
-                                              <details className="mt-3">
-                                                <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
-                                                  <Code className="w-4 h-4" />
-                                                  Техническая информация
-                                                </summary>
-                                                <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono space-y-1">
-                                                  <div>
-                                                    <span className="text-blue-400">Инструмент:</span> {item.toolName}
+                                                )}
+                                                
+                                                {/* До изменения */}
+                                                {item.beforeState && item.beforeState !== "null" && hasDataChanges(item) && (
+                                                  <div className="mb-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                      <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                                      <span className="text-sm font-medium text-gray-700">До изменения</span>
+                                                    </div>
+                                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm font-mono max-h-32 overflow-y-auto">
+                                                      <pre className="whitespace-pre-wrap text-gray-700">{item.beforeState}</pre>
+                                                    </div>
                                                   </div>
-                                                  <div>
-                                                    <span className="text-green-400">Метод:</span> {item.httpMethod}
+                                                )}
+                                                
+                                                {/* Результат */}
+                                                {item.afterState && item.afterState !== "null" && (
+                                                  <div className="mb-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                      <Check className="w-4 h-4 text-green-500" />
+                                                      <span className="text-sm font-medium text-gray-700">
+                                                        {hasDataChanges(item) ? "После изменения" : "Результат"}
+                                                      </span>
+                                                    </div>
+                                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                                                      {(() => {
+                                                        try {
+                                                          const result = JSON.parse(item.afterState);
+                                                          if (typeof result === "object" && result !== null) {
+                                                            const keyFields = ["id", "fullName", "email", "title", "name", "status"];
+                                                            const summary = keyFields.reduce((acc, field) => {
+                                                              if (result[field] !== undefined) {
+                                                                acc[field] = result[field];
+                                                              }
+                                                              return acc;
+                                                            }, {} as any);
+                                                            return Object.keys(summary).length > 0 ? (
+                                                              <div className="space-y-1">
+                                                                {Object.entries(summary).map(([key, value]) => (
+                                                                  <div key={key} className="flex items-start gap-2">
+                                                                    <span className="font-mono text-green-700 min-w-0 font-medium">
+                                                                      {key}:
+                                                                    </span>
+                                                                    <span className="text-gray-800 break-all">
+                                                                      {String(value)}
+                                                                    </span>
+                                                                  </div>
+                                                                ))}
+                                                              </div>
+                                                            ) : (
+                                                              <span className="text-green-700 font-medium">
+                                                                ✅ Операция выполнена успешно
+                                                              </span>
+                                                            );
+                                                          }
+                                                          return <span className="text-green-700">{String(result)}</span>;
+                                                        } catch {
+                                                          return <span className="text-green-700">{item.afterState}</span>;
+                                                        }
+                                                      })()}
+                                                    </div>
                                                   </div>
-                                                  <div>
-                                                    <span className="text-yellow-400">Эндпоинт:</span> {item.endpoint}
+                                                )}
+                                                
+                                                {/* Technical details */}
+                                                <details className="mt-3">
+                                                  <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
+                                                    <Code className="w-4 h-4" />
+                                                    Техническая информация
+                                                  </summary>
+                                                  <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono space-y-1">
+                                                    <div>
+                                                      <span className="text-blue-400">Инструмент:</span> {item.toolName}
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-green-400">Метод:</span> {item.httpMethod}
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-yellow-400">Эндпоинт:</span> {item.endpoint}
+                                                    </div>
                                                   </div>
-                                                </div>
-                                              </details>
-                                            </div>
-                                          </details>
+                                                </details>
+                                              </div>
+                                            </details>
+                                          </div>
                                         ))}
                                       </div>
                                     </div>
