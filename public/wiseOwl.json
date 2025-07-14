@@ -375,6 +375,20 @@
     }
   },
   {
+    "name": "getReservationDates",
+    "description": "Задача: получить даты бронирований за указанный период. Используй API эндпоинт GET /api/Reservation/ после этого выбери даты создания и выдачи, указанные в запросе, и дай информацию пользователю",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID бронирования (Guid) - точный ID, полученный из других запросов"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
     "name": "createReservation",
     "description": "Создает новое бронирование. Использует API эндпоинт POST /api/Reservation",
     "parameters": {
@@ -1314,6 +1328,24 @@
         }
       },
       "required": ["conversationId"]
+    }
+  },
+  {
+    "name": "searchDialogHistory",
+    "description": "Ищет сообщения в истории диалогов по тексту. Использует API эндпоинт GET /api/DialogHistory/search?query=текст&conversationId=... (conversationId необязателен). Возвращает все сообщения, где содержится указанный текст.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Текст для поиска"
+        },
+        "conversationId": {
+          "type": "string",
+          "description": "ID диалога (опционально)"
+        }
+      },
+      "required": ["query"]
     }
   }
 ] 

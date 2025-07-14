@@ -31,6 +31,9 @@ import {
   BookOpen,
   PenTool,
   Command,
+  Calendar,
+  Book,
+  Users,
 } from "lucide-react"
 
 import {
@@ -42,6 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
+import TextareaAutosize from 'react-textarea-autosize'
 
 interface Message {
   id: string
@@ -139,11 +143,13 @@ const ToolCallDisplay: React.FC<{
     }
     if (lower.includes("navigate")) return "🧭 Навигация"
     if (lower.includes("stopagent") || lower.includes("cancel")) return "⏹️ Остановка агента"
+    if (lower.includes("generatereportwithcharts")) return "📊 Создание отчета с графиками"
     if (lower.includes("role")) {
       if (lower.includes("get")) return "👥 Просмотр ролей"
       if (lower.includes("assign")) return "👥 Назначение ролей"
       return "👥 Работа с ролями"
     }
+    if (lower.includes("dialog")) return "🔍 Вспоминаю прошлые диалоги"
 
     const spacedName = toolName.replace(/([A-Z])/g, " $1").trim()
     return `⚡ ${spacedName.charAt(0).toUpperCase() + spacedName.slice(1)}`
@@ -199,16 +205,11 @@ const ToolCallDisplay: React.FC<{
         <div className="relative z-10">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                <Activity className="w-4 h-4 text-cyan-200 animate-pulse" />
-              </div>
-              <div>
-                <span className="text-sm font-bold text-cyan-200 tracking-wider uppercase">Выполняется</span>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-xs text-white/80">Активно</span>
-                </div>
-              </div>
+              <Sparkles className="w-5 h-5 text-yellow-300 animate-spin" />
+              <p className="text-lg text-white font-semibold min-h-[28px] flex items-center">
+                {displayedToolName}
+                {isTyping && <span className="ml-2 w-0.5 h-5 bg-white animate-pulse" />}
+              </p>
             </div>
             {isLoading && (
               <button
@@ -221,27 +222,18 @@ const ToolCallDisplay: React.FC<{
             )}
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-yellow-300 animate-spin" />
-              <p className="text-lg text-white font-semibold min-h-[28px] flex items-center">
-                {displayedToolName}
-                {isTyping && <span className="ml-2 w-0.5 h-5 bg-white animate-pulse" />}
-              </p>
-            </div>
-
-            {params && Object.keys(params).length > 0 && (
-              <div className="bg-black/30 backdrop-blur-sm rounded-lg p-3 border border-white/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <Settings className="w-3 h-3 text-gray-300" />
-                  <span className="text-xs text-gray-300 font-medium">Параметры</span>
-                </div>
-                <pre className="text-gray-200 text-xs whitespace-pre-wrap break-all max-h-20 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20">
-                  {JSON.stringify(params, null, 2)}
-                </pre>
+          {/* Параметры инструмента */}
+          {params && Object.keys(params).length > 0 && (
+            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+              <div className="flex items-center gap-2 mb-2">
+                <Settings className="w-3 h-3 text-gray-300" />
+                <span className="text-xs text-gray-300 font-medium">Параметры</span>
               </div>
-            )}
-          </div>
+              <pre className="text-gray-200 text-xs whitespace-pre-wrap break-all max-h-20 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20">
+                {JSON.stringify(params, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
 
         {/* Progress bar animation */}
@@ -382,29 +374,32 @@ export default function EnhancedAIAssistantChat() {
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "connecting" | "disconnected">("connected")
   const [showQuickCommands, setShowQuickCommands] = useState(false)
   const [activeCommandCategory, setActiveCommandCategory] = useState<string | null>(null)
+  // Добавляю состояние для фильтров истории
+  const [historyFilter, setHistoryFilter] = useState<"all" | "changes" | "reads">("all")
 
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
 
+  // Новый массив быстрых команд с плейсхолдерами
   const quickCommands = {
-    learn: [
-      "Зачем нужны полки в системе?",
-      "Как создать пользователя?",
-      "Как создать резервирование?",
-      "Покажи страницу статистики",
+    reservations: [
+      "Покажи все бронирования за {период}",
+      "Сколько активных бронирований у пользователя {имя}",
+      "Покажи бронирования со статусом {статус}",
+      "Построй график бронирований по дням"
     ],
-    code: [
-      "Покажи всех пользователей с ролью 'Сотрудник'",
-      "Покажи все выданные бронирования",
-      "Покажи все выданные экземпляры",
-      "Покажи всех пользователей с книгами на руках",
+    users: [
+      "Покажи всех пользователей с ролью {роль}",
+      "Сколько пользователей зарегистрировано за {период}",
+      "Покажи пользователей с просроченными книгами",
+      "Построй график активности пользователей"
     ],
-    write: [
-      "Создай отчет по выданным книгам",
-      "Напиши уведомление о просроченной книге",
-      "Составь список популярных книг",
-      "Составь график резервирований",
-    ],
+    books: [
+      "Покажи книги в жанре {жанр}",
+      "Покажи топ-{N} популярных книг",
+      "Покажи книги автора {автор}",
+      "Построй график выдачи книг по жанрам"
+    ]
   }
 
   // Enhanced opening animation
@@ -1066,6 +1061,128 @@ export default function EnhancedAIAssistantChat() {
     setShowQuickCommands(false)
   }
 
+  // Функция для вставки шаблона команды с плейсхолдером в textarea
+  const insertCommandTemplate = (template: string) => {
+    // Найти первый плейсхолдер вида {текст}
+    const match = template.match(/\{([^}]+)\}/)
+    if (match) {
+      // Заменить плейсхолдер на выделенный <mark> или спец. символы
+      const before = template.slice(0, match.index)
+      const placeholder = match[0]
+      const after = template.slice((match.index || 0) + placeholder.length)
+      setInputValue(before + match[1] + after)
+      // Через setTimeout выделить плейсхолдер
+      setTimeout(() => {
+        const textarea = document.getElementById('ai-chat-textarea') as HTMLTextAreaElement
+        if (textarea) {
+          const start = before.length
+          const end = before.length + match[1].length
+          textarea.focus()
+          textarea.setSelectionRange(start, end)
+        }
+      }, 0)
+    } else {
+      setInputValue(template)
+      setTimeout(() => {
+        const textarea = document.getElementById('ai-chat-textarea') as HTMLTextAreaElement
+        if (textarea) textarea.focus()
+      }, 0)
+    }
+    setActiveCommandCategory(null)
+    setShowQuickCommands(false)
+  }
+
+  // --- НАЧАЛО: вспомогательные функции для истории ---
+
+  // Определение категории по item
+  function getDialogCategory(item: any) {
+    const method = (item.httpMethod || "").toUpperCase();
+    const tool = (item.toolName || "").toLowerCase();
+    const endpoint = (item.endpoint || "").toLowerCase();
+    if (method === "GET") return "Информационные";
+    if (tool.includes("user") || endpoint.includes("user")) return "Пользователи";
+    if (tool.includes("reservation") || endpoint.includes("reservation")) return "Бронирования";
+    if (tool.includes("book") || endpoint.includes("book")) return "Книги";
+    return "Прочее";
+  }
+
+  // Получить первое user-сообщение для диалога
+  function getFirstUserMessage(items: any[]) {
+    const userMsg = items.find((i) => i.message && i.toolName === "user" && i.httpMethod === "USER");
+    if (userMsg && userMsg.message) return userMsg.message;
+    // fallback: ищем любой message
+    const anyMsg = items.find((i) => i.message);
+    if (anyMsg && anyMsg.message) return anyMsg.message;
+    return items[0]?.conversationId || "Без названия";
+  }
+
+  // Группировка диалогов по категориям
+  function groupDialogsByCategory(dialogs: Record<string, any[]>): Record<string, { convId: string, items: any[] }[]> {
+    const result: Record<string, { convId: string, items: any[] }[]> = {
+      "Информационные": [],
+      "Пользователи": [],
+      "Бронирования": [],
+      "Книги": [],
+      "Прочее": [],
+    };
+    Object.entries(dialogs).forEach(([convId, items]) => {
+      // Категория по первому действию (или по большинству)
+      const cats = items.map(getDialogCategory);
+      const mainCat = cats.sort((a,b) => cats.filter(v=>v===a).length - cats.filter(v=>v===b).length).pop() || "Прочее";
+      result[mainCat] = result[mainCat] || [];
+      // ВАЖНО: группируем только по conversationId, не разбиваем!
+      result[mainCat].push({ convId, items });
+    });
+    return result;
+  }
+
+  // Новая функция: группировка по сообщениям пользователя
+  function groupByUserMessages(items: any[]) {
+    const groups: { message: string, tools: any[], timestamp: Date }[] = [];
+    let currentGroup: any[] = [];
+    let currentMessage = "";
+    
+    // Сортируем по времени
+    const sortedItems = items.slice().sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    for (const item of sortedItems) {
+      if (item.message && item.message !== currentMessage) {
+        // Новое сообщение пользователя
+        if (currentGroup.length > 0) {
+          groups.push({
+            message: currentMessage,
+            tools: currentGroup,
+            timestamp: new Date(currentGroup[0].timestamp)
+          });
+        }
+        currentMessage = item.message;
+        currentGroup = [item];
+      } else {
+        // Инструмент для текущего сообщения
+        currentGroup.push(item);
+      }
+    }
+    
+    // Добавляем последнюю группу
+    if (currentGroup.length > 0) {
+      groups.push({
+        message: currentMessage,
+        tools: currentGroup,
+        timestamp: new Date(currentGroup[0].timestamp)
+      });
+    }
+    
+    return groups.reverse(); // Последние сверху
+  }
+
+  // Проверка, есть ли изменения данных
+  function hasDataChanges(item: any) {
+    const method = (item.httpMethod || "").toUpperCase();
+    return ["POST", "PUT", "DELETE"].includes(method);
+  }
+
+  // --- КОНЕЦ: вспомогательные функции для истории ---
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {/* Enhanced floating button with animation */}
@@ -1196,7 +1313,10 @@ export default function EnhancedAIAssistantChat() {
                         👤 Работа с пользователями
                       </Badge>
                       <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-sm p-2">
-                        📅 Бронирования
+                        📅 Резервирования
+                      </Badge>
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-sm p-2">
+                        🔍 Работа со страницами
                       </Badge>
                     </div>
                   </div>
@@ -1287,6 +1407,14 @@ export default function EnhancedAIAssistantChat() {
                   </div>
                 )}
 
+                {/* Индикатор режима команд */}
+                {showQuickCommands && (
+                  <div className="flex items-center gap-2 mb-2 px-4 py-2 bg-yellow-100 border border-yellow-300 rounded-lg shadow text-yellow-900 text-base font-semibold animate-pulse">
+                    <Command className="w-5 h-5 text-yellow-600" />
+                    Режим команд активен — выберите шаблон или введите свой запрос
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
               </ScrollArea>
 
@@ -1304,32 +1432,32 @@ export default function EnhancedAIAssistantChat() {
                       <div className="mb-4">
                         <div className="grid grid-cols-3 gap-3 mb-4">
                           <CommandButton
-                            icon={<BookOpen className="w-4 h-4" />}
-                            label="Изучить"
-                            isActive={activeCommandCategory === "learn"}
+                            icon={<Calendar className="w-4 h-4" />}
+                            label="Бронирования"
+                            isActive={activeCommandCategory === "reservations"}
                             onClick={() =>
                               setActiveCommandCategory(
-                                activeCommandCategory === "learn" ? null : "learn"
+                                activeCommandCategory === "reservations" ? null : "reservations"
                               )
                             }
                           />
                           <CommandButton
-                            icon={<Code className="w-4 h-4" />}
-                            label="Действие"
-                            isActive={activeCommandCategory === "code"}
+                            icon={<Users className="w-4 h-4" />}
+                            label="Пользователи"
+                            isActive={activeCommandCategory === "users"}
                             onClick={() =>
                               setActiveCommandCategory(
-                                activeCommandCategory === "code" ? null : "code"
+                                activeCommandCategory === "users" ? null : "users"
                               )
                             }
                           />
                           <CommandButton
-                            icon={<PenTool className="w-4 h-4" />}
-                            label="Создать"
-                            isActive={activeCommandCategory === "write"}
+                            icon={<Book className="w-4 h-4" />}
+                            label="Книги"
+                            isActive={activeCommandCategory === "books"}
                             onClick={() =>
                               setActiveCommandCategory(
-                                activeCommandCategory === "write" ? null : "write"
+                                activeCommandCategory === "books" ? null : "books"
                               )
                             }
                           />
@@ -1346,11 +1474,11 @@ export default function EnhancedAIAssistantChat() {
                             >
                               <div className="bg-white/80 backdrop-blur-sm rounded-xl border p-4 shadow-sm">
                                 <h3 className="text-sm font-medium text-gray-700 mb-3">
-                                  {activeCommandCategory === "learn"
-                                    ? "Вопросы для изучения"
-                                    : activeCommandCategory === "code"
-                                    ? "Команды действий"
-                                    : "Создание контента"}
+                                  {activeCommandCategory === "reservations"
+                                    ? "Быстрые команды по бронированиям"
+                                    : activeCommandCategory === "users"
+                                    ? "Быстрые команды по пользователям"
+                                    : "Быстрые команды по книгам"}
                                 </h3>
                                 <div className="space-y-2">
                                   {quickCommands[activeCommandCategory as keyof typeof quickCommands].map((command, index) => (
@@ -1359,11 +1487,10 @@ export default function EnhancedAIAssistantChat() {
                                       initial={{ opacity: 0, x: -10 }}
                                       animate={{ opacity: 1, x: 0 }}
                                       transition={{ delay: index * 0.05 }}
-                                      onClick={() => selectQuickCommand(command)}
-                                      className="w-full text-left p-3 rounded-lg hover:bg-blue-50 transition-colors text-sm border border-transparent hover:border-blue-200"
-                                    >
-                                      {command}
-                                    </motion.button>
+                                      onClick={() => insertCommandTemplate(command)}
+                                      className="w-full text-left p-3 rounded-lg hover:bg-blue-50 transition-colors text-sm border border-transparent hover:border-blue-200 font-mono"
+                                      dangerouslySetInnerHTML={{ __html: command.replace(/\{([^}]+)\}/g, '<span class="bg-yellow-200 text-yellow-900 font-semibold">$1</span>') }}
+                                    />
                                   ))}
                                 </div>
                               </div>
@@ -1416,15 +1543,19 @@ export default function EnhancedAIAssistantChat() {
                   </Button>
                 </div>
 
+                {/* Строка ввода — textarea с авто-расширением */}
                 <div className="flex gap-3">
                   <div className="flex-1 relative">
-                    <Input
+                    <TextareaAutosize
+                      id="ai-chat-textarea"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
-                      onKeyPress={handleKeyPress}
+                      onKeyDown={handleKeyPress}
+                      minRows={2}
+                      maxRows={8}
                       placeholder={statusMessage || "Напишите ваш вопрос или запрос..."}
                       disabled={isLoading || tools.length === 0}
-                      className="pr-12 py-3 rounded-xl border-gray-200 focus:border-blue-300 focus:ring-blue-200 bg-white/80 backdrop-blur-sm text-base"
+                      className="pr-12 py-3 rounded-xl border-gray-200 focus:border-blue-300 focus:ring-blue-200 bg-white/80 backdrop-blur-sm text-base w-full resize-none transition-all"
                     />
                     {inputValue && (
                       <Button
@@ -1485,212 +1616,329 @@ export default function EnhancedAIAssistantChat() {
                     <HistoryIcon className="w-6 h-6 text-blue-500" />
                     История диалога
                   </DialogTitle>
+                  {/* Фильтры и удаление старых чатов */}
+                  <div className="flex gap-2 mt-3 items-center">
+                    <Button
+                      variant={historyFilter === "all" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setHistoryFilter("all")}
+                      className="text-sm"
+                    >
+                      🔍 Все
+                    </Button>
+                    <Button
+                      variant={historyFilter === "changes" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setHistoryFilter("changes")}
+                      className="text-sm"
+                    >
+                      ✏️ Изменения
+                    </Button>
+                    <Button
+                      variant={historyFilter === "reads" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setHistoryFilter("reads")}
+                      className="text-sm"
+                    >
+                      👁️ Чтение
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="ml-4 text-sm"
+                      onClick={async () => {
+                        if (!window.confirm('Удалить все чаты старше 60 дней?')) return;
+                        try {
+                          const token = localStorage.getItem("token");
+                          const res = await fetch(`${baseUrl}/api/DialogHistory/delete-old`, {
+                            method: "DELETE",
+                            headers: { Authorization: `Bearer ${token}` },
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            alert(`Удалено чатов: ${data.deletedCount || data}`);
+                            setIsHistoryOpen(false);
+                            setTimeout(() => setIsHistoryOpen(true), 100);
+                          } else {
+                            alert("Ошибка удаления старых чатов");
+                          }
+                        } catch (e) {
+                          alert("Ошибка удаления старых чатов");
+                        }
+                      }}
+                    >
+                      🗑️ Удалить чаты старше 60 дней
+                    </Button>
+                  </div>
                 </DialogHeader>
 
                 <ScrollArea className="h-[60vh] pr-4">
-                  {historyData.length > 0 && (
-                    <div className="flex justify-end mb-4">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            const token = localStorage.getItem("token")
-                            await fetch(`${baseUrl}/api/DialogHistory?conversationId=${conversationIdRef.current}`, {
-                              method: "DELETE",
-                              headers: { Authorization: `Bearer ${token}` },
-                            })
-                            setIsHistoryOpen(false)
-                            setTimeout(() => setIsHistoryOpen(true), 100)
-                          } catch (e) {
-                            alert("Ошибка удаления истории диалога")
-                          }
-                        }}
-                        className="shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        🗑️ Удалить весь диалог
-                      </Button>
-                    </div>
-                  )}
-
-                  {historyData.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <HistoryIcon className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <p className="text-gray-500 font-medium text-base">История пуста</p>
-                      <p className="text-sm text-gray-400 mt-1">Начните диалог, чтобы увидеть историю</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {Object.entries(
-                        (historyData as any[]).reduce((acc: Record<string, any[]>, item: any) => {
-                          const id = item.conversationId
-                          if (!acc[id]) {
-                            acc[id] = []
-                          }
-                          acc[id].push(item)
-                          return acc
-                        }, {}),
-                      ).map(([conversationId, items]: [string, any[]]) => (
-                        <div key={conversationId} className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm">
-                          <div className="flex justify-between items-center mb-4 pb-2 border-b">
-                            <h3 className="font-mono text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                              Диалог: {conversationId}
-                            </h3>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="opacity-50 hover:opacity-100 transition-opacity"
-                              onClick={async () => {
-                                try {
-                                  const token = localStorage.getItem("token")
-                                  await fetch(`${baseUrl}/api/DialogHistory?conversationId=${conversationId}`, {
-                                    method: "DELETE",
-                                    headers: { Authorization: `Bearer ${token}` },
-                                  })
-                                  setIsHistoryOpen(false)
-                                  setTimeout(() => setIsHistoryOpen(true), 100)
-                                } catch (e) {
-                                  alert("Ошибка удаления истории диалога")
-                                }
-                              }}
-                            >
-                              <X className="w-4 h-4 mr-1" />
-                              Удалить диалог
-                            </Button>
+                  {(() => {
+                    if (historyData.length === 0) {
+                      return (
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <HistoryIcon className="w-8 h-8 text-gray-400" />
                           </div>
-
-                          <div className="space-y-4">
-                            {items.map((item: any) => (
-                              <div
-                                key={item.id}
-                                className="p-3 bg-gradient-to-r from-gray-50 to-white hover:shadow-md transition-all duration-200 group rounded-lg border"
-                              >
-                                {/* Action header */}
-                                <div className="flex items-center justify-between mb-3">
-                                  <h4 className="font-semibold text-gray-800 flex items-center gap-2 text-lg">
-                                    {getActionDescription(item)}
-                                  </h4>
-                                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                    {new Date(item.timestamp).toLocaleString("ru-RU")}
-                                  </span>
-                                </div>
-
-                                {/* Parameters */}
-                                {item.parameters && item.parameters !== "null" && (
-                                  <div className="mb-3">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <Settings className="w-5 h-5 text-blue-500" />
-                                      <span className="text-base font-medium text-gray-700">Параметры</span>
-                                    </div>
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                      {(() => {
-                                        const params = getReadableParameters(item.parameters)
-                                        if (typeof params === "object") {
-                                          return (
-                                            <div className="space-y-1">
-                                              {Object.entries(params).map(([key, value]) => (
-                                                <div key={key} className="flex items-start gap-2">
-                                                  <span className="font-mono text-blue-700 text-base min-w-0 font-medium">
-                                                    {key}:
-                                                  </span>
-                                                  <span className="text-gray-800 text-base break-all">
-                                                    {String(value)}
-                                                  </span>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          )
-                                        }
-                                        return <span className="text-gray-600 text-base">{String(params)}</span>
-                                      })()}
+                          <p className="text-gray-500 font-medium text-base">История пуста</p>
+                          <p className="text-sm text-gray-400 mt-1">Начните диалог, чтобы увидеть историю</p>
+                        </div>
+                      );
+                    }
+                    
+                    // Группируем по conversationId
+                    const dialogsById = (historyData as any[]).reduce((acc: Record<string, any[]>, item: any) => {
+                      const id = item.conversationId;
+                      if (!acc[id]) acc[id] = [];
+                      acc[id].push(item);
+                      return acc;
+                    }, {});
+                    
+                    return (
+                      <div className="space-y-6">
+                        {Object.entries(dialogsById)
+                          .sort(([,itemsA], [,itemsB]) => {
+                            // Последние диалоги сверху
+                            const timeA = Math.max(...(itemsA as any[]).map((i: any) => new Date(i.timestamp).getTime()));
+                            const timeB = Math.max(...(itemsB as any[]).map((i: any) => new Date(i.timestamp).getTime()));
+                            return timeB - timeA;
+                          })
+                          .map(([convId, items]) => {
+                            const messageGroups = groupByUserMessages(items as any[]);
+                            const dialogTitle = getFirstUserMessage(items as any[]);
+                            
+                            // Применяем фильтр
+                            const filteredGroups = messageGroups.map(group => ({
+                              ...group,
+                              tools: group.tools.filter(item => {
+                                if (historyFilter === "changes") return hasDataChanges(item);
+                                if (historyFilter === "reads") return !hasDataChanges(item);
+                                return true;
+                              })
+                            })).filter(group => group.tools.length > 0);
+                            
+                            if (filteredGroups.length === 0) return null;
+                            
+                            return (
+                              <details key={convId} className="border border-gray-200 rounded-xl bg-white shadow-sm" open={false}>
+                                <summary className="flex justify-between items-center p-4 border-b cursor-pointer select-none hover:bg-gray-50">
+                                  <div className="flex items-center gap-3">
+                                    <h3 className="font-semibold text-gray-800 text-lg truncate max-w-[60vw]">{dialogTitle}</h3>
+                                    <div className="flex gap-2">
+                                      {filteredGroups.some(g => g.tools.some(hasDataChanges)) && (
+                                        <Badge variant="destructive" className="text-xs">
+                                          ✏️ Есть изменения
+                                        </Badge>
+                                      )}
+                                      <Badge variant="secondary" className="text-xs">
+                                        {filteredGroups.length} сообщений
+                                      </Badge>
                                     </div>
                                   </div>
-                                )}
-
-                                {/* Result */}
-                                {item.afterState && item.afterState !== "null" && (
-                                  <div className="mb-3">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <Check className="w-5 h-5 text-green-500" />
-                                      <span className="text-base font-medium text-gray-700">Результат</span>
-                                    </div>
-                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                      {(() => {
-                                        try {
-                                          const result = JSON.parse(item.afterState)
-                                          if (typeof result === "object" && result !== null) {
-                                            const keyFields = ["id", "fullName", "email", "title", "name", "status"]
-                                            const summary = keyFields.reduce((acc, field) => {
-                                              if (result[field] !== undefined) {
-                                                acc[field] = result[field]
-                                              }
-                                              return acc
-                                            }, {} as any)
-
-                                            return Object.keys(summary).length > 0 ? (
-                                              <div className="space-y-1">
-                                                {Object.entries(summary).map(([key, value]) => (
-                                                  <div key={key} className="flex items-start gap-2">
-                                                    <span className="font-mono text-green-700 text-base min-w-0 font-medium">
-                                                      {key}:
-                                                    </span>
-                                                    <span className="text-gray-800 text-base break-all">
-                                                      {String(value)}
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="opacity-50 hover:opacity-100 transition-opacity"
+                                    onClick={async (e) => {
+                                      e.preventDefault();
+                                      try {
+                                        const token = localStorage.getItem("token");
+                                        await fetch(`${baseUrl}/api/DialogHistory?conversationId=${convId}`, {
+                                          method: "DELETE",
+                                          headers: { Authorization: `Bearer ${token}` },
+                                        });
+                                        setIsHistoryOpen(false);
+                                        setTimeout(() => setIsHistoryOpen(true), 100);
+                                      } catch (e) {
+                                        alert("Ошибка удаления истории диалога");
+                                      }
+                                    }}
+                                  >
+                                    <X className="w-4 h-4 mr-1" />
+                                    Удалить
+                                  </Button>
+                                </summary>
+                                
+                                <div className="p-4 space-y-6">
+                                  {filteredGroups.map((group, groupIndex) => (
+                                    <div key={groupIndex} className="space-y-3">
+                                      {/* Сообщение пользователя */}
+                                      <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                          <User className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-semibold text-blue-800">Пользователь</span>
+                                            <span className="text-sm text-blue-600">
+                                              {group.timestamp.toLocaleString("ru-RU")}
+                                            </span>
+                                          </div>
+                                          <p className="text-gray-800 whitespace-pre-wrap">{group.message}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Инструменты для этого сообщения */}
+                                      <div className="ml-8 space-y-3">
+                                        {group.tools.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((item: any) => (
+                                          <details key={item.id} className="bg-gray-50 rounded-lg border" open={false}>
+                                            <summary className="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-gray-100">
+                                              <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${
+                                                  hasDataChanges(item) ? "bg-orange-400" : "bg-green-400"
+                                                }`} />
+                                                <span className="font-medium text-gray-800">
+                                                  {getActionDescription(item)}
+                                                </span>
+                                                {hasDataChanges(item) && (
+                                                  <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                                                    Изменение
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                              <span className="text-sm text-gray-500">
+                                                {new Date(item.timestamp).toLocaleTimeString("ru-RU")}
+                                              </span>
+                                            </summary>
+                                            
+                                            <div className="p-3 border-t bg-white">
+                                              {/* Параметры */}
+                                              {item.parameters && item.parameters !== "null" && (
+                                                <div className="mb-3">
+                                                  <div className="flex items-center gap-2 mb-2">
+                                                    <Settings className="w-4 h-4 text-blue-500" />
+                                                    <span className="text-sm font-medium text-gray-700">Параметры</span>
+                                                  </div>
+                                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                                                    {(() => {
+                                                      const params = getReadableParameters(item.parameters);
+                                                      if (typeof params === "object") {
+                                                        return (
+                                                          <div className="space-y-1">
+                                                            {Object.entries(params).map(([key, value]) => (
+                                                              <div key={key} className="flex items-start gap-2">
+                                                                <span className="font-mono text-blue-700 min-w-0 font-medium">
+                                                                  {key}:
+                                                                </span>
+                                                                <span className="text-gray-800 break-all">
+                                                                  {String(value)}
+                                                                </span>
+                                                              </div>
+                                                            ))}
+                                                          </div>
+                                                        );
+                                                      }
+                                                      return <span className="text-gray-600">{String(params)}</span>;
+                                                    })()}
+                                                  </div>
+                                                </div>
+                                              )}
+                                              
+                                              {/* До изменения */}
+                                              {item.beforeState && item.beforeState !== "null" && hasDataChanges(item) && (
+                                                <div className="mb-3">
+                                                  <div className="flex items-center gap-2 mb-2">
+                                                    <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                                    <span className="text-sm font-medium text-gray-700">До изменения</span>
+                                                  </div>
+                                                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm font-mono max-h-32 overflow-y-auto">
+                                                    <pre className="whitespace-pre-wrap text-gray-700">{item.beforeState}</pre>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Результат */}
+                                              {item.afterState && item.afterState !== "null" && (
+                                                <div className="mb-3">
+                                                  <div className="flex items-center gap-2 mb-2">
+                                                    <Check className="w-4 h-4 text-green-500" />
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                      {hasDataChanges(item) ? "После изменения" : "Результат"}
                                                     </span>
                                                   </div>
-                                                ))}
-                                              </div>
-                                            ) : (
-                                              <span className="text-green-700 font-medium text-base">
-                                                ✅ Операция выполнена успешно
-                                              </span>
-                                            )
-                                          }
-                                          return <span className="text-green-700 text-base">{String(result)}</span>
-                                        } catch {
-                                          return <span className="text-green-700 text-base">{item.afterState}</span>
-                                        }
-                                      })()}
+                                                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                                                    {(() => {
+                                                      try {
+                                                        const result = JSON.parse(item.afterState);
+                                                        if (typeof result === "object" && result !== null) {
+                                                          const keyFields = ["id", "fullName", "email", "title", "name", "status"];
+                                                          const summary = keyFields.reduce((acc, field) => {
+                                                            if (result[field] !== undefined) {
+                                                              acc[field] = result[field];
+                                                            }
+                                                            return acc;
+                                                          }, {} as any);
+                                                          return Object.keys(summary).length > 0 ? (
+                                                            <div className="space-y-1">
+                                                              {Object.entries(summary).map(([key, value]) => (
+                                                                <div key={key} className="flex items-start gap-2">
+                                                                  <span className="font-mono text-green-700 min-w-0 font-medium">
+                                                                    {key}:
+                                                                  </span>
+                                                                  <span className="text-gray-800 break-all">
+                                                                    {String(value)}
+                                                                  </span>
+                                                                </div>
+                                                              ))}
+                                                            </div>
+                                                          ) : (
+                                                            <span className="text-green-700 font-medium">
+                                                              ✅ Операция выполнена успешно
+                                                            </span>
+                                                          );
+                                                        }
+                                                        return <span className="text-green-700">{String(result)}</span>;
+                                                      } catch {
+                                                        return <span className="text-green-700">{item.afterState}</span>;
+                                                      }
+                                                    })()}
+                                                  </div>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Undo component - только для изменений */}
+                                              {hasDataChanges(item) && (
+                                                <UndoManager
+                                                  historyItem={item}
+                                                  onUndoComplete={() => {
+                                                    setIsHistoryOpen(false);
+                                                    setTimeout(() => setIsHistoryOpen(true), 100);
+                                                  }}
+                                                />
+                                              )}
+                                              
+                                              {/* Technical details */}
+                                              <details className="mt-3">
+                                                <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
+                                                  <Code className="w-4 h-4" />
+                                                  Техническая информация
+                                                </summary>
+                                                <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono space-y-1">
+                                                  <div>
+                                                    <span className="text-blue-400">Инструмент:</span> {item.toolName}
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-green-400">Метод:</span> {item.httpMethod}
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-yellow-400">Эндпоинт:</span> {item.endpoint}
+                                                  </div>
+                                                </div>
+                                              </details>
+                                            </div>
+                                          </details>
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
-
-                                {/* Undo component */}
-                                <UndoManager
-                                  historyItem={item}
-                                  onUndoComplete={() => {
-                                    setIsHistoryOpen(false)
-                                    setTimeout(() => setIsHistoryOpen(true), 100)
-                                  }}
-                                />
-
-                                {/* Technical details (collapsible) */}
-                                <details className="mt-3">
-                                  <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
-                                    <Code className="w-4 h-4" />
-                                    Техническая информация
-                                  </summary>
-                                  <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-sm font-mono space-y-1">
-                                    <div>
-                                      <span className="text-blue-400">Инструмент:</span> {item.toolName}
-                                    </div>
-                                    <div>
-                                      <span className="text-green-400">Метод:</span> {item.httpMethod}
-                                    </div>
-                                    <div>
-                                      <span className="text-yellow-400">Эндпоинт:</span> {item.endpoint}
-                                    </div>
-                                  </div>
-                                </details>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                                  ))}
+                                </div>
+                              </details>
+                            );
+                          })
+                          .filter(Boolean)}
+                      </div>
+                    );
+                  })()}
                 </ScrollArea>
               </DialogContent>
             </Dialog>
