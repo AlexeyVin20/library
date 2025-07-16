@@ -147,6 +147,7 @@ export default function ReservationsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem("userId") : null;
 
   useEffect(() => {
     // Уже существующий вызов fetchReservations при монтировании
@@ -219,7 +220,11 @@ export default function ReservationsPage() {
         try {
           // Запрос деталей книги
           if (reservation.bookId) {
-            const bookRes = await fetch(`${baseUrl}/api/books/${reservation.bookId}`);
+            const bookRes = await fetch(`${baseUrl}/api/books/${reservation.bookId}`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
             if (bookRes.ok) {
               bookDetails = await bookRes.json();
             } else {
@@ -228,7 +233,11 @@ export default function ReservationsPage() {
           }
           // Запрос деталей пользователя
           if (reservation.userId) {
-            const userRes = await fetch(`${baseUrl}/api/users/${reservation.userId}`);
+            const userRes = await fetch(`${baseUrl}/api/User/${reservation.userId}`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
             if (userRes.ok) {
               userDetails = await userRes.json();
             } else {
@@ -303,20 +312,7 @@ export default function ReservationsPage() {
       delete updatedReservation.book;
       delete updatedReservation.bookInstance;
       
-      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(updatedReservation)
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Ошибка при обновлении статуса");
-      }
-      
-      // Обновляем локальное состояние с пересчетом отображаемого статуса
+      // 1. Мгновенно обновляем локальное состояние для мгновенного отклика
       setReservations(reservations.map(r => {
         if (r.id === id) {
           const updatedReservation = { ...r, originalStatus: newStatus };
@@ -327,6 +323,49 @@ export default function ReservationsPage() {
         }
         return r;
       }));
+
+      // 2. Отправляем запрос на сервер
+      const response = await fetch(`${baseUrl}/api/Reservation/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedReservation)
+      });
+      if (!response.ok) {
+        let errorMessage = "Ошибка при обновлении статуса";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            errorMessage = data.error || data.message || errorMessage;
+          } else {
+            const text = await response.text();
+            if (text) errorMessage = text;
+          }
+        } catch (e) {}
+        throw new Error(errorMessage);
+      }
+      
+      // --- ДОБАВЛЕНО: Пересчёт экземпляров книги ---
+      if (reservation.bookId) {
+        try {
+          await fetch(`${baseUrl}/api/BookInstance/recalculate/${reservation.bookId}`, {
+            method: 'POST',
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            }
+          });
+        } catch (recalcError) {
+          console.warn("Ошибка при пересчёте экземпляров книги:", recalcError);
+        }
+      }
+      // --- КОНЕЦ ДОБАВЛЕНИЯ ---
+      
+      // 3. После успешного ответа синхронизируем данные с сервера (на всякий случай)
+      fetchReservations();
       
       // Отправляем событие для обновления других компонентов
       window.dispatchEvent(new CustomEvent('instanceStatusUpdate'));
@@ -334,17 +373,25 @@ export default function ReservationsPage() {
       // Показываем уведомление об успехе  
       toast({
         title: "Статус обновлен",
-        description: `Статус резервирования изменен на "${newStatus}"`,
+        description: `Статус резервирования изменен на \"${newStatus}\"`,
         variant: "default",
       });
       
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
+      let errorMessage = "Ошибка при обновлении статуса";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
       toast({
         title: "Ошибка",
-        description: err instanceof Error ? err.message : "Ошибка при обновлении статуса",
+        description: errorMessage,
         variant: "destructive",
       });
+      // После ошибки синхронизируем данные
+      fetchReservations();
     }
   };
 
@@ -1073,9 +1120,9 @@ export default function ReservationsPage() {
                             {/* Быстрое действие: Выдать книгу */}
                             {(reservation.originalStatus || reservation.status) === "Одобрена" && (
                               <motion.button 
-                                onClick={() => handleStatusChange(reservation.id, "Выдана")} 
+                                onClick={() => handleStatusChange(reservation.id, "Выдана")}
                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm" 
-                                disabled={reservation.book?.availableCopies === 0}
+                                disabled={false}
                                 whileHover={{ y: -2 }} 
                                 whileTap={{ scale: 0.95 }}
                                 title="Выдать книгу (назначить экземпляр)"

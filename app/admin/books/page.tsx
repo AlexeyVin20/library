@@ -12,6 +12,7 @@ import { Book } from "@/components/ui/book";
 import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
 import AutoAssignGenres from "@/components/admin/AutoAssignGenres";
 import IframePagePreviewCentered from "@/components/ui/iframe-page-preview-centered";
+import { useSettings } from '@/hooks/use-settings'
 
 /**
  * Interface for book item
@@ -719,27 +720,21 @@ const ViewModeMenu = ({
  * Main BooksPage component
  */
 export default function BooksPage() {
+  const { settings, updateSettings } = useSettings();
   const [books, setBooks] = useState<Book[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
-  const [viewMode, setViewMode] = useState("cards");
+  // const [viewMode, setViewMode] = useState("cards"); // Удаляем локальный стейт
   const [loading, setLoading] = useState(true);
   const [selectedBooks, setSelectedBooks] = useState<string[]>([]);
   const [showAutoAssignGenres, setShowAutoAssignGenres] = useState(false);
 
-  // Загружаем сохраненный режим отображения при инициализации
-  useEffect(() => {
-    const savedViewMode = localStorage.getItem('booksViewMode');
-    if (savedViewMode && ['cards', '3d', 'list'].includes(savedViewMode)) {
-      setViewMode(savedViewMode);
-    }
-  }, []);
-
-  // Сохраняем режим отображения при его изменении
-  const handleViewModeChange = (mode: string) => {
-    setViewMode(mode);
-    localStorage.setItem('booksViewMode', mode);
+  // Используем глобальный режим отображения
+  const viewMode = settings.booksViewMode || 'cards';
+  const handleViewModeChange = (mode: 'cards' | '3d' | 'list') => {
+    updateSettings({ booksViewMode: mode });
   };
+
   useEffect(() => {
     const fetchBooks = async () => {
       try {

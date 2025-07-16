@@ -1111,7 +1111,7 @@
   },
   {
     "name": "getInstanceStatusSummary",
-    "description": "Получает сводку по статусам всех экземпляров книг. Использует API эндпоинт GET /api/BookInstance/status-summary. Требует роль администратора или библиотекаря.",
+    "description": "Получает сводку по статусам всех экземпляров книг. Использует API эндпоинт GET /api/BookInstance/status-summary Требует роль администратора или библиотекаря.",
     "parameters": {
       "type": "object",
       "properties": {},

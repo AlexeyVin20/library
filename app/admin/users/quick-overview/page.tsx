@@ -335,17 +335,17 @@ const UserCard = ({
                       Активные книги ({userWithBooks.activeReservations.length}):
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {userWithBooks.activeReservations.slice(0, 3).map((book) => (
+                      {userWithBooks.activeReservations.slice(0, 5).map((book) => (
                         <div key={book.id} className="flex-shrink-0">
                           <BookCover book={book} />
                         </div>
                       ))}
-                      {userWithBooks.activeReservations.length > 3 && (
+                      {userWithBooks.activeReservations.length > 5 && (
                         <div className="flex flex-col items-center justify-center bg-gray-100 rounded-lg p-4 shadow-md border border-gray-200" style={{ height: "180px" }}>
                           <div className="text-center">
                             <BookOpen className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                             <p className="text-sm font-medium text-gray-600">
-                              +{userWithBooks.activeReservations.length - 3}
+                              +{userWithBooks.activeReservations.length - 5}
                             </p>
                             <p className="text-xs text-gray-500">
                               активных

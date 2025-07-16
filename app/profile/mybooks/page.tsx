@@ -187,9 +187,14 @@ export default function MyBooksPage() {
   }
 
   const renderBooks = () => {
-    const booksOnHold = (user?.borrowedBooks || []).map((b) => ({ ...b, author: b.authors }))
+    // Книги, которые реально на руках (нет returnDate и статус не 'returned')
+    const booksOnHold = (user?.borrowedBooks || [])
+      .filter((b: any) => !b.returnDate && b.status !== 'returned')
+      .map((b) => ({ ...b, author: b.authors }))
+
+    // Книги из резерваций, которые реально выданы и не возвращены
     const booksFromReservations = (user?.reservations || [])
-      .filter((r) => r.status === "Выдана" && r.book && new Date(r.expirationDate) >= new Date())
+      .filter((r: any) => r.status === "Выдана" && !r.actualReturnDate)
       .map((r) => ({
         ...(r.book!),
         id: r.bookId,

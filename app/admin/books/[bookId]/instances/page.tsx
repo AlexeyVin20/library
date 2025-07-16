@@ -567,34 +567,6 @@ export default function BookInstancesPage({
                     Добавить экземпляр
                   </motion.button>
                 </Link>
-
-                <motion.button
-                  onClick={handleAutoCreateInstances}
-                  disabled={autoCreateLoading || !book?.isbn}
-                  className={`${
-                    book?.isbn 
-                      ? "bg-green-500 hover:bg-green-700 text-white" 
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  } font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md disabled:opacity-50`}
-                  whileHover={book?.isbn ? {
-                    y: -3,
-                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-                  } : {}}
-                  whileTap={book?.isbn ? { scale: 0.98 } : {}}
-                  title={!book?.isbn ? "Отсутствует ISBN для автосоздания" : "Автоматически создать экземпляры"}
-                >
-                  {autoCreateLoading ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                    />
-                  ) : (
-                    <Zap className="h-4 w-4" />
-                  )}
-                  Авто-создание
-                </motion.button>
-
                 <motion.button
                   onClick={() => setShowMultipleCreateModal(true)}
                   disabled={!book?.isbn}

@@ -53,6 +53,7 @@ import type { Book, Journal, Shelf } from "@/lib/types"
 import { Switch } from "@/components/ui/switch"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import RubricatorSelectorModal from "../RubricatorSelectorModal"
+import { useSettings } from '@/hooks/use-settings'
 
 interface Position {
   x: number
@@ -174,6 +175,7 @@ interface BookFormProps {
 
 const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFormProps) => {
   const router = useRouter()
+  const { settings, updateSettings } = useSettings();
   const [showManualCoverInput, setShowManualCoverInput] = useState(false)
   const [manualCoverUrl, setManualCoverUrl] = useState("")
   const [isSearchLoading, setIsSearchLoading] = useState(false)
@@ -195,8 +197,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
       setFormSuccess("Обложка успешно загружена")
     }
   })
-  // Переключатель ИИ модели
-  const [aiModel, setAiModel] = useState<'openrouter' | 'gemini'>('gemini')
+  const aiModel = settings.aiModel || 'gemini';
 
   // Хук для загрузки изображений
   const imageUpload = useImageUpload({
@@ -230,6 +231,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
     watch,
     trigger,
     reset,
+    setFocus, // добавляем setFocus
   } = useForm<z.infer<typeof bookSchema>>({
     resolver: zodResolver(bookSchema),
     defaultValues: {
@@ -299,17 +301,17 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
   }, [isAdvancedMode, activeTab])
 
   // Добавление записи в localStorage для переключателя модели ИИ
-  useEffect(() => {
-    localStorage.setItem('aiModel', aiModel);
-  }, [aiModel]);
+  // useEffect(() => {
+  //   localStorage.setItem('aiModel', aiModel);
+  // }, [aiModel]);
 
   // Чтение значения переключателя модели ИИ из localStorage при загрузке компонента
-  useEffect(() => {
-    const savedModel = localStorage.getItem('aiModel');
-    if (savedModel) {
-      setAiModel(savedModel as 'openrouter' | 'gemini');
-    }
-  }, []);
+  // useEffect(() => {
+  //   const savedModel = localStorage.getItem('aiModel');
+  //   if (savedModel) {
+  //     setAiModel(savedModel as 'openrouter' | 'gemini');
+  //   }
+  // }, []);
 
   const handleFetchByISBN = async () => {
     const isbn = formValues.isbn;
@@ -773,6 +775,21 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
     setValue("originalLanguage", data.originalLanguage || "");
     setValue("isEbook", data.isEbook !== undefined ? data.isEbook : false);
     setValue("condition", data.condition || "");
+
+    // Новое: Проверка валидности формы после автозаполнения и фокусировка на первом ошибочном поле
+    trigger().then((isValid) => {
+      if (!isValid) {
+        // Фокус на первое ошибочное поле
+        const firstError = Object.keys(errors)[0];
+        if (firstError) setFocus(firstError as any);
+        setFormError("Некоторые обязательные поля не заполнены или заполнены некорректно. Проверьте выделенные поля.");
+        toast({
+          title: "Ошибка автозаполнения",
+          description: "Некоторые поля заполнены некорректно. Проверьте выделенные поля.",
+          variant: "destructive",
+        });
+      }
+    });
   }
 
   const fillFormFromJson = (data: any) => {
@@ -1105,7 +1122,7 @@ const BookForm = ({ initialData, onSubmit, isSubmitting, mode, shelves }: BookFo
                     </span>
                     <Switch
                       checked={aiModel === 'gemini'}
-                      onCheckedChange={(checked) => setAiModel(checked ? 'gemini' : 'openrouter')}
+                      onCheckedChange={(checked) => updateSettings({ aiModel: checked ? 'gemini' : 'openrouter' })}
                     />
                   </div>
                 </div>

@@ -17,6 +17,8 @@ export interface UserSettings {
       recommendations: boolean
     }
   }
+  booksViewMode: 'cards' | '3d' | 'list'
+  aiModel: 'gemini' | 'openrouter'
 }
 
 const defaultSettings: UserSettings = {
@@ -34,7 +36,9 @@ const defaultSettings: UserSettings = {
       returnReminders: true,
       recommendations: false
     }
-  }
+  },
+  booksViewMode: 'cards',
+  aiModel: 'gemini'
 }
 
 const SETTINGS_KEY = 'library-user-settings'

@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, BookOpen, Edit, ArrowLeft, Clock, Calendar, LanguagesIcon as Language, Hash, BookCopy, Bookmark, Plus, Package } from "lucide-react";
+import { ChevronLeft, BookOpen, Edit, ArrowLeft, Clock, Calendar, LanguagesIcon as Language, Hash, BookCopy, Bookmark, Plus, Package, Copy } from "lucide-react";
 import { Book } from "@/components/ui/book";
 import BookInstanceManager from "@/components/admin/BookInstanceManager";
 import { useRouter } from "next/navigation";
@@ -124,6 +124,9 @@ export default function BookDetails({
 }: BookDetailsProps) {
   const [activeTab, setActiveTab] = useState("details");
   const router = useRouter();
+  const [showMultipleCreateModal, setShowMultipleCreateModal] = useState(false);
+  const [multipleCount, setMultipleCount] = useState(1);
+  const [multipleCreateLoading, setMultipleCreateLoading] = useState(false);
 
   const handleCreateInstance = () => {
     router.push(`/admin/books/${book.id}/instances/create`);
@@ -131,6 +134,42 @@ export default function BookDetails({
 
   const handleEditInstance = (instanceId: string) => {
     router.push(`/admin/books/${book.id}/instances/${instanceId}/update`);
+  };
+
+  const handleCreateMultipleInstances = async () => {
+    if (multipleCount <= 0 || multipleCount > 100) {
+      alert("Количество экземпляров должно быть от 1 до 100");
+      return;
+    }
+    try {
+      setMultipleCreateLoading(true);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert("Токен авторизации не найден. Пожалуйста, войдите в систему заново.");
+        return;
+      }
+      const response = await fetch(`${baseUrl}/api/BookInstance/create-multiple/${book.id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(multipleCount)
+      });
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || 'Ошибка при создании экземпляров');
+      }
+      const result = await response.json();
+      setShowMultipleCreateModal(false);
+      setMultipleCount(1);
+      alert(result.message || `Создано ${result.createdCount} экземпляров`);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Не удалось создать экземпляры");
+    } finally {
+      setMultipleCreateLoading(false);
+    }
   };
 
   return <div className="min-h-screen bg-gray-200 relative">
@@ -240,11 +279,27 @@ export default function BookDetails({
             {/* Tabs */}
             <div className="mt-8">
               <Tabs defaultValue="details" onValueChange={setActiveTab}>
-                <TabsList className="border-b border-gray-200 p-0 rounded-none bg-blue-300 shadow-none">
-                  <AnimatedTabsTrigger value="details" label="Детальная информация" isActive={activeTab === "details"} />
-                  {!book.isEbook && <AnimatedTabsTrigger value="instances" label="Экземпляры" isActive={activeTab === "instances"} />}
-                  <AnimatedTabsTrigger value="additional" label="Дополнительно" isActive={activeTab === "additional"} />
-                </TabsList>
+                <div className="flex items-center justify-between">
+                  <TabsList className="border-b border-gray-200 p-0 rounded-none bg-blue-300 shadow-none">
+                    <AnimatedTabsTrigger value="details" label="Детальная информация" isActive={activeTab === "details"} />
+                    {!book.isEbook && <AnimatedTabsTrigger value="instances" label="Экземпляры" isActive={activeTab === "instances"} />}
+                    <AnimatedTabsTrigger value="additional" label="Дополнительно" isActive={activeTab === "additional"} />
+                  </TabsList>
+                  {/* Кнопка Добавить экземпляры всегда видна справа, если не электронная книга */}
+                  {!book.isEbook && (
+                    <motion.button
+                      onClick={() => setShowMultipleCreateModal(true)}
+                      disabled={!book.isbn}
+                      className={`ml-4 ${book.isbn ? "bg-purple-500 hover:bg-purple-700 text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"} font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md disabled:opacity-50 text-sm`}
+                      whileHover={book.isbn ? { y: -2, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" } : {}}
+                      whileTap={book.isbn ? { scale: 0.98 } : {}}
+                      title={!book.isbn ? "Отсутствует ISBN для создания экземпляров" : "Создать несколько экземпляров"}
+                    >
+                      <Copy className="h-4 w-4" />
+                      Добавить экземпляры
+                    </motion.button>
+                  )}
+                </div>
 
                 <TabsContent value="details" className="mt-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -273,15 +328,15 @@ export default function BookDetails({
 
                 {!book.isEbook && (
                   <TabsContent value="instances" className="mt-6">
-                    <BookInstanceManager 
+                    <BookInstanceManager
                       bookId={book.id}
-                      bookData={{
-                        isbn: book.isbn,
-                        title: book.title
-                      }}
+                      bookData={{ isbn: book.isbn, title: book.title }}
                       onCreateInstance={handleCreateInstance}
                       onEditInstance={handleEditInstance}
+                      showAddButton={false}
+                      showMultipleButton={false}
                     />
+                    {/* Модалка создания нескольких экземпляров (можно вынести сюда, если нужно) */}
                   </TabsContent>
                 )}
 
@@ -363,5 +418,82 @@ export default function BookDetails({
           </motion.div>
         </FadeInView>
       </div>
+      {/* Модальное окно создания нескольких экземпляров */}
+      {showMultipleCreateModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => !multipleCreateLoading && setShowMultipleCreateModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-center mb-6">
+              <Copy className="w-12 h-12 text-purple-500 mx-auto mb-3" />
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                Создать несколько экземпляров
+              </h3>
+              <p className="text-gray-600">
+                Укажите количество экземпляров для создания
+              </p>
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Количество экземпляров (1-100)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={multipleCount}
+                onChange={e => setMultipleCount(parseInt(e.target.value) || 1)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-800"
+                disabled={multipleCreateLoading}
+              />
+            </div>
+            <div className="flex gap-3">
+              <motion.button
+                onClick={() => !multipleCreateLoading && setShowMultipleCreateModal(false)}
+                disabled={multipleCreateLoading}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg py-2 px-4 disabled:opacity-50"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Отмена
+              </motion.button>
+              <motion.button
+                onClick={handleCreateMultipleInstances}
+                disabled={multipleCreateLoading || multipleCount <= 0 || multipleCount > 100}
+                className="flex-1 bg-purple-500 hover:bg-purple-700 text-white font-medium rounded-lg py-2 px-4 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {multipleCreateLoading ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                    />
+                    Создание...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Создать
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>;
 }

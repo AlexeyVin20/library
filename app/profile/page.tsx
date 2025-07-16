@@ -463,30 +463,29 @@ export default function ProfilePage() {
   }
 
   const renderBooks = () => {
-    const booksOnHold = user?.borrowedBooks || [];
+    // Книги, которые реально на руках (нет returnDate и статус не 'returned')
+    const booksOnHold = (user?.borrowedBooks || [])
+      .filter((b: any) => !b.returnDate && b.status !== 'returned')
+      .map((b) => ({ ...b, author: b.authors }))
+
+    // Книги из резерваций, которые реально выданы и не возвращены
     const booksFromReservations = (user?.reservations || [])
-      .filter(
-        (reservation) =>
-          reservation.status === "Выдана" &&
-          reservation.book &&
-          new Date(reservation.expirationDate) >= new Date()
-      )
-      .map((reservation) => ({
-        ...(reservation.book!), 
-        id: reservation.bookId, 
-        title: reservation.bookTitle || reservation.book!.title,
-        author: reservation.book!.authors || "Автор не указан",
-        dueDate: reservation.expirationDate, 
-        borrowDate: reservation.reservationDate,
-        returnDate: reservation.expirationDate,
-        cover: reservation.book!.cover,
+      .filter((r: any) => r.status === "Выдана" && !r.actualReturnDate)
+      .map((r) => ({
+        ...(r.book!),
+        id: r.bookId,
+        title: r.bookTitle || r.book!.title,
+        author: r.book!.authors || "Автор не указан",
+        dueDate: r.expirationDate,
+        borrowDate: r.reservationDate,
+        returnDate: r.expirationDate,
+        cover: r.book!.cover,
         isFromReservation: true,
-      }));
+      }))
 
     const allBooks = [...booksOnHold, ...booksFromReservations].filter(
-      (book, index, self) =>
-        index === self.findIndex((b) => b.id === book.id)
-    );
+      (book, index, self) => index === self.findIndex((b) => b.id === book.id)
+    )
 
     if (allBooks.length > 0) {
       return (
@@ -520,7 +519,7 @@ export default function ProfilePage() {
                   Автор: {book.author || book.authors || "Автор не указан"}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Дата возврата: {formatDate(book.returnDate || book.dueDate || "")}
+                  Дата возврата: {formatDate(book.returnDate || "")}
                 </p>
                 {book.isFromReservation && (
                   <span className="text-xs text-blue-500 mt-1 inline-block">

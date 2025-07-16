@@ -342,7 +342,7 @@ export function CreateReservationDialog({
   // ───────────────────────── render ─────────────────────────
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 sm:max-w-2xl gap-0 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="p-0 sm:max-w-3xl gap-0 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b px-6 py-4 pt-5">
           <DialogTitle>Создать резервирование</DialogTitle>
         </DialogHeader>
@@ -373,7 +373,9 @@ export function CreateReservationDialog({
                     <Book className="h-4 w-4" /> Книга *
                   </Label>
                   <Button type="button" variant="outline" className="w-full justify-between" onClick={() => setBookModalOpen(true)}>
-                    {selectedBook ? selectedBook.title : "Выберите книгу"}
+                    <span className="truncate max-w-[170px] block">
+                      {selectedBook ? selectedBook.title : "Выберите книгу"}
+                    </span>
                     <ChevronDownIcon className="ml-2 h-4 w-4 opacity-50" />
                   </Button>
                   <BookPickerModal open={bookModalOpen} onOpenChange={setBookModalOpen} books={books} onSelect={handleBookSelect} selectedBook={selectedBook} />
@@ -403,7 +405,11 @@ export function CreateReservationDialog({
                           Книга недоступна
                         </h4>
                         <p className="text-sm text-orange-700 mt-1">
-                          Все экземпляры книги "{selectedBook.title}" заняты. Резервирование
+                          Все экземпляры книги 
+                          <span className="inline-block max-w-[170px] align-bottom truncate" title={selectedBook.title}>
+                            "{selectedBook.title}"
+                          </span> 
+                          заняты. Резервирование
                           будет поставлено в очередь.
                         </p>
                       </div>
@@ -610,7 +616,7 @@ function BookPickerModal({ open, onOpenChange, books, onSelect, selectedBook }: 
                 onClick={() => { onSelect(b); onOpenChange(false); }}>
                 {b.cover && <div className="relative mr-3 h-12 w-8"><Image src={b.cover} alt={b.title} fill className="object-cover rounded" /></div>}
                 <div className="flex-1">
-                  <div className="font-medium">{b.title}</div>
+                  <div className="font-medium max-w-[220px] truncate">{b.title}</div>
                   {b.authors && <div className="text-sm text-gray-500">{b.authors}</div>}
                   <div className={cn("text-sm", b.isEbook ? "text-blue-600" : b.availableCopies > 0 ? "text-green-600" : "text-orange-600")}>{b.isEbook ? "Электронная книга" : (b.availableCopies > 0 ? `${b.availableCopies} доступно` : "Нет в наличии")}</div>
                 </div>

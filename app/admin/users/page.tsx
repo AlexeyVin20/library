@@ -11,7 +11,6 @@ import { Users, UserPlus, ChevronRight, ArrowRight, ChevronLeft, Shield, BookOpe
 import { CreateUserDialog } from "@/components/ui/user-creation-modal";
 import { USER_ROLES } from "@/lib/types";
 import GlassCard from "@/components/glass-card";
-import IframePagePreviewCentered from "@/components/ui/iframe-page-preview-centered";
 
 // CSS для анимации строк таблицы
 const fadeInAnimation = `
@@ -525,9 +524,9 @@ export default function AllUsersPage() {
         }} transition={{
           delay: 0.8
         }} />
-          <div className="max-h-[400px] bg-white rounded-xl overflow-hidden border border-gray-200">
+          <div className="max-h-[800px] bg-white rounded-xl overflow-hidden border border-gray-200">
             <div className="overflow-auto" style={{
-            height: 400
+            height: 800
           }}>
               <table className="min-w-full" cellPadding={0} cellSpacing={0}>
                 <thead className="sticky top-0 bg-gray-100 z-10">
@@ -561,7 +560,11 @@ export default function AllUsersPage() {
                         <td className="px-6 py-4 text-gray-800 align-middle cursor-pointer"
                           onMouseEnter={(e) => handleMouseEnter(e, user.id)}
                           onMouseLeave={handleMouseLeave}
-                        >{user.fullName}</td>
+                        >
+                          <Link href={`/admin/users/${user.id}`} className="hover:underline">
+                            {user.fullName}
+                          </Link>
+                        </td>
                         <td className="px-6 py-4 text-gray-800 align-middle">{user.email}</td>
                         <td className="px-6 py-4 text-gray-800 align-middle">{user.borrowedBooksCount}/{user.maxBooksAllowed}</td>
                         <td className="px-6 py-4 text-gray-800 align-middle">
@@ -606,18 +609,6 @@ export default function AllUsersPage() {
         open={createUserDialogOpen}
         onOpenChange={setCreateUserDialogOpen}
         onCreateUser={handleCreateUser}
-      />
-      <IframePagePreviewCentered 
-        route={previewState.id ? `/admin/users/${previewState.id}` : ''}
-        isVisible={!!previewState.id}
-        delay={0}
-        displayMode="api"
-        coords={previewState.coords || { top: 0, left: 0 }}
-        onMouseEnter={() => setIsPreviewHovered(true)}
-        onMouseLeave={() => {
-            setIsPreviewHovered(false);
-            setPreviewState({ id: null, position: "right", coords: { top: 0, left: 0 } });
-        }}
       />
     </div>;
 }

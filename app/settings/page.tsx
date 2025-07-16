@@ -23,6 +23,7 @@ import {
   Eye,
   Monitor
 } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 
 export default function SettingsPage() {
   const { settings, updateSettings, resetSettings, updateNotificationSetting, isLoaded } = useSettings()
@@ -64,6 +65,16 @@ export default function SettingsPage() {
     { value: 'compact', label: 'Компактный', description: 'Плотный список для быстрого просмотра' }
   ]
 
+  const booksViewModeOptions = [
+    { value: 'cards', label: 'Карточки', description: 'Современные карточки с анимацией' },
+    { value: '3d', label: '3D', description: 'Трёхмерные книги' },
+    { value: 'list', label: 'Список', description: 'Табличный вид' }
+  ]
+  const aiModelOptions = [
+    { value: 'gemini', label: 'Google Gemini' },
+    { value: 'openrouter', label: 'OpenRouter (Gemini 2.0)' }
+  ]
+
   if (!isLoaded) {
     return (
       <div className="container mx-auto py-8">
@@ -78,7 +89,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-8 space-y-6 bg-white rounded-xl p-4 text-black">
       {/* Заголовок */}
       <div className="flex items-center justify-between">
         <div>
@@ -115,18 +126,30 @@ export default function SettingsPage() {
             <Type className="h-4 w-4" />
             Чтение
           </TabsTrigger>
-          <TabsTrigger value="preferences" className="flex items-center gap-2">
-            <Heart className="h-4 w-4" />
-            Предпочтения
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Уведомления
-          </TabsTrigger>
+          <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="preferences" className="flex items-center gap-2 opacity-50 pointer-events-none" disabled>
+                <Heart className="h-4 w-4" />
+                Предпочтения
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Временно недоступно</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="notifications" className="flex items-center gap-2 opacity-50 pointer-events-none" disabled>
+                <Bell className="h-4 w-4" />
+                Уведомления
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Временно недоступно</TooltipContent>
+          </Tooltip>
+          </TooltipProvider>
         </TabsList>
 
         {/* Вкладка "Отображение" */}
-        <TabsContent value="display" className="space-y-6">
+        <TabsContent value="display" className="space-y-6 text-black bg-white rounded-xl p-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -140,18 +163,16 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               {/* Режим отображения по умолчанию */}
               <div className="space-y-3">
-                <Label className="text-base font-medium">Режим отображения по умолчанию</Label>
-                <Select 
-                  value={settings.defaultViewMode} 
-                  onValueChange={(value: 'grid' | 'list' | 'compact') => 
-                    updateSettings({ defaultViewMode: value })
-                  }
+                <Label className="text-base font-medium">Режим отображения книг</Label>
+                <Select
+                  value={settings.booksViewMode}
+                  onValueChange={(value: 'cards' | '3d' | 'list') => updateSettings({ booksViewMode: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {viewModeOptions.map((option) => (
+                    {booksViewModeOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         <div className="flex flex-col">
                           <span>{option.label}</span>
@@ -162,7 +183,29 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
-                  Выберите, как по умолчанию будут отображаться книги в каталоге
+                  Выберите, как будут отображаться книги в разделе "Книги"
+                </p>
+              </div>
+              {/* Выбор AI-модели */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Модель искусственного интеллекта для распознавания книг</Label>
+                <Select
+                  value={settings.aiModel}
+                  onValueChange={(value: 'gemini' | 'openrouter') => updateSettings({ aiModel: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {aiModelOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Выберите модель, которая будет использоваться для автоматического заполнения данных о книгах по фото
                 </p>
               </div>
             </CardContent>

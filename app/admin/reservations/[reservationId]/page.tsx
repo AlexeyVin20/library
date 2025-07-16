@@ -470,8 +470,10 @@ const StatusSwitcher = ({
                 Административные статусы
               </div>
               {administrativeStatusOptions.map((option) => {
-                // Проверяем, заблокирован ли статус "Выдана" из-за отсутствия экземпляров
-                const isBlocked = option.value === "Выдана" && availableCopies === 0;
+                // Если статус 'Выдана' и текущий статус 'Одобрена', то не блокируем кнопку
+                const isBlocked = option.value === "Выдана"
+                  ? currentStatus !== "Одобрена" && availableCopies === 0
+                  : false;
                 
                 return (
                   <motion.button
@@ -569,6 +571,7 @@ export default function ReservationDetailsPage({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem("userId") : null;
 
   // Получаем params через React.use
   const actualParams = React.use(params);
@@ -683,7 +686,12 @@ export default function ReservationDetailsPage({
     }
     
     // Проверяем доступность экземпляров для статуса "Выдана"
-    if (newStatus === "Выдана" && (reservation.book?.availableCopies || 0) === 0) {
+    if (
+      newStatus === "Выдана" &&
+      (reservation.originalStatus || reservation.status) !== "Одобрена" &&
+      (reservation.book?.availableCopies || 0) === 0 &&
+      reservation.userId !== currentUserId
+    ) {
       toast({
         title: "Ошибка",
         description: "Нельзя выдать книгу: все экземпляры заняты. Дождитесь возврата хотя бы одного экземпляра",
@@ -722,10 +730,34 @@ export default function ReservationDetailsPage({
         },
         body: JSON.stringify(updatedReservation)
       });
-      
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Ошибка при обновлении статуса");
+        let errorMessage = "Ошибка при обновлении статуса";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            errorMessage = data.error || data.message || errorMessage;
+          } else {
+            const text = await response.text();
+            if (text) errorMessage = text;
+          }
+        } catch (e) {}
+        throw new Error(errorMessage);
+      }
+      
+      // Пересчёт экземпляров книги
+      if (reservation.bookId) {
+        try {
+          await fetch(`${baseUrl}/api/BookInstance/recalculate/${reservation.bookId}`, {
+            method: 'POST',
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            }
+          });
+        } catch (recalcError) {
+          console.warn("Ошибка при пересчёте экземпляров книги:", recalcError);
+        }
       }
       
       // Перезагружаем данные резервирования чтобы получить обновленную информацию об экземпляре
@@ -745,11 +777,19 @@ export default function ReservationDetailsPage({
       
     } catch (err) {
       console.error("Ошибка при обновлении статуса:", err);
+      let errorMessage = "Ошибка при обновлении статуса";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
       toast({
         title: "Ошибка",
-        description: err instanceof Error ? err.message : "Ошибка при обновлении статуса",
+        description: errorMessage,
         variant: "destructive",
       });
+      // После ошибки синхронизируем данные
+      await fetchReservation();
     }
   };
 
@@ -1196,15 +1236,6 @@ export default function ReservationDetailsPage({
                       <span>Начислить штраф</span>
                     </motion.button>
                   )}
-                  
-                  <motion.button onClick={generateFormular} className="bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg px-4 py-2 flex items-center gap-2 shadow-md" whileHover={{
-                y: -3
-              }} whileTap={{
-                scale: 0.98
-              }}>
-                    <Printer className="h-4 w-4" />
-                    <span>Печать формуляра бронирования</span>
-                  </motion.button>
                 </div>
               </div>
 

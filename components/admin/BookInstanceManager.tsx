@@ -33,6 +33,8 @@ interface BookInstanceManagerProps {
   };
   onCreateInstance?: () => void;
   onEditInstance?: (instanceId: string) => void;
+  showAddButton?: boolean;
+  showMultipleButton?: boolean;
 }
 
 interface ReservationInfo {
@@ -120,7 +122,9 @@ export default function BookInstanceManager({
   bookId, 
   bookData,
   onCreateInstance, 
-  onEditInstance 
+  onEditInstance,
+  showAddButton = true,
+  showMultipleButton = true
 }: BookInstanceManagerProps) {
   const [instances, setInstances] = useState<BookInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -469,41 +473,41 @@ export default function BookInstanceManager({
             {instances.length}
           </span>
         </div>
-        
-        <div className="flex gap-2">
-          <motion.button
-            onClick={onCreateInstance}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md text-sm"
-            whileHover={{
-              y: -2,
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-            }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Plus className="h-4 w-4" />
-            Добавить
-          </motion.button>
-
-
-
-          <motion.button
-            onClick={() => setShowMultipleCreateModal(true)}
-            disabled={!bookData?.isbn}
-            className={`${
-              bookData?.isbn 
-                ? "bg-purple-500 hover:bg-purple-700 text-white" 
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            } font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md disabled:opacity-50 text-sm`}
-            whileHover={bookData?.isbn ? {
-              y: -2,
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
-            } : {}}
-            whileTap={bookData?.isbn ? { scale: 0.98 } : {}}
-            title={!bookData?.isbn ? "Отсутствует ISBN для создания экземпляров" : "Создать несколько экземпляров"}
-          >
-            <Copy className="h-4 w-4" />
-            Несколько
-          </motion.button>
+        <div className="flex items-center gap-2">
+          {showAddButton && (
+            <motion.button
+              onClick={onCreateInstance}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md text-sm"
+              whileHover={{
+                y: -2,
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+              }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus className="h-4 w-4" />
+              Добавить
+            </motion.button>
+          )}
+          {showMultipleButton && (
+            <motion.button
+              onClick={() => setShowMultipleCreateModal(true)}
+              disabled={!bookData?.isbn}
+              className={`${
+                bookData?.isbn 
+                  ? "bg-purple-500 hover:bg-purple-700 text-white" 
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              } font-medium rounded-lg px-3 py-2 flex items-center gap-2 shadow-md disabled:opacity-50 text-sm`}
+              whileHover={bookData?.isbn ? {
+                y: -2,
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+              } : {}}
+              whileTap={bookData?.isbn ? { scale: 0.98 } : {}}
+              title={!bookData?.isbn ? "Отсутствует ISBN для создания экземпляров" : "Создать несколько экземпляров"}
+            >
+              <Copy className="h-4 w-4" />
+              Несколько
+            </motion.button>
+          )}
         </div>
       </div>
 

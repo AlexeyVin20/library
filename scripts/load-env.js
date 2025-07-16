@@ -4,7 +4,8 @@ const path = require('path');
 const possiblePaths = [
   '/etc/root/library/main.json',
   '/main.json',
-  '/Synapse/main.json'
+  '/Synapse/main.json',
+  'main.json',
 ];
 const envLocalPath = path.resolve(process.cwd(), '.env.local');
 
