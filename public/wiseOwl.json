@@ -32,6 +32,44 @@
     }
   },
   {
+    "name": "searchUsers",
+    "description": "Поиск пользователей по различным критериям. Использует API эндпоинт GET /api/User/search Этот инструмент приоритетен для поиска пользователей",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "description": "Фильтр по полному имени пользователя (частичное совпадение)"
+        },
+        "email": {
+          "type": "string",
+          "description": "Фильтр по email (частичное совпадение)"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Фильтр по телефону (частичное совпадение)"
+        },
+        "username": {
+          "type": "string",
+          "description": "Фильтр по имени пользователя (частичное совпадение)"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Фильтр по статусу активности пользователя"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Количество записей для возврата (по умолчанию 20)"
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Смещение для пагинации (по умолчанию 0)"
+        }
+      },
+      "required": []
+    }
+  },
+  {
     "name": "createUser",
     "description": "Создает нового пользователя. Использует API эндпоинт POST /api/User",
     "parameters": {
@@ -361,6 +399,46 @@
     }
   },
   {
+    "name": "searchReservations",
+    "description": "Расширенный поиск резервирований. Использует API эндпоинт GET /api/Reservation/search",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Фильтр по ID пользователя (Guid)"
+        },
+        "bookId": {
+          "type": "string",
+          "description": "Фильтр по ID книги (Guid)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Фильтр по статусу. Доступные статусы: 'Обрабатывается', 'Одобрена', 'Отменена', 'Истекла', 'Выдана', 'Возвращена', 'Просрочена'"
+        },
+        "dateFrom": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Начальная дата для фильтрации по дате резервирования (в формате YYYY-MM-DD)"
+        },
+        "dateTo": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Конечная дата для фильтрации по дате резервирования (в формате YYYY-MM-DD)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Количество записей для возврата (по умолчанию 20)"
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Смещение для пагинации (по умолчанию 0)"
+        }
+      },
+      "required": []
+    }
+  },
+  {
     "name": "getReservationById",
     "description": "Получает детальную информацию о бронировании по ID из 16 символов. Если пользователь указывает ID в сокращенном виде (8 символов), то нужно сначала найти все резервирования (`getAllReservations`) и определить те, что начинаются на эти восемь символов. Использует API эндпоинт GET /api/Reservation/{id} Используйте этот метод, чтобы получить полную информацию о резервировании перед его изменением.",
     "parameters": {
@@ -516,6 +594,48 @@
     "parameters": {
       "type": "object",
       "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "searchBooks",
+    "description": "Поиск книг по различным критериям. Использует API эндпоинт GET /api/Books/search Этот инструмент приоритетен для поиска книг",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Фильтр по названию книги (частичное совпадение)"
+        },
+        "authors": {
+          "type": "string",
+          "description": "Фильтр по авторам (частичное совпадение)"
+        },
+        "genre": {
+          "type": "string",
+          "description": "Фильтр по жанру (частичное совпадение)"
+        },
+        "Categorization": {
+          "type": "string",
+          "description": "Фильтр по категоризации (частичное совпадение)"
+        },
+        "isbn": {
+          "type": "string",
+          "description": "Фильтр по ISBN (частичное совпадение)"
+        },
+        "availableCopies": {
+          "type": "boolean",
+          "description": "Фильтр по наличию доступных экземпляров (true, если есть хотя бы один)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Количество записей для возврата (по умолчанию 20)"
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Смещение для пагинации (по умолчанию 0)"
+        }
+      },
       "required": []
     }
   },
@@ -1347,5 +1467,209 @@
       },
       "required": ["query"]
     }
+  },
+  {
+    "name": "getUserStatistics",
+    "description": "Получает общую статистику по пользователям (количество активных/неактивных, распределение по ролям, средний период займа). Использует API эндпоинт GET /api/User/statistics",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "getReservationStatistics",
+    "description": "Получает статистику по резервированиям за период с группировкой. Использует API эндпоинт GET /api/Reservation/statistics",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "dateFrom": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Начальная дата для фильтрации (в формате YYYY-MM-DD)"
+        },
+        "dateTo": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Конечная дата для фильтрации (в формате YYYY-MM-DD)"
+        },
+        "groupBy": {
+          "type": "string",
+          "description": "Критерий группировки: 'day', 'week', 'month' (по умолчанию 'day')"
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "getBookStatistics",
+    "description": "Получает общую статистику по книгам (самые популярные, распределение по жанрам, статистика доступности). Использует API эндпоинт GET /api/Books/statistics",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "getTopPopularBooks",
+    "description": "Получает список самых популярных книг за определенный период. Использует API эндпоинт GET /api/Books/top-popular",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "Количество книг для возврата (по умолчанию 10)"
+        },
+        "period": {
+          "type": "string",
+          "description": "Период для анализа: 'week', 'month', 'year' (по умолчанию 'month')"
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "bulkUpdateReservations",
+    "description": "Массово обновляет статусы резервирований. Использует API эндпоинт PUT /api/Reservation/bulk-update Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "updates": {
+          "type": "array",
+          "description": "Массив объектов для обновления резервирований.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "ID резервирования (Guid)"
+              },
+              "status": {
+                "type": "string",
+                "description": "Новый статус резервирования. Доступные статусы: 'Обрабатывается', 'Одобрена', 'Отменена', 'Истекла', 'Выдана', 'Возвращена', 'Просрочена'"
+              }
+            },
+            "required": ["id", "status"]
+          }
+        }
+      },
+      "required": ["updates"]
+    }
+  },
+  {
+    "name": "bulkCreateBookInstances",
+    "description": "Массово создает экземпляры для указанной книги. Использует API эндпоинт POST /api/BookInstance/bulk-create Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "ID книги (Guid), для которой создаются экземпляры"
+        },
+        "count": {
+          "type": "integer",
+          "description": "Количество экземпляров для создания"
+        },
+        "defaultStatus": {
+          "type": "string",
+          "description": "Статус по умолчанию для новых экземпляров (например, 'Доступна')."
+        },
+        "defaultCondition": {
+          "type": "string",
+          "description": "Состояние по умолчанию для новых экземпляров (например, 'Новая')."
+        }
+      },
+      "required": ["bookId", "count", "defaultStatus", "defaultCondition"]
+    }
+  },
+  {
+    "name": "bulkUpdateBookInstanceStatuses",
+    "description": "Массово обновляет статусы экземпляров книг. Использует API эндпоинт PUT /api/BookInstance/bulk-update-status Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "updates": {
+          "type": "array",
+          "description": "Массив объектов для обновления статусов экземпляров.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "ID экземпляра книги (Guid)"
+              },
+              "newStatus": {
+                "type": "string",
+                "description": "Новый статус экземпляра. Доступные статусы: 'Доступен', 'Выдан', 'В ремонте', 'Списан', 'В обработке'"
+              }
+            },
+            "required": ["id", "newStatus"]
+          }
+        }
+      },
+      "required": ["updates"]
+    }
+  },
+  {
+    "name": "getBookAvailability",
+    "description": "Получает детальную информацию о доступности книги (количество доступных экземпляров, ближайшая дата возврата, очередь резервирований). Использует API эндпоинт GET /api/Books/{id}/availability",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID книги (Guid)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "getUserRecommendations",
+    "description": "Получает персональные книжные рекомендации для пользователя на основе его истории. Использует API эндпоинт GET /api/User/{id}/recommendations",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID пользователя (Guid)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Количество рекомендаций для возврата (по умолчанию 10)"
+        },
+        "genre": {
+          "type": "string",
+          "description": "Фильтр по жанру (опционально)"
+        },
+        "excludeRead": {
+          "type": "boolean",
+          "description": "Исключить уже прочитанные книги из рекомендаций (по умолчанию true)"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
+    "name": "getOverdueReservations",
+    "description": "Получает список всех просроченных резервирований. Использует API эндпоинт GET /api/Reservation/overdue Требует роль администратора или библиотекаря.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Фильтр по ID пользователя (Guid, опционально)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Количество записей для возврата (по умолчанию 20)"
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Смещение для пагинации (по умолчанию 0)"
+        }
+      },
+      "required": []
+    }
   }
-] 
+]   

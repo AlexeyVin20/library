@@ -555,9 +555,9 @@ const TopNavigation = ({ user }: { user: User | null }) => {
   // Генерируем breadcrumbs на основе текущего пути
   const breadcrumbs = generateBreadcrumbs(pathname)
 
-  // Keyboard shortcut handler for backslash
+  // Keyboard shortcut handler for Shift + slash
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "\\" || e.key === "/") {
+    if (e.key === "/" && e.shiftKey) {
       e.preventDefault()
       setIsSearchOpen(true)
       setTimeout(() => {
@@ -1711,7 +1711,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                   <div className="flex items-center gap-2">
                     Поиск
                     <kbd className="px-1.5 py-0.5 text-xs bg-white/20 rounded border">
-                      \
+                      Shift + /
                     </kbd>
                   </div>
                 </TooltipContent>
@@ -2092,7 +2092,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
               <div className="relative max-w-xl mx-auto">
                 <Input
                   ref={searchInputRef}
-                  placeholder="Поиск... (нажмите \\ для быстрого доступа)"
+                  placeholder="Поиск... (нажмите ? для быстрого доступа)"
                   className="pr-10 h-12 focus:ring-2 focus:ring-blue-300 text-lg border-white/30 bg-white/80 backdrop-blur-sm text-gray-900 placeholder:text-gray-500 rounded-xl shadow"
                   autoFocus
                   value={searchQuery}
@@ -2120,7 +2120,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                     </Button>
                   )}
                   <div className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                    \
+                    Shift + /
                   </div>
                 </div>
               </div>
@@ -2252,7 +2252,7 @@ const TopNavigation = ({ user }: { user: User | null }) => {
                         </div>
                         <p className="text-sm text-gray-800 mb-2">Введите запрос для поиска</p>
                         <p className="text-xs text-gray-500">
-                          Используйте <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">\\</kbd> для быстрого доступа
+                          Используйте <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Shift + /</kbd> для быстрого доступа
                         </p>
                       </motion.div>
                     </div>
