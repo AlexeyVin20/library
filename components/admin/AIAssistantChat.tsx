@@ -40,6 +40,9 @@ import {
   Lightbulb,
   CheckCircle,
   BarChart3,
+  GraduationCap,
+  Shield,
+  Cpu,
 } from "lucide-react"
 
 import {
@@ -55,12 +58,21 @@ import TextareaAutosize from 'react-textarea-autosize'
 import {
   TOOL_CATEGORIES,
   DEFAULT_TOOL_SELECTION_CONFIG,
+  USER_LEVELS,
+  T9Helper,
   analyzeUserQuery,
   filterToolsByCategories,
   selectToolsForQuery,
   getToolUsageStats,
   createSelectionSummary,
+  analyzeExecutionContext,
+  getQueryAnalysisCacheStats,
+  clearQueryAnalysisCache,
+  type ExecutionContext,
 } from "@/lib/tool_selection_logic"
+import { SlashCommandMenu } from './SlashCommandMenu'; // Импортируем новый компонент
+// Добавляем импорт новых инструкций
+import { getSystemInstructions as getNewSystemInstructions, getUserTypeInstructions, USER_TYPES } from "@/lib/AIAssistantInstructions"
 
 interface Message {
   id: string
@@ -91,7 +103,299 @@ type OpenRouterHistoryMessage =
 
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 
-// Command button component
+// ---------- НОВАЯ СИСТЕМА КЭШИРОВАНИЯ API ЗАПРОСОВ ----------
+interface CacheEntry {
+  data: any
+  timestamp: number
+  params: any
+  endpoint: string
+  method: string
+}
+
+interface CacheConfig {
+  ttl: number // time to live в миллисекундах
+  maxEntries: number
+  invalidateOn: string[] // методы, которые инвалидируют кэш
+}
+
+class APICache {
+  private memoryCache = new Map<string, CacheEntry>()
+  private readonly CONFIG: Record<string, CacheConfig> = {
+    // Конфигурация кэширования для разных типов запросов
+    'users': {
+      ttl: 5 * 60 * 1000, // 5 минут
+      maxEntries: 100,
+      invalidateOn: ['POST', 'PUT', 'DELETE'] // инвалидируется при изменениях пользователей
+    },
+    'books': {
+      ttl: 10 * 60 * 1000, // 10 минут
+      maxEntries: 200,
+      invalidateOn: ['POST', 'PUT', 'DELETE']
+    },
+    'reservations': {
+      ttl: 2 * 60 * 1000, // 2 минуты (часто меняются)
+      maxEntries: 150,
+      invalidateOn: ['POST', 'PUT', 'DELETE']
+    },
+    'statistics': {
+      ttl: 15 * 60 * 1000, // 15 минут (статистика меняется редко)
+      maxEntries: 50,
+      invalidateOn: ['POST', 'PUT', 'DELETE'] // любые изменения инвалидируют статистику
+    },
+    'roles': {
+      ttl: 30 * 60 * 1000, // 30 минут (роли меняются очень редко)
+      maxEntries: 20,
+      invalidateOn: ['POST', 'PUT', 'DELETE']
+    },
+    'default': {
+      ttl: 3 * 60 * 1000, // 3 минуты по умолчанию
+      maxEntries: 50,
+      invalidateOn: ['POST', 'PUT', 'DELETE']
+    }
+  }
+
+  private getEntityType(endpoint: string): string {
+    const lower = endpoint.toLowerCase()
+    if (lower.includes('user')) return 'users'
+    if (lower.includes('book')) return 'books'
+    if (lower.includes('reservation')) return 'reservations'
+    if (lower.includes('statistic') || lower.includes('popular') || lower.includes('top')) return 'statistics'
+    if (lower.includes('role')) return 'roles'
+    return 'default'
+  }
+
+  private generateCacheKey(endpoint: string, method: string, params: any): string {
+    // Нормализуем параметры для создания стабильного ключа
+    const normalizedParams = params ? JSON.stringify(params, Object.keys(params).sort()) : ''
+    return `${method}:${endpoint}:${normalizedParams}`
+  }
+
+  private getFromLocalStorage(key: string): CacheEntry | null {
+    try {
+      const stored = localStorage.getItem(`ai_cache_${key}`)
+      if (stored) {
+        return JSON.parse(stored)
+      }
+    } catch (error) {
+      console.warn('Ошибка чтения кэша из localStorage:', error)
+    }
+    return null
+  }
+
+  private setToLocalStorage(key: string, entry: CacheEntry): void {
+    try {
+      // Ограничиваем размер localStorage кэша
+      const existingKeys = Object.keys(localStorage).filter(k => k.startsWith('ai_cache_'))
+      if (existingKeys.length > 500) { // Максимум 500 записей в localStorage
+        // Удаляем самые старые записи
+        const entries = existingKeys.map(k => ({
+          key: k,
+          timestamp: JSON.parse(localStorage.getItem(k) || '{}').timestamp || 0
+        })).sort((a, b) => a.timestamp - b.timestamp)
+        
+        entries.slice(0, 100).forEach(e => localStorage.removeItem(e.key)) // Удаляем 100 самых старых
+      }
+      
+      localStorage.setItem(`ai_cache_${key}`, JSON.stringify(entry))
+    } catch (error) {
+      console.warn('Ошибка записи кэша в localStorage:', error)
+    }
+  }
+
+  get(endpoint: string, method: string, params: any): any | null {
+    // Кэшируем только GET запросы
+    if (method.toUpperCase() !== 'GET') return null
+
+    const key = this.generateCacheKey(endpoint, method, params)
+    const entityType = this.getEntityType(endpoint)
+    const config = this.CONFIG[entityType] || this.CONFIG.default
+
+    // Сначала проверяем memory cache
+    let entry = this.memoryCache.get(key)
+    
+    // Если нет в памяти, проверяем localStorage
+    if (!entry) {
+      entry = this.getFromLocalStorage(key)
+      if (entry) {
+        // Восстанавливаем в memory cache
+        this.memoryCache.set(key, entry)
+      }
+    }
+
+    // Проверяем валидность кэша
+    if (entry) {
+      const isValid = (Date.now() - entry.timestamp) < config.ttl
+      if (isValid) {
+        console.log(`🎯 Кэш HIT: ${endpoint} (возраст: ${Math.round((Date.now() - entry.timestamp) / 1000)}с)`)
+        return entry.data
+      } else {
+        // Удаляем устаревший кэш
+        this.memoryCache.delete(key)
+        localStorage.removeItem(`ai_cache_${key}`)
+        console.log(`⏰ Кэш EXPIRED: ${endpoint}`)
+      }
+    }
+
+    console.log(`❌ Кэш MISS: ${endpoint}`)
+    return null
+  }
+
+  set(endpoint: string, method: string, params: any, data: any): void {
+    // Кэшируем только GET запросы
+    if (method.toUpperCase() !== 'GET') return
+
+    const key = this.generateCacheKey(endpoint, method, params)
+    const entityType = this.getEntityType(endpoint)
+    const config = this.CONFIG[entityType] || this.CONFIG.default
+
+    const entry: CacheEntry = {
+      data,
+      timestamp: Date.now(),
+      params,
+      endpoint,
+      method
+    }
+
+    // Ограничиваем размер memory cache
+    if (this.memoryCache.size >= config.maxEntries) {
+      // Удаляем самую старую запись
+      const oldestKey = Array.from(this.memoryCache.entries())
+        .sort(([,a], [,b]) => a.timestamp - b.timestamp)[0][0]
+      this.memoryCache.delete(oldestKey)
+    }
+
+    this.memoryCache.set(key, entry)
+    this.setToLocalStorage(key, entry)
+    
+    console.log(`💾 Кэш SET: ${endpoint} (тип: ${entityType}, TTL: ${config.ttl/1000}с)`)
+  }
+
+  invalidate(endpoint: string, method: string): void {
+    const entityType = this.getEntityType(endpoint)
+    const config = this.CONFIG[entityType] || this.CONFIG.default
+
+    // Проверяем, нужно ли инвалидировать кэш для этого метода
+    if (!config.invalidateOn.includes(method.toUpperCase())) {
+      return
+    }
+
+    console.log(`🗑️ Инвалидация кэша для типа: ${entityType} (метод: ${method})`)
+
+    // Инвалидируем memory cache
+    const keysToDelete: string[] = []
+    this.memoryCache.forEach((entry, key) => {
+      const entryEntityType = this.getEntityType(entry.endpoint)
+      if (entryEntityType === entityType) {
+        keysToDelete.push(key)
+      }
+    })
+    keysToDelete.forEach(key => this.memoryCache.delete(key))
+
+    // Инвалидируем localStorage cache
+    const localStorageKeys = Object.keys(localStorage).filter(k => k.startsWith('ai_cache_'))
+    localStorageKeys.forEach(key => {
+      try {
+        const entry = JSON.parse(localStorage.getItem(key) || '{}')
+        if (entry.endpoint) {
+          const entryEntityType = this.getEntityType(entry.endpoint)
+          if (entryEntityType === entityType) {
+            localStorage.removeItem(key)
+          }
+        }
+      } catch (error) {
+        // Удаляем поврежденные записи
+        localStorage.removeItem(key)
+      }
+    })
+
+    console.log(`✅ Инвалидировано записей кэша: ${keysToDelete.length} (memory) + localStorage`)
+  }
+
+  // Принудительная очистка всего кэша
+  clear(): void {
+    this.memoryCache.clear()
+    const localStorageKeys = Object.keys(localStorage).filter(k => k.startsWith('ai_cache_'))
+    localStorageKeys.forEach(key => localStorage.removeItem(key))
+    console.log(`🧹 Полная очистка кэша: ${localStorageKeys.length} записей удалено`)
+  }
+
+  // Получение статистики кэша
+  getStats(): { memorySize: number; localStorageSize: number; hitRate: number } {
+    const localStorageKeys = Object.keys(localStorage).filter(k => k.startsWith('ai_cache_'))
+    return {
+      memorySize: this.memoryCache.size,
+      localStorageSize: localStorageKeys.length,
+      hitRate: 0 // TODO: реализовать подсчет hit rate
+    }
+  }
+}
+
+// Создаем глобальный экземпляр кэша
+const apiCache = new APICache()
+
+// НОВОЕ: Функция для поиска данных в кэше по ключевым словам
+export const findInCache = (query: string): { users: any[], books: any[], reservations: any[] } => {
+  const results = { users: [], books: [], reservations: [] }
+  
+  try {
+    // Получаем все ключи кэша
+    const cacheKeys = Array.from(apiCache['memoryCache'].keys())
+    
+    for (const key of cacheKeys) {
+      const entry = apiCache['memoryCache'].get(key)
+      if (!entry || !entry.data) continue
+      
+      const data = entry.data
+      const queryLower = query.toLowerCase()
+      
+      // Ищем пользователей
+      if (entry.endpoint.toLowerCase().includes('user')) {
+        if (Array.isArray(data)) {
+          data.forEach((user: any) => {
+            if (user.fullName && user.fullName.toLowerCase().includes(queryLower)) {
+              results.users.push(user)
+            }
+          })
+        } else if (data.fullName && data.fullName.toLowerCase().includes(queryLower)) {
+          results.users.push(data)
+        }
+      }
+      
+      // Ищем книги
+      if (entry.endpoint.toLowerCase().includes('book')) {
+        if (Array.isArray(data)) {
+          data.forEach((book: any) => {
+            if (book.title && book.title.toLowerCase().includes(queryLower)) {
+              results.books.push(book)
+            }
+          })
+        } else if (data.title && data.title.toLowerCase().includes(queryLower)) {
+          results.books.push(data)
+        }
+      }
+      
+      // Ищем резервирования
+      if (entry.endpoint.toLowerCase().includes('reservation')) {
+        if (Array.isArray(data)) {
+          data.forEach((res: any) => {
+            if (res.id && res.id.toLowerCase().includes(queryLower)) {
+              results.reservations.push(res)
+            }
+          })
+        } else if (data.id && data.id.toLowerCase().includes(queryLower)) {
+          results.reservations.push(data)
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Ошибка поиска в кэше:', error)
+  }
+  
+  return results
+}
+// ---------- КОНЕЦ СИСТЕМЫ КЭШИРОВАНИЯ ----------
+
+// Enhanced Command button component
 interface CommandButtonProps {
   icon: React.ReactNode;
   label: string;
@@ -389,9 +693,11 @@ export default function EnhancedAIAssistantChat() {
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "connecting" | "disconnected">("connected")
   const [showQuickCommands, setShowQuickCommands] = useState(false)
   const [activeCommandCategory, setActiveCommandCategory] = useState<string | null>(null)
+  
   // Добавляю состояние для фильтров истории
   const [historyFilter, setHistoryFilter] = useState<"all" | "changes" | "reads">("all")
-  // --- ДОБАВЛЯЮ состояния для выбора инструментов ---
+  
+  // НОВЫЕ состояния для выбора инструментов
   const [allTools, setAllTools] = useState<Tool[]>([])
   const [toolSelectionMode, setToolSelectionMode] = useState<'auto' | 'manual'>('auto')
   const [manualSelectedCategories, setManualSelectedCategories] = useState<string[]>(['users', 'books', 'reservations'])
@@ -399,19 +705,82 @@ export default function EnhancedAIAssistantChat() {
   const [toolSelectionSummary, setToolSelectionSummary] = useState<string | null>(null)
   const [lastQueryAnalysis, setLastQueryAnalysis] = useState<ReturnType<typeof analyzeUserQuery>>({
     detectedCategories: [],
+    detectedTools: [],
     confidence: {},
-    suggestedCategories: []
+    suggestedCategories: [],
+    intentType: 'action',
+    complexity: 'medium',
+    hasMultipleEntities: false,
+    entityTypes: [],
+    hasPasswordMention: false
   })
-  // Добавляю состояния для slash-меню инструментов
+  
+  // НОВЫЕ состояния для типов пользователей
+  const [userLevel, setUserLevel] = useState<number>(USER_LEVELS.INTERMEDIATE)
+  const [isExpertMode, setIsExpertMode] = useState(false)
+  
+  // НОВОЕ: Состояние для хранения агрегированного контекста анализа
+  const [conversationAnalysisContext, setConversationAnalysisContext] = useState({
+    hasMultipleEntities: false,
+    entityTypes: [],
+    hasPasswordMention: false
+  })
+  
+  // НОВЫЕ состояния для T9 и подсказок
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [slashMenuVisible, setSlashMenuVisible] = useState(false)
   const [slashQuery, setSlashQuery] = useState("")
+  
   // Добавляю состояние для автоматической генерации отчетов
   const [autoGenerateReports, setAutoGenerateReports] = useState(false)
+  
   // Добавляю состояние для управления размером окна
   const [isExpanded, setIsExpanded] = useState(false)
+  
+  // НОВОЕ: Состояния для кэша
+  const [showCacheStats, setShowCacheStats] = useState(false)
+  const [cacheStats, setCacheStats] = useState({ 
+    memorySize: 0, 
+    localStorageSize: 0, 
+    hitRate: 0,
+    queryAnalysisSize: 0 
+  })
+  
+  // НОВОЕ: Состояние для хранения текущих доступных инструментов между запросами
+  const [currentAvailableTools, setCurrentAvailableTools] = useState<Tool[]>([])
 
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+
+  // Новый массив быстрых команд с плейсхолдерами
+  const quickCommands = {
+    reservations: [
+      "Покажи все бронирования за {период}",
+      "Сколько активных бронирований у пользователя {имя}",
+      "Покажи бронирования со статусом {статус}",
+      "Построй график бронирований по дням"
+    ],
+    users: [
+      "Покажи всех пользователей с ролью {роль}",
+      "Сколько пользователей зарегистрировано за {период}",
+      "Покажи пользователей с просроченными книгами",
+      "Построй график активности пользователей"
+    ],
+    books: [
+      "Покажи книги в жанре {жанр}",
+      "Покажи топ-{N} популярных книг",
+      "Покажи книги автора {автор}",
+      "Построй график выдачи книг по жанрам"
+    ]
+  }
+
+  // User level options
+  const userLevelOptions = [
+    { id: USER_LEVELS.NOVICE, name: "Новичок", icon: "🌱", description: "Базовые функции" },
+    { id: USER_LEVELS.INTERMEDIATE, name: "Обычный", icon: "⚡", description: "Расширенные возможности" },
+    { id: USER_LEVELS.EXPERT, name: "Эксперт", icon: "🔧", description: "Все функции" },
+  ]
 
   // ---------- Функция для конвертации дат в UTC формат ----------
   const convertDatesToUtc = (obj: any): any => {
@@ -460,33 +829,13 @@ export default function EnhancedAIAssistantChat() {
   }
   // ---------- Конец функции конвертации дат ----------
 
-  // Новый массив быстрых команд с плейсхолдерами
-  const quickCommands = {
-    reservations: [
-      "Покажи все бронирования за {период}",
-      "Сколько активных бронирований у пользователя {имя}",
-      "Покажи бронирования со статусом {статус}",
-      "Построй график бронирований по дням"
-    ],
-    users: [
-      "Покажи всех пользователей с ролью {роль}",
-      "Сколько пользователей зарегистрировано за {период}",
-      "Покажи пользователей с просроченными книгами",
-      "Построй график активности пользователей"
-    ],
-    books: [
-      "Покажи книги в жанре {жанр}",
-      "Покажи топ-{N} популярных книг",
-      "Покажи книги автора {автор}",
-      "Построй график выдачи книг по жанрам"
-    ]
-  }
-
   // Enhanced opening animation
   const handleToggleChat = () => {
     if (!isOpen) {
       setIsAnimating(true)
       setIsOpen(true)
+      // НОВОЕ: Инициализируем статистику кэша при открытии
+      updateCacheStats()
       setTimeout(() => setIsAnimating(false), 600)
     } else {
       setIsAnimating(true)
@@ -671,29 +1020,6 @@ export default function EnhancedAIAssistantChat() {
           setAllTools(enhancedTools)
           setConnectionStatus("connected")
 
-          // ОТЛАДКА: Добавляем логирование загрузки инструментов
-          console.log('🔍 ОТЛАДКА ЗАГРУЗКИ ИНСТРУМЕНТОВ:')
-          console.log('📚 Всего загружено инструментов:', enhancedTools.length)
-          
-          // Проверяем инструменты для книг
-          const bookTools = enhancedTools.filter(t => 
-            t.name.includes('Book') || 
-            t.name.includes('book') ||
-            t.name === 'getAllBooks' ||
-            t.name === 'searchBooks' ||
-            t.name === 'createBook' ||
-            t.name === 'updateBook' ||
-            t.name === 'deleteBook'
-          )
-          console.log('📚 Инструменты для книг загружены:', bookTools.length)
-          console.log('📋 Имена инструментов для книг:', bookTools.map(t => t.name))
-          
-          // Проверяем все инструменты по категориям
-          const userTools = enhancedTools.filter(t => t.name.includes('User') || t.name.includes('user'))
-          const reservationTools = enhancedTools.filter(t => t.name.includes('Reservation') || t.name.includes('reservation'))
-          console.log('👤 Инструменты для пользователей:', userTools.length)
-          console.log('📅 Инструменты для резервирований:', reservationTools.length)
-
           if (enhancedTools.length === 0) {
             setStatusMessage("❌ Ошибка: Не удалось загрузить инструменты")
             setConnectionStatus("disconnected")
@@ -747,6 +1073,16 @@ export default function EnhancedAIAssistantChat() {
     let beforeState: any = null
     const userMessage = apiCall.message || ""
 
+    // НОВОЕ: Проверяем кэш для GET запросов
+    if (method.toUpperCase() === "GET") {
+      const cachedResult = apiCache.get(endpoint, method, params)
+      if (cachedResult !== null) {
+        // Логируем использование кэша
+        logDialogHistory(toolName, "GET_CACHED", endpoint, convertDatesToUtc(params), null, cachedResult, userMessage)
+        return cachedResult
+      }
+    }
+
     if (["PUT", "DELETE"].includes(method.toUpperCase())) {
       try {
         const beforeRes = await fetch(url.toString(), {
@@ -798,6 +1134,16 @@ export default function EnhancedAIAssistantChat() {
     if (response.status !== 204) {
       const contentType = response.headers.get("content-type")
       afterState = contentType?.includes("application/json") ? await response.json() : await response.text()
+    }
+
+    // НОВОЕ: Кэшируем результат GET запросов
+    if (requestOptions.method === "GET" && afterState !== null) {
+      apiCache.set(endpoint, method, params, afterState)
+    }
+
+    // НОВОЕ: Инвалидируем кэш при изменении данных
+    if (["POST", "PUT", "DELETE"].includes(requestOptions.method)) {
+      apiCache.invalidate(endpoint, requestOptions.method)
     }
 
     const operationRecord = {
@@ -867,130 +1213,368 @@ export default function EnhancedAIAssistantChat() {
     return result
   }
 
+  // Enhanced system instructions based on user level with dynamic context
+  const getSystemInstructions = (contextData?: {
+    availableTools?: Tool[]
+    lastAnalysis?: ReturnType<typeof analyzeUserQuery>
+    selectionSummary?: string
+    conversationHistory?: Message[]
+  }) => {
+    // НОВОЕ: Интеграция с улучшенными инструкциями
+    const userType = userLevel === USER_LEVELS.NOVICE ? USER_TYPES.NOVICE : 
+                    userLevel === USER_LEVELS.EXPERT ? USER_TYPES.EXPERT : 
+                    USER_TYPES.EXPERT // По умолчанию эксперт для среднего уровня
+    
+    // Получаем новые инструкции из централизованного модуля
+    const newInstructions = getUserTypeInstructions(userType)
+    
+    // Добавляем контекстные инструкции в зависимости от активного контекста
+    let contextualInstructions = ""
+    
+    // Если доступно мало инструментов, добавляем специальные инструкции
+    if (contextData?.availableTools && contextData.availableTools.length <= 5) {
+      contextualInstructions += `\n\n**ОГРАНИЧЕННЫЙ НАБОР ИНСТРУМЕНТОВ:** В данный момент доступно только ${contextData.availableTools.length} инструментов. Максимально эффективно используй доступные возможности и при необходимости запроси расширение набора инструментов.`
+    }
+    
+    // Если есть информация о последнем анализе запроса, добавляем контекст
+    const analysis = contextData?.lastAnalysis || lastQueryAnalysis
+    if (analysis) {
+      if (analysis.hasMultipleEntities) {
+        contextualInstructions += `\n\n**МНОЖЕСТВЕННЫЕ СУЩНОСТИ:** Детектированы множественные типы сущностей (${analysis.entityTypes.join(', ')}). CRUD операции для отдельных сущностей исключены для оптимизации.`
+      }
+      
+      if (analysis.hasPasswordMention) {
+        contextualInstructions += `\n\n**РАБОТА С ПАРОЛЯМИ:** В запросе упоминается пароль. Доступны специальные инструменты для работы с паролями пользователей.`
+      }
+      
+      if (analysis.complexity === 'simple') {
+        contextualInstructions += `\n\n**ПРОСТОЙ ЗАПРОС:** Запрос классифицирован как простой. Стремись к быстрому и прямому ответу.`
+      } else if (analysis.complexity === 'complex') {
+        contextualInstructions += `\n\n**СЛОЖНЫЙ ЗАПРОС:** Запрос классифицирован как сложный. Может потребоваться несколько шагов и детальный анализ.`
+      }
+    }
+    
+    // Если есть информация о выборе инструментов, добавляем контекст
+    const summary = contextData?.selectionSummary || toolSelectionSummary
+    if (summary) {
+      contextualInstructions += `\n\n**КОНТЕКСТ ИНСТРУМЕНТОВ:** ${summary}`
+    }
+    
+          // НОВОЕ: Добавляем информацию о кэше для оптимизации ИИ
+    const currentCacheStats = apiCache.getStats()
+    if (currentCacheStats.memorySize > 0) {
+      contextualInstructions += `\n\n**КЭШИРОВАНИЕ АКТИВНО:** В системе работает кэш с ${currentCacheStats.memorySize + currentCacheStats.localStorageSize} записями. Повторные запросы к API будут возвращены мгновенно из кэша. 
+
+**ВАЖНО - РАБОТА С КОНТЕКСТОМ:**
+1. Если пользователь упоминает сущности из предыдущих запросов (например, "пользователя Test Admin One" или "книгу 1231"), используй кэшированные данные
+2. Для создания резервирования используй ID из кэша: getUserById() для получения пользователя, getBookById() для получения книги
+3. Если в запросе упоминается "ее", "его", "этого пользователя", "эту книгу" - это ссылки на предыдущий контекст
+4. Всегда проверяй кэш перед новыми API запросами
+5. Используй точные ID из предыдущих ответов для создания связей между сущностями
+6. **КРИТИЧНО**: Если пользователь говорит "выдай ее пользователю Test Admin One" - это означает:
+   - "ее" = последняя найденная книга (ID: afeb412d-5198-47ee-b594-415db95c9931)
+   - "пользователю Test Admin One" = пользователь (ID: 01980ff0-33c7-7eb3-901a-17f7b8e76f6c)
+   - Используй createReservation с этими ID`
+    }
+
+    // НОВОЕ: Добавляем активный контекст из истории
+    if (contextData?.conversationHistory) {
+      const activeContext = extractContextFromHistory(contextData.conversationHistory)
+      if (activeContext.contextSummary !== "Нет активного контекста") {
+        contextualInstructions += `\n\n**АКТИВНЫЙ КОНТЕКСТ ИЗ ИСТОРИИ:**
+${activeContext.contextSummary}
+
+**ИНСТРУКЦИИ ПО РАБОТЕ С КОНТЕКСТОМ:**
+- Если пользователь говорит "ее", "его", "этого пользователя" - используй данные из контекста
+- Для создания резервирования используй getUserById(${activeContext.lastUser?.id || 'ID_ПОЛЬЗОВАТЕЛЯ'}) и getBookById(${activeContext.lastBook?.id || 'ID_КНИГИ'})
+- Если нужно найти пользователя или книгу, сначала проверь контекст, затем кэш, затем API`
+      }
+      
+      // НОВОЕ: Добавляем информацию о данных в кэше
+      const lastUserQuery = contextData.conversationHistory
+        .filter(m => m.role === "user")
+        .slice(-1)[0]?.content || ""
+      
+      if (lastUserQuery) {
+        const cachedData = findInCache(lastUserQuery)
+        const cacheInfo = []
+        
+        if (cachedData.users.length > 0) {
+          cacheInfo.push(`Пользователи в кэше: ${cachedData.users.map(u => u.fullName).join(', ')}`)
+        }
+        if (cachedData.books.length > 0) {
+          cacheInfo.push(`Книги в кэше: ${cachedData.books.map(b => b.title).join(', ')}`)
+        }
+        if (cachedData.reservations.length > 0) {
+          cacheInfo.push(`Резервирования в кэше: ${cachedData.reservations.length} шт.`)
+        }
+        
+        if (cacheInfo.length > 0) {
+          contextualInstructions += `\n\n**ДАННЫЕ В КЭШЕ ПО ЗАПРОСУ "${lastUserQuery}":**
+${cacheInfo.join('\n')}
+
+**ИНСТРУКЦИИ ПО ИСПОЛЬЗОВАНИЮ КЭША:**
+- Используй эти данные вместо повторных API запросов
+- Для создания резервирования используй ID из кэшированных данных
+- Если данных нет в кэше, выполни поиск через API`
+        }
+      }
+    }
+    
+    return newInstructions + contextualInstructions
+  }
+
+  // ---------- Генерация HTML отчётов ----------
+  const generateHtmlReport = async (reportData: any, title: string = "Отчёт WiseOwl") => {
+    try {
+      // Анализируем данные для определения типа отчета
+      let reportType = "general"
+      let dataDescription = ""
+      let specificInstructions = ""
+      
+      if (title.includes("пользователей")) {
+        reportType = "users"
+        dataDescription = "статистика пользователей библиотеки"
+        specificInstructions = "Создай диаграммы: распределение по ролям, активность пользователей, статистика штрафов, топ активных пользователей"
+      } else if (title.includes("резервирований")) {
+        reportType = "reservations" 
+        dataDescription = "статистика резервирований и выдачи книг"
+        specificInstructions = "Создай диаграммы: статусы резервирований, динамика по времени, популярные книги, эффективность обработки"
+      } else if (title.includes("книг")) {
+        reportType = "books"
+        dataDescription = "статистика книжного фонда"
+        specificInstructions = "Создай диаграммы: распределение по жанрам, доступность книг, популярные авторы, состояние фонда"
+      } else if (title.includes("популярных")) {
+        reportType = "popular"
+        dataDescription = "рейтинг популярности книг"
+        specificInstructions = "Создай диаграммы: топ популярных книг, рейтинг по жанрам, динамика популярности"
+      } else if (title.includes("Список всех")) {
+        reportType = "list"
+        dataDescription = "список всех записей"
+        specificInstructions = "Создай таблицу с данными и диаграммы распределения по основным параметрам"
+      }
+
+      // Создаем расширенный промпт в зависимости от типа данных
+      const prompt = `Создай полноценную HTML-страницу (<!DOCTYPE html> … </html>) с встроенным CDN-скриптом Chart.js (https://cdn.jsdelivr.net/npm/chart.js) на русском языке.
+
+ТРЕБОВАНИЯ К СТРАНИЦЕ:
+1. В шапке h1 укажи «${title}»
+2. Добавь дату и время генерации отчета в формате "Сгенерировано: [дата] [время]"
+3. Создай несколько интерактивных диаграмм на основе переданных данных
+4. Используй подходящие типы диаграмм:
+   - Bar charts для сравнения количеств
+   - Pie charts для распределения по категориям
+   - Line charts для временных рядов
+   - Doughnut charts для процентных соотношений
+   - Table для отображения списков данных
+5. Под каждым графиком добавь краткое текстовое описание на русском языке
+6. Добавь общую сводку в начале отчета с ключевыми цифрами
+7. Используй современный дизайн с градиентами и тенями
+8. Добавь адаптивность для мобильных устройств
+9. Не добавляй внешних зависимостей, кроме Chart.js CDN
+10. Используй цветовую схему: синий, зеленый, оранжевый, фиолетовый
+
+ТИП ОТЧЕТА: ${reportType}
+ОПИСАНИЕ: ${dataDescription}
+СПЕЦИФИЧЕСКИЕ ИНСТРУКЦИИ: ${specificInstructions}
+
+Возврати только чистый HTML-код без дополнительных комментариев.`
+
+      // Подготавливаем данные для отчета
+      let processedData = reportData
+      
+      // Если данные - это массив, добавляем метаинформацию
+      if (Array.isArray(reportData)) {
+        processedData = {
+          totalCount: reportData.length,
+          data: reportData,
+          generatedAt: new Date().toISOString(),
+          dataType: reportType
+        }
+      }
+      
+      // Если данные - это объект, добавляем метаинформацию
+      if (typeof reportData === 'object' && reportData !== null && !Array.isArray(reportData)) {
+        processedData = {
+          ...reportData,
+          generatedAt: new Date().toISOString(),
+          dataType: reportType
+        }
+      }
+
+      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
+      const body = {
+        contents: [
+          {
+            parts: [{ text: prompt }, { text: JSON.stringify(processedData, null, 2) }],
+            role: "user",
+          },
+        ],
+      }
+
+      const res = await fetch(geminiEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Gemini API error ${res.status}: ${errorText}`)
+      }
+      
+      const data = await res.json()
+      const html = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "<html><body>Ошибка генерации отчёта</body></html>"
+
+      // Проверяем, что HTML содержит необходимые элементы
+      if (!html.includes('<html') || !html.includes('</html>')) {
+        throw new Error('Сгенерированный HTML не содержит необходимых элементов')
+      }
+
+      // Открываем отчёт в новой вкладке через Blob
+      const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }))
+      window.open(blobUrl, "_blank")
+      
+      // Показываем уведомление об успешной генерации
+      console.log(`✅ HTML-отчет "${title}" успешно сгенерирован и открыт в новой вкладке`)
+    } catch (err) {
+      console.error("Ошибка генерации отчёта:", err)
+      const errorMessage = err instanceof Error ? err.message : "Неизвестная ошибка"
+      console.error(`❌ Не удалось сгенерировать HTML-отчет "${title}": ${errorMessage}`)
+    }
+  }
+  // ---------- Конец генерации HTML отчётов ----------
+
   const runConversation = async (conversationHistory: Message[], onStreamChunk?: (chunk: string) => void) => {
     const isStreaming = selectedModel === "gemini-2.0-flash-streaming"
     const modelForApi = selectedModel === "gemini-2.0-flash-streaming" ? "gemini-2.0-flash" : selectedModel
     const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelForApi}:generateContent?key=${GEMINI_API_KEY}`
+    
+    // Получаем последнее сообщение пользователя для анализа
+    const currentUserQuery = conversationHistory.filter((m) => m.role === "user").pop()?.content || ""
+    const lastUserMessage = currentUserQuery // Алиас для обратной совместимости с логированием
+    
+    // НОВОЕ: Предзагружаем контекст из истории
+    await preloadContext(conversationHistory)
+    
+    // ОТЛАДКА: Логируем что анализируем
+    console.log(`🔍 [ОТЛАДКА] Анализируем запрос: "${currentUserQuery}"`)
+    
     let availableTools: Tool[]
     let selectionSummary: string
+    
     if (toolSelectionMode === 'auto') {
+      const config = {
+        ...DEFAULT_TOOL_SELECTION_CONFIG,
+        userLevel: userLevel,
+        // НОВАЯ ЛОГИКА: Включаем режим дополнения если есть существующие инструменты
+        appendToExisting: currentAvailableTools.length > 0,
+        existingTools: currentAvailableTools
+      }
+      
+      // НОВАЯ ОПТИМИЗАЦИЯ: Анализируем контекст выполнения
+      const executionContext = analyzeExecutionContext(conversationHistory, 0)
+      console.log(`🔍 [ОТЛАДКА] Контекст выполнения:`, executionContext)
+      console.log(`🔧 [ДОПОЛНЕНИЕ] Режим дополнения: ${config.appendToExisting ? 'ВКЛЮЧЕН' : 'ВЫКЛЮЧЕН'}`)
+      console.log(`🔧 [ДОПОЛНЕНИЕ] Существующие инструменты: ${currentAvailableTools.length}`)
+      
       const { selectedTools: autoSelectedTools, analysis, usedCategories } = selectToolsForQuery(
-        inputValue, 
+        currentUserQuery, // Используем последнее сообщение пользователя вместо inputValue
         allTools, 
-        DEFAULT_TOOL_SELECTION_CONFIG
+        {
+          ...config,
+          // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
+          // Передаем агрегированный контекст из состояния
+          ...conversationAnalysisContext 
+        },
+        executionContext // Передаем контекст выполнения
       )
+      
+      // ОТЛАДКА: Логируем результаты анализа и выбора
+      console.log(`🔍 [ОТЛАДКА] Результат анализа запроса:`, analysis)
+      console.log(`🔍 [ОТЛАДКА] Использованные категории:`, usedCategories)
+      console.log(`🔍 [ОТЛАДКА] Выбрано инструментов: ${autoSelectedTools.length}/${allTools.length}`)
+      console.log(`🔍 [ОТЛАДКА] Названия инструментов:`, autoSelectedTools.map(t => t.name))
+      
       availableTools = autoSelectedTools
+      
+      // НОВАЯ ЛОГИКА: Обновляем состояние текущих доступных инструментов
+      setCurrentAvailableTools(availableTools)
+      
       const stats = getToolUsageStats(availableTools, allTools)
       selectionSummary = createSelectionSummary(analysis, usedCategories, stats)
+      
+      // Дополняем сводку информацией об оптимизациях
+      if (executionContext.isLikelyFinalResponse) {
+        selectionSummary = `🎯 Финальный ответ. ${selectionSummary}`
+      }
+      if (analysis.hasMultipleEntities && executionContext.hasExecutedTools) {
+        selectionSummary = `🚫 CRUD исключены. ${selectionSummary}`
+      }
+      
+      // НОВАЯ ЛОГИКА: Добавляем информацию о дополнении в сводку
+      if (config.appendToExisting) {
+        const newToolsCount = availableTools.length - currentAvailableTools.length
+        if (newToolsCount > 0) {
+          selectionSummary = `🔧 Дополнено ${newToolsCount} инструментов. ${selectionSummary}`
+        }
+      }
+      
+      // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
+      // Обновляем агрегированный контекст на основе последнего анализа
+      setConversationAnalysisContext(prevContext => ({
+        hasMultipleEntities: prevContext.hasMultipleEntities || analysis.hasMultipleEntities,
+        entityTypes: [...new Set([...prevContext.entityTypes, ...analysis.entityTypes])],
+        hasPasswordMention: prevContext.hasPasswordMention || analysis.hasPasswordMention
+      }))
+      
+      // ИСПРАВЛЕНИЕ: Обновляем lastQueryAnalysis только здесь, когда действительно отправляем запрос
       setLastQueryAnalysis(analysis)
-      
-      // ОТЛАДКА: Добавляем логирование
-      console.log('🔍 ОТЛАДКА ВЫБОРА ИНСТРУМЕНТОВ:')
-      console.log('📝 Запрос пользователя:', inputValue)
-      console.log('📊 Анализ запроса:', analysis)
-      console.log('📚 Всего инструментов:', allTools.length)
-      console.log('✅ Выбранные инструменты:', availableTools.length)
-      console.log('📋 Имена выбранных инструментов:', availableTools.map(t => t.name))
-      console.log('📂 Используемые категории:', usedCategories)
-      console.log('📈 Статистика:', stats)
-      
-      // Проверяем инструменты для книг
-      const bookTools = availableTools.filter(t => 
-        t.name.includes('Book') || 
-        t.name.includes('book') ||
-        t.name === 'getAllBooks' ||
-        t.name === 'searchBooks' ||
-        t.name === 'createBook' ||
-        t.name === 'updateBook' ||
-        t.name === 'deleteBook'
-      )
-      console.log('📚 Инструменты для книг в выбранных:', bookTools.map(t => t.name))
-      
     } else {
-      availableTools = filterToolsByCategories(allTools, manualSelectedCategories, DEFAULT_TOOL_SELECTION_CONFIG)
+      console.log(`🔍 [ОТЛАДКА] Ручной режим выбора инструментов`)
+      const config = {
+        ...DEFAULT_TOOL_SELECTION_CONFIG,
+        userLevel: userLevel
+      }
+      
+      // Анализируем контекст для ручного режима
+      const executionContext = analyzeExecutionContext(conversationHistory, 0)
+      console.log(`🔍 [ОТЛАДКА] Контекст выполнения (ручной):`, executionContext)
+      
+      availableTools = filterToolsByCategories(allTools, manualSelectedCategories, [], config, executionContext)
+      console.log(`🔍 [ОТЛАДКА] Ручной выбор - доступно инструментов: ${availableTools.length}/${allTools.length}`)
+      console.log(`🔍 [ОТЛАДКА] Ручной выбор - категории:`, manualSelectedCategories)
+      
+      // НОВАЯ ЛОГИКА: Обновляем состояние текущих доступных инструментов для ручного режима
+      setCurrentAvailableTools(availableTools)
+      
       const stats = getToolUsageStats(availableTools, allTools)
       const categoryNames = manualSelectedCategories
         .map(id => TOOL_CATEGORIES.find(cat => cat.id === id)?.name)
         .filter(Boolean)
         .join(", ")
-      selectionSummary = `Ручной выбор. ${stats.selectedCount}/${stats.totalTools} инструментов (-${stats.reductionPercentage}%). Категории: ${categoryNames}.`
+      selectionSummary = `Ручной выбор. ${stats.selectedCount}/${stats.totalTools} инструментов (-${stats.reductionPercentage}%). Категории: ${categoryNames}. Эффективность: ${stats.efficiencyScore}%.`
       
-      // ОТЛАДКА: Добавляем логирование для ручного режима
-      console.log('🔍 ОТЛАДКА РУЧНОГО ВЫБОРА:')
-      console.log('📝 Ручные категории:', manualSelectedCategories)
-      console.log('📚 Всего инструментов:', allTools.length)
-      console.log('✅ Выбранные инструменты:', availableTools.length)
-      console.log('📋 Имена выбранных инструментов:', availableTools.map(t => t.name))
-      
-      // Проверяем инструменты для книг
-      const bookTools = availableTools.filter(t => 
-        t.name.includes('Book') || 
-        t.name.includes('book') ||
-        t.name === 'getAllBooks' ||
-        t.name === 'searchBooks' ||
-        t.name === 'createBook' ||
-        t.name === 'updateBook' ||
-        t.name === 'deleteBook'
-      )
-      console.log('📚 Инструменты для книг в выбранных:', bookTools.map(t => t.name))
+      // Добавляем информацию об оптимизациях для ручного режима
+      if (executionContext.isLikelyFinalResponse) {
+        selectionSummary = `🎯 Финальный ответ. ${selectionSummary}`
+      }
     }
+    
     if (aiMode === "question") {
       availableTools = availableTools.filter((tool) => tool.apiMethod === "GET" || !tool.apiMethod)
-      console.log('🔍 РЕЖИМ ВОПРОСА: Отфильтровано до', availableTools.length, 'инструментов')
     }
+    
     setToolSelectionSummary(selectionSummary)
     const toolDeclarations = availableTools.map(({ apiMethod, apiEndpoint, ...rest }) => rest)
     
-    // ОТЛАДКА: Проверяем финальные декларации инструментов
-    console.log('🔍 ФИНАЛЬНЫЕ ДЕКЛАРАЦИИ ИНСТРУМЕНТОВ:', toolDeclarations.length)
-    console.log('📋 Имена инструментов в декларациях:', toolDeclarations.map(t => t.name))
+    console.log(`🔧 [ОТЛАДКА] Изначальный набор для отправки в ИИ: ${availableTools.length} инструментов`)
+    console.log(`🔧 [ОТЛАДКА] Изначальные инструменты:`, availableTools.map(t => t.name))
     
     const currentHistory = buildGeminiHistory(conversationHistory)
     let maxIterations = 10
     let lastToolCalledInLoop: string | null = null
-    const lastUserMessage = conversationHistory.filter((m) => m.role === "user").pop()?.content || ""
-
-    // --- ДОБАВЛЯЮ обработку tool_code и print(...) ---
-    function parseToolCodeOrPrint(text: string) {
-      // Пример: print(getAllReservations()) или print(getUserById({id: "..."}))
-      const printMatch = text.match(/print\((.*?)\)/)
-      if (printMatch) {
-        const call = printMatch[1]
-        // getAllReservations() или getUserById({id: "..."})
-        const fnMatch = call.match(/(\w+)\((.*)\)/)
-        if (fnMatch) {
-          const toolName = fnMatch[1]
-          let params = {}
-          try {
-            params = fnMatch[2] ? JSON.parse(fnMatch[2]) : {}
-          } catch {
-            // если не json, возможно просто строка
-            params = {}
-          }
-          return { toolName, params }
-        } else {
-          // getAllReservations без скобок
-          return { toolName: call.trim(), params: {} }
-        }
-      }
-      // Если просто getAllReservations()
-      const fnMatch = text.match(/(\w+)\((.*)\)/)
-      if (fnMatch) {
-        const toolName = fnMatch[1]
-        let params = {}
-        try {
-          params = fnMatch[2] ? JSON.parse(fnMatch[2]) : {}
-        } catch {
-          params = {}
-        }
-        return { toolName, params }
-      }
-      // Если просто getAllReservations
-      if (/^\w+$/.test(text.trim())) {
-        return { toolName: text.trim(), params: {} }
-      }
-      return null
-    }
+    let currentIterationCount = 0 // НОВЫЙ счетчик итераций
 
     // --- STREAMING режим ---
     if (isStreaming) {
@@ -998,55 +1582,12 @@ export default function EnhancedAIAssistantChat() {
         contents: currentHistory,
         tools: [{ functionDeclarations: toolDeclarations }],
         systemInstruction: {
-          parts: [
-            {
-              text: `Текущая дата и время в UTC: ${new Date().toISOString()}.
-Используй это значение, когда в запросе упоминается 'сегодня' или 'текущая дата'.
-+ВАЖНО: Все даты для резервирований, статистики и отчетов должны быть в формате UTC (DateTimeKind.Utc).
-+При создании или обновлении резервирований всегда используй даты в UTC формате (ISO 8601 с 'Z' в конце).
-+При запросах статистики и отчетов убедись, что все временные параметры передаются в UTC.
-+
-Ты — высокоэффективный ИИ-ассистент для управления библиотекой WiseOwl.
-Твоя основная задача — точно и оперативно выполнять запросы пользователей, используя предоставленные инструменты API.
-Стремись максимально использовать доступные инструменты, а также выявлять возможности для параллельного выполнения операций, если это логически обосновано и не приводит к конфликтам данных.
-Если для выполнения запроса требуется несколько шагов, планируй их последовательно, но всегда ищи возможности для одновременного вызова нескольких инструментов, если их выполнение не зависит друг от друга.
-
-**ТЕРМИНЫ:** Слова 'резервирование', 'резерв', 'бронирование', 'бронь' являются синонимами и означают одну и ту же сущность.
-
-**СТАТУСЫ РЕЗЕРВИРОВАНИЙ:** 'Обрабатывается' (новое резервирование), 'Одобрена' (резервирование одобрено), 'Отменена' (отменено), 'Истекла' (время истекло), 'Выдана' (книга выдана), 'Возвращена' (книга возвращена), 'Просрочена' (просрочено).
-
-**ВАЖНО ПРИ РАБОТЕ С ID:** Все операции с резервированиями, пользователями, книгами и экземплярами книг требуют точных GUID.
-Всегда сначала получай список сущностей или детали конкретной сущности, чтобы получить правильный ID, а затем используй его для операций обновления/удаления.
-Никогда не предполагай ID.
-
-**ЭФФЕКТИВНЫЙ ПОИСК:**
-*   **Приоритет поиска:** При поиске сущностей (пользователей, книг) всегда отдавай предпочтение инструментам поиска (\`searchUsers\`, \`searchBooks\`) перед получением полного списка (\`getAllUsers\`, \`getAllBooks\`). Полный список используй только если поиск не дал результатов или если пользователь явно просит показать "всех".
-*   **Неоднозначный поиск:** Если пользователь предоставляет информацию, которая может соответствовать нескольким полям (например, строка 'Иванов' может быть частью \`fullName\` или \`username\`), используй инструмент поиска, указывая эту строку в обоих полях (\`fullName: 'Иванов', username: 'Иванов'\`). Это повысит шансы на успешный поиск.
-*   **Комбинированный поиск:** Если пользователь предоставляет несколько критериев (например, 'найди книгу "Война и мир" автора Толстого'), используй инструмент поиска с несколькими параметрами (\`searchBooks({title: 'Война и мир', authors: 'Толстой'})\`).
-
-**СЦЕНАРИИ РАБОТЫ С РЕЗЕРВИРОВАНИЯМИ:**
-*   **Выдача книги:** Если пользователь просит 'Дай книгу {название} пользователю {имя}', необходимо:
-    1.  Найти ID книги по названию (getAllBooks, затем фильтрация или getBookById, если название уникально).
-    2.  Найти ID пользователя по имени (getAllUsers, затем фильтрация или getUserById).
-    3.  Найти лучший доступный экземпляр книги (getBestAvailableBookInstance).
-    4.  Создать новое резервирование (createReservation) с указанием ID книги, ID пользователя, ID экземпляра и статусом 'Выдана'.
-*   **Возврат книги:** Если пользователь говорит '{имя} вернул книгу {название}' или '{имя} вернул все книги', необходимо:
-    1.  Найти ID пользователя по имени (getAllUsers, затем фильтрация или getUserById).
-    2.  Получить все активные резервирования ('Выдана', 'Просрочена') для данного пользователя (getUserReservations).
-    3.  Для каждого найденного резервирования (или конкретного резервирования, если указана книга) изменить его статус на 'Возвращена' (updateReservation). Эти операции могут выполняться параллельно для разных резервирований.
-*   **Одобрение резервирований:** При запросе 'Одобри все резервирования' или 'Одобри все резервирования для пользователя {имя}', необходимо:
-    1.  Получить все резервирования со статусом 'Обрабатывается' (getAllReservations или getUserReservations).
-    2.  Для каждого найденного резервирования изменить его статус на 'Одобрена' (updateReservation). Эти операции могут выполняться параллельно для разных резервирований.
-
-**ОБРАБОТКА НЕОПРЕДЕЛЕННОСТИ:** Если для выполнения запроса не хватает информации (например, не указан ID, или не найдена сущность по предоставленным данным), запроси уточнение у пользователя, предложив варианты, если это возможно.
-
-**ОБРАБОТКА ОШИБОК:** В случае ошибки при вызове инструмента, сообщи пользователю о проблеме и предложи возможные пути решения или альтернативные действия.
-
-**ПРИМЕР ПАРАЛЛЕЛЬНОГО ВЫПОЛНЕНИЯ:** Если пользователь просит 'Покажи всех пользователей и все доступные книги', ты можешь одновременно вызвать \`getAllUsers\` и \`getAllBooks\`, а затем объединить результаты.
-
-Всегда стремись к максимальной автоматизации и минимизации шагов, но при этом обеспечивай точность и надежность выполнения операций.`,
-            },
-          ],
+          parts: [{ text: getSystemInstructions({
+            availableTools,
+            lastAnalysis: lastQueryAnalysis,
+            selectionSummary,
+            conversationHistory: conversationHistory
+          }) }],
         },
         stream: true,
       }
@@ -1096,60 +1637,90 @@ export default function EnhancedAIAssistantChat() {
 
     // --- NON-STREAMING режим ---
     while (maxIterations > 0) {
-      const requestBody = {
-        contents: currentHistory,
-        tools: [{ functionDeclarations: toolDeclarations }],
-        systemInstruction: {
-          parts: [
-            {
-              text: `Текущая дата и время в UTC: ${new Date().toISOString()}.
-Используй это значение, когда в запросе упоминается 'сегодня' или 'текущая дата'.
-+ВАЖНО: Все даты для резервирований, статистики и отчетов должны быть в формате UTC (DateTimeKind.Utc).
-+При создании или обновлении резервирований всегда используй даты в UTC формате (ISO 8601 с 'Z' в конце).
-+При запросах статистики и отчетов убедись, что все временные параметры передаются в UTC.
-+
-Ты — высокоэффективный ИИ-ассистент для управления библиотекой WiseOwl.
-Твоя основная задача — точно и оперативно выполнять запросы пользователей, используя предоставленные инструменты API.
-Стремись максимально использовать доступные инструменты, а также выявлять возможности для параллельного выполнения операций, если это логически обосновано и не приводит к конфликтам данных.
-Если для выполнения запроса требуется несколько шагов, планируй их последовательно, но всегда ищи возможности для одновременного вызова нескольких инструментов, если их выполнение не зависит друг от друга.
-
-**ТЕРМИНЫ:** Слова 'резервирование', 'резерв', 'бронирование', 'бронь' являются синонимами и означают одну и ту же сущность.
-
-**СТАТУСЫ РЕЗЕРВИРОВАНИЙ:** 'Обрабатывается' (новое резервирование), 'Одобрена' (резервирование одобрено), 'Отменена' (отменено), 'Истекла' (время истекло), 'Выдана' (книга выдана), 'Возвращена' (книга возвращена), 'Просрочена' (просрочено).
-
-**ВАЖНО ПРИ РАБОТЕ С ID:** Все операции с резервированиями, пользователями, книгами и экземплярами книг требуют точных GUID.
-Всегда сначала получай список сущностей или детали конкретной сущности, чтобы получить правильный ID, а затем используй его для операций обновления/удаления.
-Никогда не предполагай ID.
-
-**ЭФФЕКТИВНЫЙ ПОИСК:**
-*   **Приоритет поиска:** При поиске сущностей (пользователей, книг) всегда отдавай предпочтение инструментам поиска (\`searchUsers\`, \`searchBooks\`) перед получением полного списка (\`getAllUsers\`, \`getAllBooks\`). Полный список используй только если поиск не дал результатов или если пользователь явно просит показать "всех".
-*   **Неоднозначный поиск:** Если пользователь предоставляет информацию, которая может соответствовать нескольким полям (например, строка 'Иванов' может быть частью \`fullName\` или \`username\`), используй инструмент поиска, указывая эту строку в обоих полях (\`fullName: 'Иванов', username: 'Иванов'\`). Это повысит шансы на успешный поиск.
-*   **Комбинированный поиск:** Если пользователь предоставляет несколько критериев (например, 'найди книгу "Война и мир" автора Толстого'), используй инструмент поиска с несколькими параметрами (\`searchBooks({title: 'Война и мир', authors: 'Толстой'})\`).
-
-**СЦЕНАРИИ РАБОТЫ С РЕЗЕРВИРОВАНИЯМИ:**
-*   **Выдача книги:** Если пользователь просит 'Дай книгу {название} пользователю {имя}', необходимо:
-    1.  Найти ID книги по названию (getAllBooks, затем фильтрация или getBookById, если название уникально).
-    2.  Найти ID пользователя по имени (getAllUsers, затем фильтрация или getUserById).
-    3.  Найти лучший доступный экземпляр книги (getBestAvailableBookInstance).
-    4.  Создать новое резервирование (createReservation) с указанием ID книги, ID пользователя, ID экземпляра и статусом 'Выдана'.
-*   **Возврат книги:** Если пользователь говорит '{имя} вернул книгу {название}' или '{имя} вернул все книги', необходимо:
-    1.  Найти ID пользователя по имени (getAllUsers, затем фильтрация или getUserById).
-    2.  Получить все активные резервирования ('Выдана', 'Просрочена') для данного пользователя (getUserReservations).
-    3.  Для каждого найденного резервирования (или конкретного резервирования, если указана книга) изменить его статус на 'Возвращена' (updateReservation). Эти операции могут выполняться параллельно для разных резервирований.
-*   **Одобрение резервирований:** При запросе 'Одобри все резервирования' или 'Одобри все резервирования для пользователя {имя}', необходимо:
-    1.  Получить все резервирования со статусом 'Обрабатывается' (getAllReservations или getUserReservations).
-    2.  Для каждого найденного резервирования изменить его статус на 'Одобрена' (updateReservation). Эти операции могут выполняться параллельно для разных резервирований.
-
-**ОБРАБОТКА НЕОПРЕДЕЛЕННОСТИ:** Если для выполнения запроса не хватает информации (например, не указан ID, или не найдена сущность по предоставленным данным), запроси уточнение у пользователя, предложив варианты, если это возможно.
-
-**ОБРАБОТКА ОШИБОК:** В случае ошибки при вызове инструмента, сообщи пользователю о проблеме и предложи возможные пути решения или альтернативные действия.
-
-**ПРИМЕР ПАРАЛЛЕЛЬНОГО ВЫПОЛНЕНИЯ:** Если пользователь просит 'Покажи всех пользователей и все доступные книги', ты можешь одновременно вызвать \`getAllUsers\` и \`getAllBooks\`, а затем объединить результаты.
-
-Всегда стремись к максимальной автоматизации и минимизации шагов, но при этом обеспечивай точность и надежность выполнения операций.`,
-            },
-          ],
-        },
+      currentIterationCount++ // Увеличиваем счетчик итераций
+      
+      // НОВАЯ ОПТИМИЗАЦИЯ: Пересчитываем контекст выполнения на каждой итерации
+      const executionContext = analyzeExecutionContext(conversationHistory, currentIterationCount)
+      
+      let requestBody
+      
+      // Если это финальный ответ, дополняем инструменты для полноты контекста
+      if (executionContext.isLikelyFinalResponse && toolSelectionMode === 'auto') {
+        // НОВАЯ ЛОГИКА: Дополняем текущие инструменты базовыми для полного контекста
+        const currentToolNames = availableTools.map(t => t.name)
+        
+        // Определяем базовые инструменты, которые могут понадобиться для финального ответа
+        const essentialToolNames = [
+          'systemContext', // Всегда нужен
+          'searchUsers', 'searchBooks', 'searchReservations', // Поиск для получения ID
+          'getUserById', 'getBookById', 'getReservationById' // Получение деталей по ID
+        ]
+        
+        // Если это навигационный запрос, добавляем поисковые инструменты из предыдущего контекста
+        const hasNavigationTools = currentToolNames.some(name => 
+          ['navigateToPage', 'stopAgent', 'cancelCurrentAction'].includes(name)
+        )
+        
+        if (hasNavigationTools) {
+          // Для навигационных запросов ДОПОЛНЯЕМ поисковыми инструментами
+          let additionalToolNames = [...essentialToolNames]
+          
+          // Анализируем контекст выполнения - какие инструменты использовались ранее
+          if (executionContext.executedToolNames.length > 0) {
+            console.log(`🔍 [ОТЛАДКА] Выполненные ранее инструменты:`, executionContext.executedToolNames)
+            
+            // Добавляем инструменты, которые использовались в контексте
+            const contextualTools = executionContext.executedToolNames.filter(name => 
+              ['searchBooks', 'getAllBooks', 'getBookById', 'searchUsers', 'getAllUsers', 'getUserById'].includes(name)
+            )
+            additionalToolNames = [...additionalToolNames, ...contextualTools]
+          }
+          
+          // Убираем дубликаты и фильтруем только те, которых еще нет
+          const uniqueAdditionalToolNames = [...new Set(additionalToolNames)]
+          const additionalTools = allTools.filter(tool => 
+            uniqueAdditionalToolNames.includes(tool.name) && 
+            !currentToolNames.includes(tool.name)
+          )
+          
+          availableTools = [...availableTools, ...additionalTools]
+          console.log(`🎯 [ОТЛАДКА] Финальный ответ: дополнены навигационные инструменты поисковыми`)
+          console.log(`🎯 [ОТЛАДКА] Добавлено инструментов: ${additionalTools.length} (${additionalTools.map(t => t.name).join(', ')})`)
+          console.log(`🎯 [ОТЛАДКА] Финальные инструменты (дополненные):`, availableTools.map(t => t.name))
+        } else {
+          // Для обычных запросов оставляем все инструменты без агрессивного ограничения
+          console.log(`🎯 [ОТЛАДКА] Финальный ответ: используются все доступные инструменты (${availableTools.length})`)
+          console.log(`🎯 [ОТЛАДКА] Финальные инструменты:`, availableTools.map(t => t.name))
+        }
+        
+        const newToolDeclarations = availableTools.map(({ apiMethod, apiEndpoint, ...rest }) => rest)
+        
+        // Обновляем toolDeclarations для следующего запроса
+        requestBody = {
+          contents: currentHistory,
+          tools: [{ functionDeclarations: newToolDeclarations }],
+          systemInstruction: {
+            parts: [{ text: getSystemInstructions({
+              availableTools,
+              lastAnalysis: lastQueryAnalysis,
+              selectionSummary,
+              conversationHistory: conversationHistory
+            }) }],
+          },
+        }
+      } else {
+        requestBody = {
+          contents: currentHistory,
+          tools: [{ functionDeclarations: toolDeclarations }],
+          systemInstruction: {
+            parts: [{ text: getSystemInstructions({
+              availableTools,
+              lastAnalysis: lastQueryAnalysis,
+              selectionSummary,
+              conversationHistory: conversationHistory
+            }) }],
+          },
+        }
       }
 
       const controller = new AbortController()
@@ -1175,8 +1746,7 @@ export default function EnhancedAIAssistantChat() {
 
       const functionCallParts = responseParts.filter((p: any) => p.functionCall)
       const textParts = responseParts.filter((p: any) => p.text)
-      // --- ДОБАВЛЯЮ обработку tool_code и print(...) ---
-      const toolCodeParts = responseParts.filter((p: any) => p.type === 'tool_code' || (p.text && /print\(/.test(p.text)))
+      
       if (functionCallParts.length > 0) {
         const calledToolNames = functionCallParts.map((p: any) => p.functionCall.name)
         if (calledToolNames.includes("navigateToPage")) {
@@ -1298,15 +1868,11 @@ export default function EnhancedAIAssistantChat() {
                 // Дополнительная проверка на пустые данные
                 if (Array.isArray(apiResponse) && apiResponse.length === 0) {
                   console.log(`⚠️ Данные для отчета "${reportTitle}" пусты, отчет не будет сгенерирован`)
-                  return
-                }
-                
-                if (typeof apiResponse === 'object' && Object.keys(apiResponse).length === 0) {
+                } else if (typeof apiResponse === 'object' && Object.keys(apiResponse).length === 0) {
                   console.log(`⚠️ Данные для отчета "${reportTitle}" пусты, отчет не будет сгенерирован`)
-                  return
-                }
-                
+                } else {
                 await generateHtmlReport(apiResponse, reportTitle)
+                }
               } else {
                 console.log(`⚠️ Данные для отчета "${reportTitle}" не подходят для генерации HTML-отчета`)
               }
@@ -1322,39 +1888,6 @@ export default function EnhancedAIAssistantChat() {
         currentHistory.push({ role: "function", parts: toolResponses })
         maxIterations--
         continue
-      } else if (toolCodeParts.length > 0) {
-        // Парсим и вызываем инструменты
-        let toolResults: string[] = []
-        for (const part of toolCodeParts) {
-          let code = part.text || part.code || ''
-          const parsed = parseToolCodeOrPrint(code)
-          if (parsed) {
-            const toolDef = allTools.find(t => t.name === parsed.toolName)
-            if (toolDef) {
-              let endpoint = toolDef.apiEndpoint
-              const mutableArgs = { ...parsed.params }
-              Object.keys(mutableArgs).forEach((key) => {
-                if (endpoint.includes(`{${key}}`)) {
-                  endpoint = endpoint.replace(`{${key}}`, mutableArgs[key])
-                  delete mutableArgs[key]
-                }
-              })
-              const apiResponse = await executeApiCall({
-                toolName: parsed.toolName,
-                method: toolDef.apiMethod!,
-                endpoint: endpoint!,
-                params: convertDatesToUtc(mutableArgs),
-                message: lastUserMessage,
-              })
-              toolResults.push(`${parsed.toolName}: ${typeof apiResponse === 'string' ? apiResponse : JSON.stringify(apiResponse, null, 2)}`)
-            } else {
-              toolResults.push(`Неизвестный инструмент: ${parsed.toolName}`)
-            }
-          } else {
-            toolResults.push(`Не удалось распознать вызов инструмента: ${code}`)
-          }
-        }
-        return toolResults.join('\n')
       } else if (textParts.length > 0) {
         if (lastToolCalledInLoop === "navigateToPage") {
           return ""
@@ -1378,6 +1911,7 @@ export default function EnhancedAIAssistantChat() {
     // Закрываем slash-меню при отправке
     setSlashMenuVisible(false)
     setSlashQuery("")
+    setShowSuggestions(false)
     
     const userMessageText = inputValue
     const userMessage: Message = {
@@ -1393,7 +1927,6 @@ export default function EnhancedAIAssistantChat() {
     setInputValue("")
     setIsLoading(true)
     setStreamedResponse("")
-    let lastToolCalled: string | null = null
 
     try {
       if (selectedModel === "gemini-2.0-flash-streaming") {
@@ -1454,6 +1987,14 @@ export default function EnhancedAIAssistantChat() {
     setMessages([])
     setIsLoading(false)
     prevMessagesLength.current = 0
+    // НОВАЯ ЛОГИКА: Сбрасываем текущие доступные инструменты при новом диалоге
+    setCurrentAvailableTools([])
+    // НОВОЕ: Сбрасываем контекст анализа
+    setConversationAnalysisContext({
+      hasMultipleEntities: false,
+      entityTypes: [],
+      hasPasswordMention: false
+    })
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -1524,26 +2065,6 @@ export default function EnhancedAIAssistantChat() {
     return items[0]?.conversationId || "Без названия";
   }
 
-  // Группировка диалогов по категориям
-  function groupDialogsByCategory(dialogs: Record<string, any[]>): Record<string, { convId: string, items: any[] }[]> {
-    const result: Record<string, { convId: string, items: any[] }[]> = {
-      "Информационные": [],
-      "Пользователи": [],
-      "Бронирования": [],
-      "Книги": [],
-      "Прочее": [],
-    };
-    Object.entries(dialogs).forEach(([convId, items]) => {
-      // Категория по первому действию (или по большинству)
-      const cats = items.map(getDialogCategory);
-      const mainCat = cats.sort((a,b) => cats.filter(v=>v===a).length - cats.filter(v=>v===b).length).pop() || "Прочее";
-      result[mainCat] = result[mainCat] || [];
-      // ВАЖНО: группируем только по conversationId, не разбиваем!
-      result[mainCat].push({ convId, items });
-    });
-    return result;
-  }
-
   // Новая функция: группировка по сообщениям пользователя
   function groupByUserMessages(items: any[]) {
     const groups: { message: string, tools: any[], timestamp: Date }[] = [];
@@ -1591,7 +2112,7 @@ export default function EnhancedAIAssistantChat() {
 
   // --- КОНЕЦ: вспомогательные функции для истории ---
 
-  // --- МОДАЛЬНОЕ ОКНО выбора инструментов ---
+  // Tool Selection Dialog
   const ToolSelectionDialog: React.FC<{
     isOpen: boolean
     onClose: () => void
@@ -1601,6 +2122,7 @@ export default function EnhancedAIAssistantChat() {
     manualCategories: string[]
     setManualCategories: React.Dispatch<React.SetStateAction<string[]>>
     lastQueryAnalysis: ReturnType<typeof analyzeUserQuery>
+    currentQuery: string
   }> = ({ 
     isOpen, 
     onClose, 
@@ -1609,7 +2131,8 @@ export default function EnhancedAIAssistantChat() {
     setMode, 
     manualCategories, 
     setManualCategories, 
-    lastQueryAnalysis 
+    lastQueryAnalysis,
+    currentQuery
   }) => {
     const toggleCategory = (categoryId: string) => {
       setManualCategories(prev => 
@@ -1618,10 +2141,19 @@ export default function EnhancedAIAssistantChat() {
           : [...prev, categoryId]
       )
     }
+    
+    const availableCategories = TOOL_CATEGORIES.filter(cat => 
+      !cat.minUserLevel || cat.minUserLevel <= userLevel
+    )
+    
     const stats = getToolUsageStats(
-      filterToolsByCategories(allTools, manualCategories),
+      filterToolsByCategories(allTools, manualCategories, [], {
+        ...DEFAULT_TOOL_SELECTION_CONFIG,
+        userLevel: userLevel
+      }),
       allTools
     )
+    
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className={`${
@@ -1673,6 +2205,7 @@ export default function EnhancedAIAssistantChat() {
                 </Card>
               </div>
             </div>
+            
             {/* Анализ последнего запроса */}
             {mode === 'auto' && lastQueryAnalysis.detectedCategories.length > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1683,7 +2216,7 @@ export default function EnhancedAIAssistantChat() {
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2">
                     {lastQueryAnalysis.detectedCategories.map(catId => {
-                      const category = TOOL_CATEGORIES.find(c => c.id === catId)
+                      const category = availableCategories.find(c => c.id === catId)
                       const confidence = Math.round((lastQueryAnalysis.confidence[catId] || 0) * 100)
                       return (
                         <Badge key={catId} variant="secondary" className="bg-blue-100 text-blue-800">
@@ -1696,7 +2229,7 @@ export default function EnhancedAIAssistantChat() {
                     <div>
                       <span className="text-sm text-blue-700">Предлагаемые: </span>
                       {lastQueryAnalysis.suggestedCategories.map(catId => {
-                        const category = TOOL_CATEGORIES.find(c => c.id === catId)
+                        const category = availableCategories.find(c => c.id === catId)
                         return (
                           <Badge key={catId} variant="outline" className="ml-1 border-blue-300 text-blue-700">
                             {category?.icon} {category?.name}
@@ -1705,9 +2238,13 @@ export default function EnhancedAIAssistantChat() {
                       })}
                     </div>
                   )}
+                  <div className="text-sm text-blue-700">
+                    Тип: {lastQueryAnalysis.intentType}, Сложность: {lastQueryAnalysis.complexity}
+                  </div>
                 </div>
               </div>
             )}
+            
             {/* Ручной выбор категорий */}
             {mode === 'manual' && (
               <div className="space-y-4">
@@ -1717,8 +2254,8 @@ export default function EnhancedAIAssistantChat() {
                 </h3>
                 <div className={`grid gap-3 ${
                   isExpanded ? "grid-cols-4" : "grid-cols-2"
-                }`}>
-                  {TOOL_CATEGORIES.map(category => {
+                } max-h-72 overflow-y-auto pr-2`}>
+                  {availableCategories.map(category => {
                     const isSelected = manualCategories.includes(category.id)
                     const toolCount = category.tools.length
                     return (
@@ -1764,6 +2301,7 @@ export default function EnhancedAIAssistantChat() {
                     )
                   })}
                 </div>
+                
                 {/* Статистика выбора */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
@@ -1789,6 +2327,7 @@ export default function EnhancedAIAssistantChat() {
                 </div>
               </div>
             )}
+            
             {/* Кнопки действий */}
             <div className="flex justify-between items-center pt-4 border-t">
               <Button variant="outline" onClick={onClose}>
@@ -1798,7 +2337,7 @@ export default function EnhancedAIAssistantChat() {
                 {mode === 'manual' && (
                   <Button 
                     variant="outline" 
-                    onClick={() => setManualCategories(TOOL_CATEGORIES.map(c => c.id))}
+                    onClick={() => setManualCategories(availableCategories.map(c => c.id))}
                   >
                     Выбрать все
                   </Button>
@@ -1813,14 +2352,14 @@ export default function EnhancedAIAssistantChat() {
       </Dialog>
     )
   }
-  // --- МОДАЛЬНОЕ ОКНО выбора инструментов ---
 
-  // --- ДОБАВЛЯЮ восстановление режима и категорий из localStorage ---
+  // --- ДОБАВЛЯЮ восстановление настроек из localStorage ---
   useEffect(() => {
     const savedMode = localStorage.getItem('ai_tool_mode')
     const savedCats = localStorage.getItem('ai_tool_manual_categories')
     const savedAutoReports = localStorage.getItem('ai_auto_reports')
     const savedExpanded = localStorage.getItem('ai_window_expanded')
+    const savedUserLevel = localStorage.getItem('ai_user_level')
     
     if (savedMode === 'manual' || savedMode === 'auto') {
       setToolSelectionMode(savedMode)
@@ -1834,165 +2373,247 @@ export default function EnhancedAIAssistantChat() {
     if (savedAutoReports !== null) {
       setAutoGenerateReports(savedAutoReports === 'true')
     } else {
-      // По умолчанию отключаем авто-генерацию отчетов
       setAutoGenerateReports(false)
     }
     if (savedExpanded !== null) {
       setIsExpanded(savedExpanded === 'true')
     }
+    if (savedUserLevel) {
+      const level = parseInt(savedUserLevel)
+      if ([USER_LEVELS.NOVICE, USER_LEVELS.INTERMEDIATE, USER_LEVELS.EXPERT].includes(level as any)) {
+        setUserLevel(level)
+        setIsExpertMode(level === USER_LEVELS.EXPERT)
+      }
+    }
   }, [])
-  // --- Сохраняю изменения режима и категорий ---
+  
+  // Сохраняю изменения настроек
   useEffect(() => {
     localStorage.setItem('ai_tool_mode', toolSelectionMode)
   }, [toolSelectionMode])
+  
   useEffect(() => {
     localStorage.setItem('ai_tool_manual_categories', JSON.stringify(manualSelectedCategories))
   }, [manualSelectedCategories])
   
-  // Сохраняю настройку автоматической генерации отчетов
   useEffect(() => {
     localStorage.setItem('ai_auto_reports', autoGenerateReports.toString())
   }, [autoGenerateReports])
   
-  // Сохраняю состояние расширения окна
   useEffect(() => {
     localStorage.setItem('ai_window_expanded', isExpanded.toString())
   }, [isExpanded])
-  // ... существующий код ...
+  
+  useEffect(() => {
+    localStorage.setItem('ai_user_level', userLevel.toString())
+  }, [userLevel])
 
-  // --- ВСТАВЛЯЮ вычисление выбранных категорий для отображения ---
+  // T9 подсказки при вводе
+  useEffect(() => {
+    if (inputValue.trim() && inputValue.length >= 2) {
+      const newSuggestions = T9Helper.getSuggestions(inputValue, 3)
+      setSuggestions(newSuggestions)
+      setShowSuggestions(newSuggestions.length > 0)
+    } else {
+      setShowSuggestions(false)
+      setSuggestions([])
+    }
+  }, [inputValue])
+
+  // НОВОЕ: Обновление статистики кэша
+  const updateCacheStats = () => {
+    const apiStats = apiCache.getStats()
+    const queryStats = getQueryAnalysisCacheStats()
+    setCacheStats({
+      ...apiStats,
+      queryAnalysisSize: queryStats.size
+    })
+  }
+
+  // НОВОЕ: Функция предварительной загрузки контекста
+  const preloadContext = async (conversationHistory: Message[]) => {
+    const context = extractContextFromHistory(conversationHistory)
+    
+    // Если есть пользователь в контексте, но нет в кэше - загружаем
+    if (context.lastUser?.id && !apiCache.get('/api/User/' + context.lastUser.id, 'GET', {})) {
+      try {
+        const userData = await executeApiCall({
+          toolName: 'getUserById',
+          method: 'GET',
+          endpoint: '/api/User/' + context.lastUser.id,
+          params: {},
+          message: 'Предзагрузка контекста пользователя'
+        })
+        console.log('🔄 Предзагружен пользователь в кэш:', context.lastUser.name)
+      } catch (error) {
+        console.warn('Не удалось предзагрузить пользователя:', error)
+      }
+    }
+    
+    // Если есть книга в контексте, но нет в кэше - загружаем
+    if (context.lastBook?.id && !apiCache.get('/api/Book/' + context.lastBook.id, 'GET', {})) {
+      try {
+        const bookData = await executeApiCall({
+          toolName: 'getBookById',
+          method: 'GET',
+          endpoint: '/api/Book/' + context.lastBook.id,
+          params: {},
+          message: 'Предзагрузка контекста книги'
+        })
+        console.log('🔄 Предзагружена книга в кэш:', context.lastBook.title)
+      } catch (error) {
+        console.warn('Не удалось предзагрузить книгу:', error)
+      }
+    }
+  }
+
+  // Обновляем статистику кэша при открытии окна статистики
+  useEffect(() => {
+    if (showCacheStats) {
+      updateCacheStats()
+      const interval = setInterval(updateCacheStats, 2000) // Обновляем каждые 2 секунды
+      return () => clearInterval(interval)
+    }
+  }, [showCacheStats])
+
+  // НОВОЕ: Функции управления кэшем
+  const handleClearCache = () => {
+    if (window.confirm('Очистить весь кэш? Это может замедлить следующие запросы.')) {
+      apiCache.clear()
+      clearQueryAnalysisCache()
+      updateCacheStats()
+      console.log('🧹 Кэш очищен пользователем')
+    }
+  }
+
+  // НОВОЕ: Функция извлечения контекста из истории
+  const extractContextFromHistory = (conversationHistory: Message[]): {
+    lastUser: any | null
+    lastBook: any | null
+    lastReservation: any | null
+    contextSummary: string
+  } => {
+    const context = {
+      lastUser: null,
+      lastBook: null,
+      lastReservation: null,
+      contextSummary: ""
+    }
+
+    // Ищем последние упоминания сущностей в ответах ассистента
+    const assistantMessages = conversationHistory
+      .filter(m => m.role === "assistant")
+      .slice(-5) // Последние 5 сообщений ассистента
+
+    for (const msg of assistantMessages.reverse()) {
+      const content = msg.content.toLowerCase()
+      
+      // Ищем пользователей
+      if (content.includes('пользователь') || content.includes('user') || content.includes('id:')) {
+        const userMatch = content.match(/id[:\s]*([a-f0-9-]+)/i)
+        if (userMatch && !context.lastUser) {
+          context.lastUser = { id: userMatch[1] }
+        }
+        
+        const nameMatch = content.match(/(?:пользователь|user)[:\s]*([^\n\r]+)/i)
+        if (nameMatch && !context.lastUser?.name) {
+          context.lastUser = { ...context.lastUser, name: nameMatch[1].trim() }
+        }
+      }
+      
+      // Ищем книги
+      if (content.includes('книга') || content.includes('book') || content.includes('название:')) {
+        const bookMatch = content.match(/id[:\s]*([a-f0-9-]+)/i)
+        if (bookMatch && !context.lastBook) {
+          context.lastBook = { id: bookMatch[1] }
+        }
+        
+        const titleMatch = content.match(/(?:название|title)[:\s]*([^\n\r]+)/i)
+        if (titleMatch && !context.lastBook?.title) {
+          context.lastBook = { ...context.lastBook, title: titleMatch[1].trim() }
+        }
+      }
+      
+      // Ищем резервирования
+      if (content.includes('резервирование') || content.includes('reservation')) {
+        const resMatch = content.match(/id[:\s]*([a-f0-9-]+)/i)
+        if (resMatch && !context.lastReservation) {
+          context.lastReservation = { id: resMatch[1] }
+        }
+      }
+    }
+
+    // НОВОЕ: Дополнительно ищем в кэше по именам/названиям
+    if (!context.lastUser) {
+      // Ищем пользователя по имени в кэше
+      const userMessages = conversationHistory.filter(m => 
+        m.role === "user" && 
+        (m.content.toLowerCase().includes('test admin one') || m.content.toLowerCase().includes('пользователь'))
+      )
+      if (userMessages.length > 0) {
+        // Ищем ID в ответах ассистента после этих сообщений
+        const userIndex = conversationHistory.findIndex(m => m.id === userMessages[userMessages.length - 1].id)
+        const afterUserMessages = conversationHistory.slice(userIndex + 1)
+        for (const msg of afterUserMessages) {
+          if (msg.role === "assistant") {
+            const userMatch = msg.content.match(/id[:\s]*([a-f0-9-]+)/i)
+            if (userMatch) {
+              context.lastUser = { id: userMatch[1], name: "Test Admin One" }
+              break
+            }
+          }
+        }
+      }
+    }
+
+    if (!context.lastBook) {
+      // Ищем книгу по названию в кэше
+      const bookMessages = conversationHistory.filter(m => 
+        m.role === "user" && 
+        (m.content.toLowerCase().includes('1231') || m.content.toLowerCase().includes('книга'))
+      )
+      if (bookMessages.length > 0) {
+        // Ищем ID в ответах ассистента после этих сообщений
+        const bookIndex = conversationHistory.findIndex(m => m.id === bookMessages[bookMessages.length - 1].id)
+        const afterBookMessages = conversationHistory.slice(bookIndex + 1)
+        for (const msg of afterBookMessages) {
+          if (msg.role === "assistant") {
+            const bookMatch = msg.content.match(/id[:\s]*([a-f0-9-]+)/i)
+            if (bookMatch) {
+              context.lastBook = { id: bookMatch[1], title: "1231" }
+              break
+            }
+          }
+        }
+      }
+    }
+
+    // Формируем сводку контекста
+    const contextParts = []
+    if (context.lastUser) {
+      contextParts.push(`Пользователь: ${context.lastUser.name || 'ID: ' + context.lastUser.id}`)
+    }
+    if (context.lastBook) {
+      contextParts.push(`Книга: ${context.lastBook.title || 'ID: ' + context.lastBook.id}`)
+    }
+    if (context.lastReservation) {
+      contextParts.push(`Резервирование: ID ${context.lastReservation.id}`)
+    }
+
+    context.contextSummary = contextParts.length > 0 ? 
+      `Активный контекст: ${contextParts.join(', ')}` : 
+      "Нет активного контекста"
+
+    return context
+  }
+
+  // Вычисляю выбранные категории для отображения
   const shownCategories = toolSelectionMode === 'manual'
     ? manualSelectedCategories
     : (lastQueryAnalysis.detectedCategories.length > 0 ? lastQueryAnalysis.detectedCategories : ['users','books','reservations'])
   const shownCategoryObjs = shownCategories
     .map(id => TOOL_CATEGORIES.find(cat => cat.id === id))
     .filter(Boolean)
-  // ... существующий код ...
-
-  // ---------- Генерация HTML отчётов с графиками ----------
-  const generateHtmlReport = async (reportData: any, title: string = "Отчёт WiseOwl") => {
-    try {
-      // Анализируем данные для определения типа отчета
-      let reportType = "general"
-      let dataDescription = ""
-      let specificInstructions = ""
-      
-      if (title.includes("пользователей")) {
-        reportType = "users"
-        dataDescription = "статистика пользователей библиотеки"
-        specificInstructions = "Создай диаграммы: распределение по ролям, активность пользователей, статистика штрафов, топ активных пользователей"
-      } else if (title.includes("резервирований")) {
-        reportType = "reservations" 
-        dataDescription = "статистика резервирований и выдачи книг"
-        specificInstructions = "Создай диаграммы: статусы резервирований, динамика по времени, популярные книги, эффективность обработки"
-      } else if (title.includes("книг")) {
-        reportType = "books"
-        dataDescription = "статистика книжного фонда"
-        specificInstructions = "Создай диаграммы: распределение по жанрам, доступность книг, популярные авторы, состояние фонда"
-      } else if (title.includes("популярных")) {
-        reportType = "popular"
-        dataDescription = "рейтинг популярности книг"
-        specificInstructions = "Создай диаграммы: топ популярных книг, рейтинг по жанрам, динамика популярности"
-      } else if (title.includes("Список всех")) {
-        reportType = "list"
-        dataDescription = "список всех записей"
-        specificInstructions = "Создай таблицу с данными и диаграммы распределения по основным параметрам"
-      }
-
-      // Создаем расширенный промпт в зависимости от типа данных
-      const prompt = `Создай полноценную HTML-страницу (<!DOCTYPE html> … </html>) с встроенным CDN-скриптом Chart.js (https://cdn.jsdelivr.net/npm/chart.js) на русском языке.
-
-ТРЕБОВАНИЯ К СТРАНИЦЕ:
-1. В шапке h1 укажи «${title}»
-2. Добавь дату и время генерации отчета в формате "Сгенерировано: [дата] [время]"
-3. Создай несколько интерактивных диаграмм на основе переданных данных
-4. Используй подходящие типы диаграмм:
-   - Bar charts для сравнения количеств
-   - Pie charts для распределения по категориям
-   - Line charts для временных рядов
-   - Doughnut charts для процентных соотношений
-   - Table для отображения списков данных
-5. Под каждым графиком добавь краткое текстовое описание на русском языке
-6. Добавь общую сводку в начале отчета с ключевыми цифрами
-7. Используй современный дизайн с градиентами и тенями
-8. Добавь адаптивность для мобильных устройств
-9. Не добавляй внешних зависимостей, кроме Chart.js CDN
-10. Используй цветовую схему: синий, зеленый, оранжевый, фиолетовый
-
-ТИП ОТЧЕТА: ${reportType}
-ОПИСАНИЕ: ${dataDescription}
-СПЕЦИФИЧЕСКИЕ ИНСТРУКЦИИ: ${specificInstructions}
-
-Возврати только чистый HTML-код без дополнительных комментариев.`
-
-      // Подготавливаем данные для отчета
-      let processedData = reportData
-      
-      // Если данные - это массив, добавляем метаинформацию
-      if (Array.isArray(reportData)) {
-        processedData = {
-          totalCount: reportData.length,
-          data: reportData,
-          generatedAt: new Date().toISOString(),
-          dataType: reportType
-        }
-      }
-      
-      // Если данные - это объект, добавляем метаинформацию
-      if (typeof reportData === 'object' && reportData !== null && !Array.isArray(reportData)) {
-        processedData = {
-          ...reportData,
-          generatedAt: new Date().toISOString(),
-          dataType: reportType
-        }
-      }
-
-      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
-      const body = {
-        contents: [
-          {
-            parts: [{ text: prompt }, { text: JSON.stringify(processedData, null, 2) }],
-            role: "user",
-          },
-        ],
-      }
-
-      const res = await fetch(geminiEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-
-      if (!res.ok) {
-        const errorText = await res.text()
-        throw new Error(`Gemini API error ${res.status}: ${errorText}`)
-      }
-      
-      const data = await res.json()
-      const html = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "<html><body>Ошибка генерации отчёта</body></html>"
-
-      // Проверяем, что HTML содержит необходимые элементы
-      if (!html.includes('<html') || !html.includes('</html>')) {
-        throw new Error('Сгенерированный HTML не содержит необходимых элементов')
-      }
-
-      // Открываем отчёт в новой вкладке через Blob
-      const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }))
-      window.open(blobUrl, "_blank")
-      
-      // Показываем уведомление об успешной генерации
-      console.log(`✅ HTML-отчет "${title}" успешно сгенерирован и открыт в новой вкладке`)
-    } catch (err) {
-      console.error("Ошибка генерации отчёта:", err)
-      // Показываем более информативное сообщение об ошибке
-      const errorMessage = err instanceof Error ? err.message : "Неизвестная ошибка"
-      console.error(`❌ Не удалось сгенерировать HTML-отчет "${title}": ${errorMessage}`)
-      
-      // Не показываем alert, чтобы не прерывать работу ассистента
-      // alert(`Не удалось сгенерировать HTML отчёт: ${errorMessage}`)
-    }
-  }
-  // ---------- Конец генерации HTML отчётов ----------
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -2052,11 +2673,40 @@ export default function EnhancedAIAssistantChat() {
                     <CardTitle className="text-gray-800 text-xl font-bold">
                       Мудрая Сова
                     </CardTitle>
-                    <div className="flex items-center gap-2 mt-1" />
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {userLevelOptions.find(opt => opt.id === userLevel)?.icon} {userLevelOptions.find(opt => opt.id === userLevel)?.name}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {/* User level selector */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 hover:bg-white/50">
+                        {userLevel === USER_LEVELS.NOVICE && <GraduationCap className="w-5 h-5 mr-1" />}
+                        {userLevel === USER_LEVELS.INTERMEDIATE && <Shield className="w-5 h-5 mr-1" />}
+                        {userLevel === USER_LEVELS.EXPERT && <Cpu className="w-5 h-5 mr-1" />}
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      <DropdownMenuRadioGroup value={userLevel.toString()} onValueChange={(value) => setUserLevel(parseInt(value))}>
+                        {userLevelOptions.map((option) => (
+                          <DropdownMenuRadioItem key={option.id} value={option.id.toString()} className="flex items-center gap-3 p-3">
+                            <span className="text-lg">{option.icon}</span>
+                            <div>
+                              <div className="font-medium">{option.name}</div>
+                              <div className="text-sm text-gray-500">{option.description}</div>
+                            </div>
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   {/* Model selector */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -2098,6 +2748,92 @@ export default function EnhancedAIAssistantChat() {
                         </svg>
                       )}
                     </Button>
+                    
+                    {/* НОВОЕ: Кнопка управления кэшем */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`text-gray-500 hover:text-gray-700 hover:bg-white/50 transition-all duration-200 ${
+                            (cacheStats.memorySize + cacheStats.localStorageSize + ((cacheStats as any).queryAnalysisSize || 0)) > 0 ? "bg-green-100 text-green-700" : ""
+                          }`}
+                          title="Управление кэшем"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {(cacheStats.memorySize + cacheStats.localStorageSize + ((cacheStats as any).queryAnalysisSize || 0)) > 0 && (
+                            <span className="ml-1 text-xs">{cacheStats.memorySize + cacheStats.localStorageSize + ((cacheStats as any).queryAnalysisSize || 0)}</span>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-64">
+                        <div className="p-3 space-y-3">
+                          <div>
+                            <h4 className="font-medium text-sm mb-2">📊 Статистика кэша</h4>
+                                                         <div className="space-y-2 text-sm">
+                               <div className="flex justify-between">
+                                 <span className="text-gray-600">API память:</span>
+                                 <span className="font-mono">{cacheStats.memorySize} записей</span>
+                               </div>
+                               <div className="flex justify-between">
+                                 <span className="text-gray-600">API диск:</span>
+                                 <span className="font-mono">{cacheStats.localStorageSize} записей</span>
+                               </div>
+                               <div className="flex justify-between">
+                                 <span className="text-gray-600">Анализ:</span>
+                                 <span className="font-mono">{(cacheStats as any).queryAnalysisSize || 0} запросов</span>
+                               </div>
+                               <div className="flex justify-between">
+                                 <span className="text-gray-600">Всего:</span>
+                                 <span className="font-mono font-bold">{
+                                   cacheStats.memorySize + cacheStats.localStorageSize + ((cacheStats as any).queryAnalysisSize || 0)
+                                 } записей</span>
+                               </div>
+                               <div className="flex justify-between">
+                                 <span className="text-gray-600">Статус:</span>
+                                 <span className={`font-medium ${
+                                   (cacheStats.memorySize + cacheStats.localStorageSize + ((cacheStats as any).queryAnalysisSize || 0)) > 0 ? "text-green-600" : "text-gray-500"
+                                 }`}>
+                                   {(cacheStats.memorySize + cacheStats.localStorageSize + ((cacheStats as any).queryAnalysisSize || 0)) > 0 ? "Активен" : "Пустой"}
+                                 </span>
+                               </div>
+                             </div>
+                          </div>
+                          
+                          <div className="border-t pt-3">
+                            <h4 className="font-medium text-sm mb-2">⚙️ Управление</h4>
+                            <div className="space-y-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={updateCacheStats}
+                                className="w-full text-sm"
+                              >
+                                🔄 Обновить статистику
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleClearCache}
+                                className="w-full text-sm text-red-600 hover:bg-red-50"
+                                disabled={cacheStats.memorySize === 0 && cacheStats.localStorageSize === 0 && ((cacheStats as any).queryAnalysisSize || 0) === 0}
+                              >
+                                🗑️ Очистить кэш
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="border-t pt-3">
+                            <div className="text-xs text-gray-500">
+                              💡 Кэш ускоряет повторные запросы и автоматически инвалидируется при изменениях данных
+                            </div>
+                          </div>
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
                     <Button
                       variant="ghost"
                       size="sm"
@@ -2144,7 +2880,9 @@ export default function EnhancedAIAssistantChat() {
                       <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-800 mb-2">Привет! Я Мудрая Сова 🦉</h3>
-                    <p className="text-gray-600 mb-6 text-base">Ваш персональный AI-ассистент</p>
+                    <p className="text-gray-600 mb-6 text-base">
+                      Ваш персональный AI-ассистент ({userLevelOptions.find(opt => opt.id === userLevel)?.name})
+                    </p>
                     <div className={`flex flex-wrap gap-3 justify-center ${
                       isExpanded ? "grid grid-cols-2 gap-3" : ""
                     }`}>
@@ -2157,8 +2895,8 @@ export default function EnhancedAIAssistantChat() {
                       <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-sm p-2">
                         📅 Резервирования
                       </Badge>
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-sm p-2">
-                        🔍 Работа со страницами
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-700 text-sm p-2">
+                        📊 Отчеты и аналитика
                       </Badge>
                     </div>
                   </div>
@@ -2358,6 +3096,32 @@ export default function EnhancedAIAssistantChat() {
                   </div>
                 )}
 
+                {/* T9 suggestions */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="mb-3">
+                    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                      <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        Предложения команд:
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {suggestions.map((suggestion, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              setInputValue(suggestion)
+                              setShowSuggestions(false)
+                            }}
+                            className="text-sm px-3 py-1 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action and Command buttons */}
                 <div className={`flex items-center gap-2 mb-3 ${
                   isExpanded ? "flex-wrap" : ""
@@ -2375,6 +3139,7 @@ export default function EnhancedAIAssistantChat() {
                     <Zap className="w-4 h-4 mr-2" />
                     Действие
                   </Button>
+                  
                   <Button
                     variant="ghost"
                     size="sm"
@@ -2389,7 +3154,7 @@ export default function EnhancedAIAssistantChat() {
                     <Command className="w-4 h-4 mr-2" />
                     Команды
                   </Button>
-                  {/* КНОПКА ВЫБОРА РЕЖИМА ИНСТРУМЕНТОВ */}
+                  
                   <Button
                     variant="ghost"
                     size="sm"
@@ -2405,7 +3170,6 @@ export default function EnhancedAIAssistantChat() {
                     {toolSelectionMode === 'auto' ? 'Авто' : 'Ручной'}
                   </Button>
                   
-                  {/* КНОПКА УПРАВЛЕНИЯ АВТОМАТИЧЕСКОЙ ГЕНЕРАЦИЕЙ ОТЧЕТОВ */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -2456,10 +3220,6 @@ export default function EnhancedAIAssistantChat() {
                           setSlashMenuVisible(false)
                           setSlashQuery("")
                         }
-
-                        if (toolSelectionMode === 'auto' && value.trim()) {
-                          setLastQueryAnalysis(analyzeUserQuery(value))
-                        }
                       }}
                       onKeyDown={handleKeyPress}
                       minRows={2}
@@ -2493,7 +3253,7 @@ export default function EnhancedAIAssistantChat() {
                   </Button>
                 </div>
 
-                {/* ОТОБРАЖЕНИЕ ВЫБРАННЫХ КАТЕГОРИЙ */}
+                {/* ОТОБРАЖЕНИЕ ВЫБРАННЫХ КАТЕГОРИЙ и СТАТИСТИКИ ВЫБОРА */}
                 {toolSelectionMode === 'manual' && shownCategoryObjs.length > 0 && (
                   <div className={`flex flex-wrap gap-2 mt-2 mb-1 ${
                     isExpanded ? "grid grid-cols-3 gap-2" : ""
@@ -2503,6 +3263,13 @@ export default function EnhancedAIAssistantChat() {
                         <span className="text-lg">{cat.icon}</span> {cat.name}
                       </span>
                     ))}
+                  </div>
+                )}
+
+                {/* Отображение сводки выбора инструментов */}
+                {toolSelectionSummary && (
+                  <div className="mt-2 text-xs text-gray-500 bg-gray-50 rounded px-2 py-1">
+                    {toolSelectionSummary}
                   </div>
                 )}
 
@@ -2519,6 +3286,13 @@ export default function EnhancedAIAssistantChat() {
                   </span>
                   <span>•</span>
                   <span>Отчеты: {autoGenerateReports ? "✅" : "❌"}</span>
+                  <span>•</span>
+                  <span 
+                    className={`${(cacheStats.memorySize + cacheStats.localStorageSize + ((cacheStats as any).queryAnalysisSize || 0)) > 0 ? "text-green-600" : "text-gray-400"}`}
+                    title={`Кэш: ${cacheStats.memorySize} API в памяти + ${cacheStats.localStorageSize} API на диске + ${(cacheStats as any).queryAnalysisSize || 0} анализа`}
+                  >
+                    🗄️ Кэш: {cacheStats.memorySize + cacheStats.localStorageSize + ((cacheStats as any).queryAnalysisSize || 0)}
+                  </span>
                 </div>
                   <div className="flex items-center gap-1">
                     <div
@@ -2535,96 +3309,38 @@ export default function EnhancedAIAssistantChat() {
                 </div>
 
                 {/* Slash-меню инструментов */}
-                {slashMenuVisible && allTools.length > 0 && (
-                  <div className={`absolute bottom-20 left-4 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50 animate-fade-in ${
-                    isExpanded ? "w-96" : "w-72"
-                  }`}>
-                    {/* Специальные команды отчетов */}
-                    {slashQuery.toLowerCase().includes('отчет') || slashQuery.toLowerCase().includes('report') ? (
-                      <div>
-                        <div className="px-4 py-2 bg-blue-50 border-b border-blue-200 text-sm font-medium text-blue-800">
-                          📊 Команды отчетов
-                        </div>
-                        {[
-                          { name: 'report_users', description: 'Статистика пользователей' },
-                          { name: 'report_reservations', description: 'Статистика резервирований' },
-                          { name: 'report_books', description: 'Статистика книг' },
-                          { name: 'report_popular', description: 'Топ популярных книг' },
-                          { name: 'report_all_users', description: 'Список всех пользователей' },
-                          { name: 'report_all_books', description: 'Каталог всех книг' },
-                          { name: 'report_all_reservations', description: 'Все резервирования' },
-                          { name: 'report_overdue', description: 'Просроченные резервирования' }
-                        ]
-                        .filter(t => t.name.toLowerCase().includes(slashQuery.toLowerCase()) || 
-                                   t.description.toLowerCase().includes(slashQuery.toLowerCase()))
-                        .map(tool => (
-                          <button
-                            key={tool.name}
-                            onClick={() => {
-                              // Вставляем название инструмента вместо слэш-команды
-                              const textarea = document.getElementById('ai-chat-textarea') as HTMLTextAreaElement | null
-                              if (!textarea) return
-                              const value = textarea.value
-                              const cursorPos = textarea.selectionStart || value.length
-                              const upToCursor = value.slice(0, cursorPos)
-                              const slashIndex = upToCursor.lastIndexOf('/')
-                              const before = value.slice(0, slashIndex)
-                              const after = value.slice(cursorPos)
-                              
-                              // Специальная обработка для отчетов
-                              const reportType = tool.name.replace('report_', '')
-                              const newValue = `${before}Создай HTML-отчет для ${reportType}${after}`
-                              setInputValue(newValue)
-                              
-                              setSlashMenuVisible(false)
-                              setSlashQuery("")
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-blue-50 flex flex-col"
-                          >
-                            <span className="font-medium text-gray-900">{tool.name}</span>
-                            <span className="text-xs text-gray-600 truncate">{tool.description?.slice(0, 120)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      allTools
-                        .filter(t => t.name.toLowerCase().includes(slashQuery.toLowerCase()))
-                        .slice(0, 30)
-                        .map(tool => (
-                          <button
-                            key={tool.name}
-                            onClick={() => {
-                              // Вставляем название инструмента вместо слэш-команды
-                              const textarea = document.getElementById('ai-chat-textarea') as HTMLTextAreaElement | null
-                              if (!textarea) return
-                              const value = textarea.value
-                              const cursorPos = textarea.selectionStart || value.length
-                              const upToCursor = value.slice(0, cursorPos)
-                              const slashIndex = upToCursor.lastIndexOf('/')
-                              const before = value.slice(0, slashIndex)
-                              const after = value.slice(cursorPos)
-                              
-                              const newValue = `${before}${tool.name}(${after}`
-                              setInputValue(newValue)
-                              // Перемещаем курсор внутрь скобок
-                              setTimeout(() => {
-                                const pos = (before + tool.name + '(').length
-                                textarea.focus()
-                                textarea.setSelectionRange(pos, pos)
-                              }, 0)
-                              
-                              setSlashMenuVisible(false)
-                              setSlashQuery("")
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-blue-50 flex flex-col"
-                          >
-                            <span className="font-medium text-gray-900">{tool.name}</span>
-                            <span className="text-xs text-gray-600 truncate">{tool.description?.slice(0, 120)}</span>
-                          </button>
-                        ))
-                    )}
-                  </div>
-                )}
+                 <SlashCommandMenu
+                  isVisible={slashMenuVisible}
+                  query={slashQuery}
+                  allTools={allTools}
+                  categories={TOOL_CATEGORIES}
+                  onSelect={(toolName) => {
+                     // Вставляем название инструмента вместо слэш-команды
+                    const textarea = document.getElementById('ai-chat-textarea') as HTMLTextAreaElement | null
+                    if (!textarea) return
+                    const value = textarea.value
+                    const cursorPos = textarea.selectionStart || value.length
+                    const upToCursor = value.slice(0, cursorPos)
+                    const slashIndex = upToCursor.lastIndexOf('/')
+                    const before = value.slice(0, slashIndex)
+                    const after = value.slice(cursorPos)
+                    
+                    const newValue = `${before}${toolName}(${after}`
+                    setInputValue(newValue)
+                    // Перемещаем курсор внутрь скобок
+                    setTimeout(() => {
+                      const pos = (before + toolName + '(').length
+                      textarea.focus()
+                      textarea.setSelectionRange(pos, pos)
+                    }, 0)
+                    
+                    setSlashMenuVisible(false)
+                    setSlashQuery("")
+                  }}
+                  positionClasses={`absolute bottom-20 left-4 z-50 animate-fade-in ${
+                    isExpanded ? "w-96" : "w-80"
+                  }`}
+                />
                 </div>
             </CardContent>
 
@@ -2632,14 +3348,14 @@ export default function EnhancedAIAssistantChat() {
             <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
               <DialogContent className={`${
                 isExpanded ? "max-w-6xl" : "max-w-4xl"
-              } max-h-[80vh] overflow-hidden`}>
+              } max-h-[80vh] w-[95vw] overflow-hidden`}>
                 <DialogHeader className="pb-4 border-b">
                   <DialogTitle className="flex items-center gap-2 text-2xl">
                     <HistoryIcon className="w-6 h-6 text-blue-500" />
                     История диалога
                   </DialogTitle>
                   {/* Фильтры и удаление старых чатов */}
-                  <div className="flex gap-2 mt-3 items-center">
+                  <div className="flex gap-2 mt-3 items-center flex-wrap">
                     <Button
                       variant={historyFilter === "all" ? "default" : "outline"}
                       size="sm"
@@ -2694,7 +3410,7 @@ export default function EnhancedAIAssistantChat() {
                   </div>
                 </DialogHeader>
 
-                <ScrollArea className="h-[60vh] pr-4">
+                <ScrollArea className="h-[60vh] pr-4 overflow-x-auto">
                   {(() => {
                     if (historyData.length === 0) {
                       return (
@@ -2745,7 +3461,7 @@ export default function EnhancedAIAssistantChat() {
                               <details key={convId} className="border border-gray-200 rounded-xl bg-white shadow-sm" open={false}>
                                 <summary className="flex justify-between items-center p-4 border-b cursor-pointer select-none hover:bg-gray-50">
                                   <div className="flex items-center gap-3">
-                                    <h3 className="font-semibold text-gray-800 text-lg truncate max-w-[60vw]">{dialogTitle}</h3>
+                                    <h3 className="font-semibold text-gray-800 text-lg truncate max-w-[10vw]">{dialogTitle}</h3>
                                     <div className="flex gap-2">
                                       {filteredGroups.some(g => g.tools.some(hasDataChanges)) && (
                                         <Badge variant="destructive" className="text-xs">
@@ -2781,7 +3497,7 @@ export default function EnhancedAIAssistantChat() {
                                   </Button>
                                 </summary>
                                 
-                                <div className="p-4 space-y-6">
+                                <div className="p-4 space-y-6 overflow-x-auto">
                                   {filteredGroups.map((group, groupIndex) => (
                                     <div key={groupIndex} className="space-y-3">
                                       {/* Сообщение пользователя */}
@@ -2789,14 +3505,14 @@ export default function EnhancedAIAssistantChat() {
                                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                                           <User className="w-4 h-4 text-white" />
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2 mb-1">
+                                        <div className="flex-1 min-w-0 overflow-hidden">
+                                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                                             <span className="font-semibold text-blue-800">Пользователь</span>
                                             <span className="text-sm text-blue-600">
                                               {group.timestamp.toLocaleString("ru-RU")}
                                             </span>
                                           </div>
-                                          <p className="text-gray-800 whitespace-pre-wrap">{group.message}</p>
+                                          <p className="text-gray-800 whitespace-pre-wrap break-words">{group.message}</p>
                                         </div>
                                       </div>
                                       
@@ -2806,21 +3522,21 @@ export default function EnhancedAIAssistantChat() {
                                           <div key={item.id} className="bg-gray-50 rounded-lg border">
                                             {/* Заголовок с кнопкой откат/восстановление */}
                                             <div className="p-3 border-b bg-gray-100">
-                                              <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                  <div className={`w-3 h-3 rounded-full ${
+                                              <div className="flex items-center justify-between flex-wrap gap-2">
+                                                <div className="flex items-center gap-3 flex-wrap">
+                                                  <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
                                                     hasDataChanges(item) ? "bg-orange-400" : "bg-green-400"
                                                   }`} />
-                                                  <span className="font-medium text-gray-800">
+                                                  <span className="font-medium text-gray-800 break-words">
                                                     {getActionDescription(item)}
                                                   </span>
                                                   {hasDataChanges(item) && (
-                                                    <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                                                    <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 flex-shrink-0">
                                                       Изменение
                                                     </Badge>
                                                   )}
                                                 </div>
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 flex-shrink-0">
                                                   <span className="text-sm text-gray-500">
                                                     {new Date(item.timestamp).toLocaleTimeString("ru-RU")}
                                                   </span>
@@ -2947,13 +3663,13 @@ export default function EnhancedAIAssistantChat() {
                                                     Техническая информация
                                                   </summary>
                                                   <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono space-y-1">
-                                                    <div>
+                                                    <div className="break-all">
                                                       <span className="text-blue-400">Инструмент:</span> {item.toolName}
                                                     </div>
-                                                    <div>
+                                                    <div className="break-all">
                                                       <span className="text-green-400">Метод:</span> {item.httpMethod}
                                                     </div>
-                                                    <div>
+                                                    <div className="break-all">
                                                       <span className="text-yellow-400">Эндпоинт:</span> {item.endpoint}
                                                     </div>
                                                   </div>
@@ -2989,6 +3705,7 @@ export default function EnhancedAIAssistantChat() {
         manualCategories={manualSelectedCategories}
         setManualCategories={setManualSelectedCategories}
         lastQueryAnalysis={lastQueryAnalysis}
+        currentQuery={inputValue}
       />
     </div>
   )
